@@ -1,0 +1,5 @@
+# Auto detect text files and perform LF normalization
+* text=auto
+
+package.json text eol=lf
+package-lock.json text eol=lf
