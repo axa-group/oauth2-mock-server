@@ -11,6 +11,11 @@
     "node": ">=8.0.0"
   },
   "main": "index.js",
+  "files": [
+    "README.md",
+    "index.js",
+    "lib/"
+  ],
   "scripts": {
     "cleanup:testresults": "rimraf TestResults",
     "eslint": "eslint --ignore-path .gitignore .",

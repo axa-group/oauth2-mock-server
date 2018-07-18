@@ -17,8 +17,10 @@
 
 const JWKStore = require('./lib/jwk-store');
 const OAuth2Issuer = require('./lib/oauth2-issuer');
+const OAuth2Server = require('./lib/oauth2-server');
 
 module.exports = {
   JWKStore,
-  OAuth2Issuer
+  OAuth2Issuer,
+  OAuth2Server
 };

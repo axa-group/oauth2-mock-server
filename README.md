@@ -12,6 +12,68 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 - [Node 8.0+](https://nodejs.org/)
 
+## How to use
+
+Add it to your Node.js project as a development dependency:
+
+```shell
+npm install --save-dev oauth2-mock-server
+```
+
+Here is an example for creating and running a server instance with a single random RSA key:
+
+```js
+const OAuth2Server = require('oauth2-mock-server');
+
+let server = new OAuth2Server();
+
+// Generate a new RSA key and add it to the keystore
+await server.issuer.keys.generateRSA();
+
+// Start the server
+await server.start(8080, 'localhost');
+console.log('Issuer URL:', server.issuer.url); // -> http://localhost:8080
+
+// Do some work with the server
+// ...
+
+// Stop the server
+await server.stop();
+```
+
+Any number of existing JSON-formatted or PEM-encoded keys can be added to the keystore:
+
+```js
+// Add an existing JWK key to the keystore
+await server.issuer.keys.add({
+    kid: 'some-key',
+    kty: 'RSA',
+    // ...
+});
+
+// Add an existing PEM-encoded key to the keystore
+const fs = require('fs');
+
+let pemKey = fs.readFileSync('some-key.pem');
+await server.issuer.keys.addPEM(pemKey, 'some-key');
+```
+
+JSON Web Tokens (JWT) can be built programatically:
+
+```js
+const request = require('request');
+
+// Build a new token
+let token = server.issuer.buildToken(true);
+
+// Call a remote API with the token
+request.get(
+    'https://server.example.com/api/endpoint',
+    { auth: { bearer: token } },
+    function callback(err, res, body) { /* ... */ }
+);
+```
+
 ## Supported endpoints
 
 ### GET `/.well-known/openid-configuration`
