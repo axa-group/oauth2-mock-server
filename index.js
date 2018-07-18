@@ -16,7 +16,9 @@
 'use strict';
 
 const JWKStore = require('./lib/jwk-store');
+const OAuth2Issuer = require('./lib/oauth2-issuer');
 
 module.exports = {
-  JWKStore
+  JWKStore,
+  OAuth2Issuer
 };
