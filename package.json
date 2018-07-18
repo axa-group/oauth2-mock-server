@@ -18,7 +18,9 @@
     "pretest": "npm run cleanup:testresults && npm run eslint",
     "test": "npm run jest"
   },
-  "dependencies": {},
+  "dependencies": {
+    "node-jose": "^1.0.0"
+  },
   "devDependencies": {
     "eslint": "^5.1.0",
     "eslint-plugin-jest": "^21.18.0",

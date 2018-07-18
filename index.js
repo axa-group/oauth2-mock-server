@@ -14,3 +14,9 @@
 **/
 
 'use strict';
+
+const JWKStore = require('./lib/jwk-store');
+
+module.exports = {
+  JWKStore
+};

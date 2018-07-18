@@ -14,8 +14,4 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 ## Attributions
 
-- eslint: MIT
-- eslint-plugin-jest: MIT
-- jest: MIT
-- jest-junit: Apache-2.0
-- rimraf: ISC
+- [`node-jose`](https://www.npmjs.com/package/node-jose), Copyright © Cisco Systems
