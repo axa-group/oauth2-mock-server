@@ -1,0 +1,29 @@
+{
+  "name": "oauth2-mock-server",
+  "version": "1.0.0",
+  "description": "OAuth 2 mock server",
+  "author": {
+    "name": "Jorge Poveda",
+    "email": "jorge.poveda@axa-assistance.es"
+  },
+  "license": "MIT",
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "main": "index.js",
+  "scripts": {
+    "cleanup:testresults": "rimraf TestResults",
+    "eslint": "eslint --ignore-path .gitignore .",
+    "jest": "jest",
+    "pretest": "npm run cleanup:testresults && npm run eslint",
+    "test": "npm run jest"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "eslint": "^5.1.0",
+    "eslint-plugin-jest": "^21.18.0",
+    "jest": "^23.4.1",
+    "jest-junit": "^5.1.0",
+    "rimraf": "^2.6.2"
+  }
+}
