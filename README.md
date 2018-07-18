@@ -12,6 +12,23 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 - [Node 8.0+](https://nodejs.org/)
 
+## Supported endpoints
+
+### GET `/.well-known/openid-configuration`
+
+Returns the [OpenID Provider Configuration Information](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig) for the server.
+
+### GET `/jwks`
+
+Returns the JSON Web Key Set (JWKS) of all the keys configured in the server.
+
+### POST `/token`
+
+Issues access tokens. Currently, this endpoint is limited to:
+
+- No authentication
+- Client Credentials grants only
+
 ## Attributions
 
 - [`node-jose`](https://www.npmjs.com/package/node-jose), Copyright © Cisco Systems
