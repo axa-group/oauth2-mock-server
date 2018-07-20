@@ -1,0 +1,34 @@
+environment:
+  matrix:
+    - nodejs_version: "8"
+    - nodejs_version: "10"
+
+cache:
+  - node_modules   
+
+platform:
+  - x86
+  - x64
+
+branches:
+  only:
+  - master
+
+skip_tags: true
+
+matrix:
+  fast_finish: true
+
+install:
+  - ps: Install-Product node $env:nodejs_version $env:platform
+  - npm install
+
+before_build:
+- npm run eslint
+
+test_script:
+  - node --version
+  - npm --version
+  - npm test
+
+build: off
