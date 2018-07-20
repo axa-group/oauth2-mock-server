@@ -91,6 +91,10 @@ Issues access tokens. Currently, this endpoint is limited to:
 - No authentication
 - Client Credentials grants only
 
+## Command-Line Interface
+
+The server can be run from the command line. Run `oauth2-mock-server --help` for details on its utilization.
+
 ## Attributions
 
 - [`node-jose`](https://www.npmjs.com/package/node-jose), Copyright © Cisco Systems

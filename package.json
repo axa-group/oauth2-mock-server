@@ -11,9 +11,13 @@
     "node": ">=8.0.0"
   },
   "main": "index.js",
+  "bin": {
+    "oauth2-mock-server": "./bin/oauth2-mock-server"
+  },
   "files": [
     "README.md",
     "index.js",
+    "bin/",
     "lib/"
   ],
   "scripts": {
