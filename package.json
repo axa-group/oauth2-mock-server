@@ -10,6 +10,10 @@
   "engines": {
     "node": ">=8.0.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/axa-group/oauth2-mock-server.git"
+  },
   "main": "index.js",
   "bin": {
     "oauth2-mock-server": "./bin/oauth2-mock-server"
