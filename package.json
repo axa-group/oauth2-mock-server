@@ -10,6 +10,10 @@
   "engines": {
     "node": ">=8.0.0"
   },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/axa-group/oauth2-mock-server.git"
+  },
   "main": "index.js",
   "bin": {
     "oauth2-mock-server": "./bin/oauth2-mock-server"
@@ -34,7 +38,7 @@
     "node-jose": "^1.0.0"
   },
   "devDependencies": {
-    "eslint": "^5.1.0",
+    "eslint": "^5.2.0",
     "eslint-plugin-jest": "^21.18.0",
     "jest": "^23.4.1",
     "jest-junit": "^5.1.0",
