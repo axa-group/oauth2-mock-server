@@ -52,9 +52,7 @@ describe('OAuth 2 service', () => {
   });
 
   it('should expose a token endpoint that handles Client Credentials grants', async () => {
-    let res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
+    let res = await tokenRequest(service.requestHandler)
       .send({
         grant_type: 'client_credentials',
         scope: 'urn:first-scope urn:second-scope'
@@ -81,9 +79,7 @@ describe('OAuth 2 service', () => {
     [ 'password' ],
     [ 'INVALID_GRANT_TYPE' ],
   ])('should not handle token requests for grants different than Client Credentials', async (grantType) => {
-    let res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
+    let res = await tokenRequest(service.requestHandler)
       .send({
         grant_type: grantType
       })
@@ -94,3 +90,11 @@ describe('OAuth 2 service', () => {
     });
   });
 });
+
+function tokenRequest(app) {
+  return request(app)
+    .post('/token')
+    .type('form')
+    .expect('Cache-Control', 'no-store')
+    .expect('Pragma', 'no-cache');
+}
