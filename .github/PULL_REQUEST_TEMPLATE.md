@@ -1,5 +1,3 @@
-# Pull Request Template
-
 ## PR Checklist
 
 - [ ] I have run `npm test` locally and all tests are passing.
@@ -8,4 +6,4 @@
 
 ## PR Description
 
-<!-- Describe Your PR Here! -->
+Describe Your PR Here!
