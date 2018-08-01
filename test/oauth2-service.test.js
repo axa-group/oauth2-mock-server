@@ -30,7 +30,7 @@ describe('OAuth 2 service', () => {
       token_endpoint_auth_methods_supported: [ 'none' ],
       jwks_uri: `${url}/jwks`,
       response_types_supported: [ 'code' ],
-      grant_types_supported: [ 'client_credentials' ]
+      grant_types_supported: [ 'client_credentials', 'password' ]
     });
   });
 
@@ -74,11 +74,40 @@ describe('OAuth 2 service', () => {
     expect(decoded.scope).toEqual(res.body.scope);
   });
 
+  it('should expose a token endpoint that handles Resource Owner Password Credentials grants', async () => {
+    let res = await request(service.requestHandler)
+      .post('/token')
+      .type('form')
+      .send({
+        grant_type: 'password',
+        username: 'the-resource-owner@example.com',
+        scope: 'urn:first-scope urn:second-scope'
+      })
+      .expect(200);
+    
+    expect(res.body).toMatchObject({
+      access_token: expect.any(String),
+      token_type: 'Bearer',
+      expires_in: 3600,
+      scope: 'urn:first-scope urn:second-scope'
+    });
+
+    let key = service.issuer.keys.get('test-rsa-key');
+
+    let decoded = jwt.verify(res.body.access_token, key.toPEM(false));
+    
+    expect(decoded).toMatchObject({
+      iss: service.issuer.url,
+      scope: res.body.scope,
+      sub: 'the-resource-owner@example.com',
+      amr: [ 'pwd' ]
+    });
+  });
+
   it.each([
     [ 'authorization_code' ],
-    [ 'password' ],
     [ 'INVALID_GRANT_TYPE' ],
-  ])('should not handle token requests for grants different than Client Credentials', async (grantType) => {
+  ])('should not handle token requests unsupported grant types', async (grantType) => {
     let res = await tokenRequest(service.requestHandler)
       .send({
         grant_type: grantType

@@ -92,7 +92,8 @@ Returns the JSON Web Key Set (JWKS) of all the keys configured in the server.
 Issues access tokens. Currently, this endpoint is limited to:
 
 - No authentication
-- Client Credentials grants only
+- Client Credentials grants
+- Resource Owner Password Credentials grants
 
 ## Command-Line Interface
 
