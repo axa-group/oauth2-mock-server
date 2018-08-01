@@ -1,5 +1,8 @@
 # `oauth2-mock-server`
 
+[![npm package](https://img.shields.io/npm/v/oauth2-mock-server.svg?logo=npm)](https://www.npmjs.com/package/oauth2-mock-server)
+[![Node.js version](https://img.shields.io/node/v/oauth2-mock-server.svg)](https://nodejs.org/)
+
 > _OAuth 2 mock server. Intended to be used for development or testing purposes._
 
 When developing an application that exposes or consumes APIs that are secured with an OAuth 2 authorization scheme, a mechanism for issuing access tokens is needed. Frequently, a developer needs to create custom code that fakes the creation of tokens for testing purposes, and these tokens cannot be properly verified, since there is no actual entity issuing those tokens.
@@ -10,7 +13,7 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 ## Development prerequisites
 
-- [Node 8.0+](https://nodejs.org/)
+- [Node.js 8.0+](https://nodejs.org/)
 
 ## How to use
 
