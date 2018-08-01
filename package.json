@@ -19,6 +19,7 @@
     "oauth2-mock-server": "./bin/oauth2-mock-server"
   },
   "files": [
+    "CHANGELOG.md",
     "README.md",
     "index.js",
     "bin/",
