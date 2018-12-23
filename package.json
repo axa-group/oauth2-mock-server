@@ -27,7 +27,7 @@
   ],
   "scripts": {
     "cleanup:testresults": "rimraf TestResults",
-    "eslint": "eslint --ignore-path .gitignore .",
+    "eslint": "eslint . bin/*",
     "jest": "jest",
     "pretest": "npm run cleanup:testresults && npm run eslint",
     "test": "npm run jest"
