@@ -1,6 +1,6 @@
 'use strict';
 
-const exec = require('./lib/child-script').exec;
+const { exec } = require('./lib/child-script');
 
 const cliPath = require.resolve('../bin/oauth2-mock-server');
 
@@ -11,10 +11,10 @@ describe('CLI', () => {
 
   it.each([
     ['-h'],
-    ['--help']
+    ['--help'],
   ])('should be able to print out usage information (%s)', async (arg) => {
-    let res = await executeCli(arg);
-    
+    const res = await executeCli(arg);
+
     expect(res.result).toBeNull();
     expect(res.exitCode).toBe(0);
     expect(res.stdout).toMatch(/^Usage: oauth2-mock-server \[options\]/);
@@ -24,10 +24,10 @@ describe('CLI', () => {
     ['-unknown'],
     ['--unknown'],
     ['123'],
-    [' ']
+    [' '],
   ])('should not allow unrecognized options', async (arg) => {
-    let res = await executeCli(arg);
-    
+    const res = await executeCli(arg);
+
     expect(res).toEqual(errorResponse(`Unrecognized option '${arg}'.`));
   });
 
@@ -36,15 +36,15 @@ describe('CLI', () => {
     ['::'],
     ['localhost'],
     ['127.0.0.1'],
-    ['::1']
+    ['::1'],
   ])('should accept a binding address (%s)', async (address) => {
-    let res = await executeCli('-a', address, '-p', '0');
+    const res = await executeCli('-a', address, '-p', '0');
 
     expect(res).toEqual({
       result: expect.any(Object),
       exitCode: undefined,
       stdout: expect.any(String),
-      stderr: ''
+      stderr: '',
     });
 
     expect(res.stdout).toMatch(/^OAuth 2 server listening on http:\/\/.+?:\d+$/m);
@@ -54,21 +54,21 @@ describe('CLI', () => {
   it.each([
     ['not-a-number'],
     ['-1'],
-    ['65536']
+    ['65536'],
   ])('should not allow invalid port number \'%s\'', async () => {
-    let res = await executeCli('-p', 'not-a-number');
+    const res = await executeCli('-p', 'not-a-number');
 
     expect(res).toEqual(errorResponse('Invalid port number.'));
   });
 
   it('should allow importing JSON-formatted keys', async () => {
-    let res = await executeCli('--jwk', 'test/keys/test-rsa-key.json', '--jwk', 'test/keys/test-ec-key.json', '--jwk', 'test/keys/test-oct-key.json');
+    const res = await executeCli('--jwk', 'test/keys/test-rsa-key.json', '--jwk', 'test/keys/test-ec-key.json', '--jwk', 'test/keys/test-oct-key.json');
 
     expect(res.stdout).toMatch(/^Added key with kid "test-rsa-key"$/m);
     expect(res.stdout).toMatch(/^Added key with kid "test-ec-key"$/m);
     expect(res.stdout).toMatch(/^Added key with kid "test-oct-key"$/m);
 
-    let keys = res.result.issuer.keys;
+    const { keys } = res.result.issuer;
 
     expect(keys.get('test-rsa-key')).not.toBeNull();
     expect(keys.get('test-ec-key')).not.toBeNull();
@@ -76,28 +76,29 @@ describe('CLI', () => {
   });
 
   it('should allow importing PEM-encoded keys', async () => {
-    let res = await executeCli('--pem', 'test/keys/test-rsa-key.pem', '--pem', 'test/keys/test-ec-key.pem');
+    const res = await executeCli('--pem', 'test/keys/test-rsa-key.pem', '--pem', 'test/keys/test-ec-key.pem');
 
     expect(res.stdout).toMatch(/^Added key with kid "test-rsa-key"$/m);
     expect(res.stdout).toMatch(/^Added key with kid "test-ec-key"$/m);
 
-    let keys = res.result.issuer.keys;
+    const { keys } = res.result.issuer;
 
     expect(keys.get('test-rsa-key')).not.toBeNull();
     expect(keys.get('test-ec-key')).not.toBeNull();
   });
 
   it('should allow exporting JSON-formatted keys', async () => {
-    let wfn = jest.spyOn(require('fs'), 'writeFileSync').mockImplementation();
+    const fs = require('fs'); /* eslint-disable-line global-require */
+    const wfn = jest.spyOn(fs, 'writeFileSync').mockImplementation();
 
-    let res = await executeCli('--save-jwk');
+    const res = await executeCli('--save-jwk');
 
-    let key = res.result.issuer.keys.get();
+    const key = res.result.issuer.keys.get();
     expect(key).toHaveProperty('kid');
 
     expect(wfn).toHaveBeenCalledWith(
       `${key.kid}.json`,
-      expect.stringMatching(/^{(.|\n)+}$/)
+      expect.stringMatching(/^{(.|\n)+}$/),
     );
 
     wfn.mockRestore();
@@ -107,16 +108,17 @@ describe('CLI', () => {
   });
 
   it('should allow exporting PEM-encoded keys', async () => {
-    let wfn = jest.spyOn(require('fs'), 'writeFileSync').mockImplementation();
+    const fs = require('fs'); /* eslint-disable-line global-require */
+    const wfn = jest.spyOn(fs, 'writeFileSync').mockImplementation();
 
-    let res = await executeCli('--save-pem');
+    const res = await executeCli('--save-pem');
 
-    let key = res.result.issuer.keys.get();
+    const key = res.result.issuer.keys.get();
     expect(key).toHaveProperty('kid');
 
     expect(wfn).toHaveBeenCalledWith(
       `${key.kid}.pem`,
-      expect.stringMatching(/^-----BEGIN RSA PRIVATE KEY-----\r\n(.|\r\n)+\r\n-----END RSA PRIVATE KEY-----\r\n$/)
+      expect.stringMatching(/^-----BEGIN RSA PRIVATE KEY-----\r\n(.|\r\n)+\r\n-----END RSA PRIVATE KEY-----\r\n$/),
     );
 
     wfn.mockRestore();
@@ -127,7 +129,7 @@ describe('CLI', () => {
 });
 
 async function executeCli(...args) {
-  let res = await exec(cliPath, ...args);
+  const res = await exec(cliPath, ...args);
 
   if (res.result) {
     await res.result.stop();
@@ -141,6 +143,6 @@ function errorResponse(message) {
     err: expect.any(Error),
     exitCode: 1,
     stdout: '',
-    stderr: message + '\n'
+    stderr: `${message}\n`,
   };
 }

@@ -5,16 +5,17 @@ const util = require('util');
 /* eslint no-console: off */
 
 async function exec(scriptPath, ...args) {
-  let argv = process.argv;
-  process.argv = [ argv[0], scriptPath, ...args ];
+  const argv = process.argv; /* eslint-disable-line prefer-destructuring */
+  process.argv = [argv[0], scriptPath, ...args];
 
-  let log = new ConsoleOutHook('log');
-  let error = new ConsoleOutHook('error');
+  const log = new ConsoleOutHook('log');
+  const error = new ConsoleOutHook('error');
 
-  let res = {};
+  const res = {};
 
   try {
-    res.result = await new Promise(resolve => resolve(require(scriptPath)));
+    /* eslint-disable-next-line global-require, import/no-dynamic-require */
+    res.result = await Promise.resolve(require(scriptPath));
   } catch (err) {
     res.err = err;
   } finally {
@@ -33,20 +34,20 @@ async function exec(scriptPath, ...args) {
 function ConsoleOutHook(method) {
   this.output = '';
 
-  let old = console[method];
+  const old = console[method];
   console[method] = (format, ...param) => {
-    this.output += util.format(format, ...param) + '\n';
+    this.output += util.format(`${format}\n`, ...param);
   };
 
-  this.mockClear = function() {
+  this.mockClear = function mockClear() {
     this.output = '';
   };
 
-  this.mockRestore = function() {
+  this.mockRestore = function mockRestore() {
     console[method] = old;
   };
 }
 
 module.exports = {
-  exec
+  exec,
 };
