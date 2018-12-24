@@ -69,6 +69,16 @@ describe('JWK Store', () => {
     expect(stored3).toBeNull();
   });
 
+  it('should return null when trying to retrieve a key from an empty store', async () => {
+    let store = new JWKStore();
+
+    let res1 = store.get();
+    let res2 = store.get('non-existing-kid');
+
+    expect(res1).toBeNull();
+    expect(res2).toBeNull();
+  });
+
   it('should be able to produce a JSON representation of the public keys in the key store', async () => {
     let store = new JWKStore();
     await store.generateRSA(512, 'key-one');
