@@ -97,6 +97,21 @@ describe('OAuth 2 issuer', () => {
     expect(decoded.header.x5t).toEqual('a-new-value');
     expect(decoded.payload.sub).toEqual('the-subject');
   });
+
+  it('should be able to modify the header and the payload through a beforeSigning event', () => {
+    issuer.once('beforeSigning', (token) => {
+      /* eslint-disable no-param-reassign */
+      token.header.x5t = 'a-new-value';
+      token.payload.sub = 'the-subject';
+      /* eslint-enable no-param-reassign */
+    });
+
+    const token = issuer.buildToken(true, 'test-rsa-key');
+    const decoded = jwt.decode(token, { complete: true });
+
+    expect(decoded.header.x5t).toEqual('a-new-value');
+    expect(decoded.payload.sub).toEqual('the-subject');
+  });
 });
 
 function getSecret(key) {
