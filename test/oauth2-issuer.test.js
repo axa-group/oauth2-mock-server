@@ -1,7 +1,7 @@
 'use strict';
 
-const OAuth2Issuer = require('../lib/oauth2-issuer');
 const jwt = require('jsonwebtoken');
+const OAuth2Issuer = require('../lib/oauth2-issuer');
 const testKeys = require('./keys');
 
 describe('OAuth 2 issuer', () => {
@@ -10,7 +10,7 @@ describe('OAuth 2 issuer', () => {
   beforeAll(async () => {
     issuer = new OAuth2Issuer();
     issuer.url = 'https://issuer.example.com';
-    
+
     await issuer.keys.add(testKeys.get('test-rsa-key.json'));
     await issuer.keys.add(testKeys.get('test-rsa384-key.json'));
     await issuer.keys.add(testKeys.get('test-ec-key.json'));
@@ -22,28 +22,28 @@ describe('OAuth 2 issuer', () => {
   });
 
   it('should be able to build unsigned tokens', () => {
-    let now = Math.floor(Date.now() / 1000);
-    let expiresIn = 1000;
+    const now = Math.floor(Date.now() / 1000);
+    const expiresIn = 1000;
 
-    let token = issuer.buildToken(false, 'test-rsa-key', null, expiresIn);
+    const token = issuer.buildToken(false, 'test-rsa-key', null, expiresIn);
 
     expect(token).toMatch(/^[\w-]+\.[\w-]+\.$/);
 
-    let decoded = jwt.decode(token, { complete: true });
+    const decoded = jwt.decode(token, { complete: true });
 
     expect(decoded.header).toEqual({
       alg: 'none',
       typ: 'JWT',
-      kid: 'test-rsa-key'
+      kid: 'test-rsa-key',
     });
 
-    let p = decoded.payload;
-    
+    const p = decoded.payload;
+
     expect(p).toMatchObject({
       iss: issuer.url,
       iat: expect.any(Number),
       exp: expect.any(Number),
-      nbf: expect.any(Number)
+      nbf: expect.any(Number),
     });
 
     expect(p.iat).toBeGreaterThanOrEqual(now);
@@ -52,12 +52,12 @@ describe('OAuth 2 issuer', () => {
   });
 
   it.each([
-    [ 'RSA', 'test-rsa-key' ],
-    [ 'EC', 'test-ec-key' ],
-    [ 'oct', 'test-oct-key' ]
+    ['RSA', 'test-rsa-key'],
+    ['EC', 'test-ec-key'],
+    ['oct', 'test-oct-key'],
   ])('should be able to build %s-signed tokens', async (keyType, kid) => {
-    let testKey = issuer.keys.get(kid);
-    let token = issuer.buildToken(true, kid);
+    const testKey = issuer.keys.get(kid);
+    const token = issuer.buildToken(true, kid);
 
     expect(token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
 
@@ -65,32 +65,34 @@ describe('OAuth 2 issuer', () => {
   });
 
   it('should be able to build signed tokens with the algorithm hinted by the key', () => {
-    let testKey = issuer.keys.get('test-rsa384-key');
-    let token = issuer.buildToken(true, testKey.kid);
+    const testKey = issuer.keys.get('test-rsa384-key');
+    const token = issuer.buildToken(true, testKey.kid);
 
     expect(() => jwt.verify(token, getSecret(testKey))).not.toThrow();
   });
 
   it.each([
-    [ 'urn:scope-1 urn:scope-2' ],
-    [ [ 'urn:scope-1', 'urn:scope-2' ] ]
+    ['urn:scope-1 urn:scope-2'],
+    [['urn:scope-1', 'urn:scope-2']],
   ])('should be able to build tokens with a scope', (scopes) => {
-    let token = issuer.buildToken(true, 'test-rsa-key', scopes);
+    const token = issuer.buildToken(true, 'test-rsa-key', scopes);
 
-    let decoded = jwt.decode(token);
+    const decoded = jwt.decode(token);
 
     expect(decoded.scope).toEqual('urn:scope-1 urn:scope-2');
   });
 
   it('should be able to build tokens and modify the header or the payload before signing', () => {
-    let transform = (header, payload) => {
+    /* eslint-disable no-param-reassign */
+    const transform = (header, payload) => {
       header.x5t = 'a-new-value';
       payload.sub = 'the-subject';
     };
+    /* eslint-enable no-param-reassign */
 
-    let token = issuer.buildToken(true, 'test-rsa-key', transform);
+    const token = issuer.buildToken(true, 'test-rsa-key', transform);
 
-    let decoded = jwt.decode(token, { complete: true });
+    const decoded = jwt.decode(token, { complete: true });
 
     expect(decoded.header.x5t).toEqual('a-new-value');
     expect(decoded.payload.sub).toEqual('the-subject');

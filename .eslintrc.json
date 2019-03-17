@@ -1,44 +1,16 @@
 {
   "root": true,
   "env": {
-    "es6": true,
     "node": true
   },
-  "extends": "eslint:recommended",
+  "extends": "airbnb-base",
   "parserOptions": {
-    "ecmaVersion": 2017
+    "ecmaVersion": 2017,
+    "sourceType": "script"
   },
   "rules": {
-    "array-callback-return": "error",
-    "block-scoped-var": "error",
-    "callback-return": "error",
-    "class-methods-use-this": "error",
-    "consistent-return": "error",
-    "curly": "error",
-    "default-case": "error",
-    "guard-for-in": "error",
-    "indent": [ "warn", 2, { "SwitchCase": 1, "MemberExpression": 1 } ],
     "linebreak-style": "off",
-    "no-bitwise": "error",
-    "no-caller": "error",
-    "no-eval": "error",
-    "no-extend-native": "error",
-    "no-extra-parens": [ "error", "functions" ],
-    "no-implied-eval": "error",
-    "no-loop-func": "error",
-    "no-new": "error",
-    "no-new-func": "error",
-    "no-new-wrappers": "error",
-    "no-octal-escape": "error",
-    "no-param-reassign": "error",
-    "no-process-env": "error",
-    "no-sequences": "error",
-    "no-shadow": "error",
     "no-use-before-define": [ "error", { "functions": false } ],
-    "no-var": "error",
-    "quotes": [ "error", "single" ],
-    "semi": [ "error", "always" ],
-    "strict": "error",
-    "valid-jsdoc": [ "warn" ]
+    "valid-jsdoc": "warn"
   }
 }

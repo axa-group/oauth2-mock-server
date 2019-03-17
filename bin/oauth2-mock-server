@@ -1,25 +1,25 @@
 #!/usr/bin/env node
 
 /**
-* Copyright (c) AXA Partners
-*
-* Licensed under the AXA Partners License (the "License"); you
-* may not use this file except in compliance with the License.
-* A copy of the License can be found in the LICENSE.md file distributed
-* together with this file.
-*
-* Unless required by applicable law or agreed to in writing, software
-* distributed under the License is distributed on an "AS IS" BASIS,
-* WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-* See the License for the specific language governing permissions and
-* limitations under the License.
-**/
+ * Copyright (c) AXA Partners
+ *
+ * Licensed under the AXA Partners License (the "License"); you
+ * may not use this file except in compliance with the License.
+ * A copy of the License can be found in the LICENSE.md file distributed
+ * together with this file.
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
 'use strict';
 
 const fs = require('fs');
 const path = require('path');
-const OAuth2Server = require('../').OAuth2Server;
+const { OAuth2Server } = require('../');
 
 /* eslint no-console: off */
 
@@ -28,14 +28,14 @@ const defaultOptions = {
   port: 8080,
   keys: [],
   saveJWK: false,
-  savePEM: false
+  savePEM: false,
 };
 
 module.exports = cli(...process.argv.slice(2));
 
 function cli(...args) {
   let options;
-  
+
   try {
     options = parseCliArgs(args);
   } catch (err) {
@@ -53,11 +53,11 @@ function cli(...args) {
 }
 
 function parseCliArgs(args) {
-  let opts = Object.assign({}, defaultOptions);
+  const opts = Object.assign({}, defaultOptions);
 
   while (args.length > 0) {
-    let arg = args.shift();
-  
+    const arg = args.shift();
+
     switch (arg) {
       case '-h':
       case '--help':
@@ -65,22 +65,22 @@ function parseCliArgs(args) {
         return null;
       case '-a':
         opts.host = args.shift();
-        continue;
+        break;
       case '-p':
         opts.port = parsePort(args.shift());
-        continue;
+        break;
       case '--jwk':
         opts.keys.push(parseJWK(args.shift()));
-        continue;
+        break;
       case '--pem':
         opts.keys.push(parsePEM(args.shift()));
-        continue;
+        break;
       case '--save-jwk':
         opts.saveJWK = true;
-        continue;
+        break;
       case '--save-pem':
         opts.savePEM = true;
-        continue;
+        break;
       default:
         throw new Error(`Unrecognized option '${arg}'.`);
     }
@@ -90,7 +90,7 @@ function parseCliArgs(args) {
 }
 
 function showHelp() {
-  let scriptName = path.basename(__filename, '.js');
+  const scriptName = path.basename(__filename, '.js');
   console.log(`Usage: ${scriptName} [options]
        ${scriptName} -a localhost -p 8080
 
@@ -116,9 +116,9 @@ or --save-pem options for later reuse.`);
 }
 
 function parsePort(portStr) {
-  let port = parseInt(portStr, 10);
+  const port = parseInt(portStr, 10);
 
-  if (isNaN(port) || port < 0 || port > 65535) {
+  if (Number.isNaN(port) || port < 0 || port > 65535) {
     throw new Error('Invalid port number.');
   }
 
@@ -126,37 +126,37 @@ function parsePort(portStr) {
 }
 
 function parseJWK(filename) {
-  let jwkStr = fs.readFileSync(filename, 'utf8');
+  const jwkStr = fs.readFileSync(filename, 'utf8');
   return JSON.parse(jwkStr);
 }
 
 function parsePEM(filename) {
   return {
     kid: path.parse(filename).name,
-    pem: fs.readFileSync(filename, 'utf8')
+    pem: fs.readFileSync(filename, 'utf8'),
   };
 }
 
 function saveJWK(keys) {
-  for (let key of keys) {
-    let filename = `${key.kid}.json`;
+  keys.forEach((key) => {
+    const filename = `${key.kid}.json`;
     fs.writeFileSync(filename, JSON.stringify(key.toJSON(true), null, 2));
     console.log(`JSON web key written to file "${filename}".`);
-  }
+  });
 }
 
 function savePEM(keys) {
-  for (let key of keys) {
-    let filename = `${key.kid}.pem`;
+  keys.forEach((key) => {
+    const filename = `${key.kid}.pem`;
     fs.writeFileSync(filename, key.toPEM(true));
     console.log(`PEM-encoded key written to file "${filename}".`);
-  }
+  });
 }
 
 async function startServer(opts) {
-  let server = new OAuth2Server();
+  const server = new OAuth2Server();
 
-  for (let key of opts.keys) {
+  await Promise.all(opts.keys.map(async (key) => {
     let jwk;
     if (key.pem) {
       jwk = await server.issuer.keys.addPEM(key.pem, key.kid);
@@ -165,12 +165,12 @@ async function startServer(opts) {
     }
 
     console.log(`Added key with kid "${jwk.kid}"`);
-  }
+  }));
 
-  if (opts.keys.length == 0) {
-    let jwk = await server.issuer.keys.generateRSA(1024);
+  if (opts.keys.length === 0) {
+    const jwk = await server.issuer.keys.generateRSA(1024);
     opts.keys.push(jwk);
-    
+
     console.log(`Generated new RSA key with kid "${jwk.kid}"`);
   }
 
@@ -184,8 +184,8 @@ async function startServer(opts) {
 
   await server.start(opts.port, opts.host);
 
-  let addr = server.address();
-  let hostname = addr.family == 'IPv6' ? `[${addr.address}]` : addr.address;
+  const addr = server.address();
+  const hostname = addr.family === 'IPv6' ? `[${addr.address}]` : addr.address;
 
   console.log(`OAuth 2 server listening on http://${hostname}:${addr.port}`);
   console.log(`OAuth 2 issuer is ${server.issuer.url}`);
