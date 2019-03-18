@@ -77,6 +77,39 @@ request.get(
 );
 ```
 
+It also provides a convenient way, through event emitters, to programatically customize:
+
+- The JWT access token
+- The token endpoint response body and status
+- The userinfo endpoint response body and status
+
+This is particularly useful when expecting the oidc service to behave in a specific way on one single test.
+
+```js
+//Force the oidc service to provide an invalid_grant response on next call to the token endpoint
+service.once('beforeResponse', (tokenEndpointResponse) => {
+  tokenEndpointResponse.body = {
+    error: 'invalid_grant'
+  };
+  tokenEndpointResponse.statusCode = 400;
+});
+
+//Force the oidc service to provide an error on next call to userinfo endpoint
+service.once('beforeUserinfo', (userInfoResponse) => {
+  userInfoResponse.body = {
+    error: 'invalid_token',
+    error_message: 'token is expired',
+  };
+  userInfoResponse.statusCode = 401;
+});
+
+//Modify the expiration time on next token produced
+service.issuer.once('beforeSigning', (token) => {
+  const timestamp = Math.floor(Date.now() / 1000);
+  token.payload.exp = timestamp + 400;
+});
+```
+
 ## Supported endpoints
 
 ### GET `/.well-known/openid-configuration`
@@ -92,8 +125,19 @@ Returns the JSON Web Key Set (JWKS) of all the keys configured in the server.
 Issues access tokens. Currently, this endpoint is limited to:
 
 - No authentication
-- Client Credentials grants
-- Resource Owner Password Credentials grants
+- Client Credentials grant
+- Resource Owner Password Credentials grant
+- Authorization code grant
+- Refresh token grant
+
+### GET /authorize
+
+It simulates the user authentication. It will automatically redirect to the callback endpoint sent as parameter.
+It currently supports only 'code' response_type.
+
+### GET /userinfo
+
+It provides extra userinfo claims.
 
 ## Command-Line Interface
 

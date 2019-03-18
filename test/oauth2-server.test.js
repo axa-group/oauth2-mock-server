@@ -25,4 +25,10 @@ describe('OAuth 2 Server', () => {
 
     await expect(server.stop());
   });
+
+  it('should expose the oauth2 service', () => {
+    const server = new OAuth2Server();
+
+    expect(server.service).toBeDefined();
+  });
 });
