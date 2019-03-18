@@ -6,10 +6,10 @@ const testKeys = require('./keys');
 describe('JWK Store', () => {
   it('should be able to generate a new RSA key', async () => {
     const store = new JWKStore();
-    const key = await store.generateRSA(256);
+    const key = await store.generateRSA(512);
 
     expect(key).toMatchObject({
-      length: 256,
+      length: 512,
       kty: 'RSA',
       use: 'sig',
       kid: expect.stringMatching(/^[\w-]+$/),
