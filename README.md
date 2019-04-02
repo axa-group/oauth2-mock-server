@@ -26,7 +26,7 @@ npm install --save-dev oauth2-mock-server
 Here is an example for creating and running a server instance with a single random RSA key:
 
 ```js
-const OAuth2Server = require('oauth2-mock-server');
+const { OAuth2Server } = require('oauth2-mock-server');
 
 let server = new OAuth2Server();
 
