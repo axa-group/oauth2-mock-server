@@ -36,6 +36,7 @@ describe('OAuth 2 service', () => {
       token_endpoint_auth_signing_alg_values_supported: ['RS256'],
       response_modes_supported: ['query'],
       id_token_signing_alg_values_supported: ['RS256'],
+      revocation_endpoint: `${url}/revoke`,
     });
   });
 
@@ -266,6 +267,40 @@ describe('OAuth 2 service', () => {
       error: 'invalid_token',
       error_message: 'token is expired',
     });
+  });
+
+  it('should expose the revoke endpoint', async () => {
+    const res = await request(service.requestHandler)
+      .post('/revoke')
+      .type('form')
+      .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
+      .send({
+        token: 'authorization_code',
+        token_type_hint: 'refresh_token',
+      })
+      .expect(200);
+
+    expect(res.body).toEqual(null);
+  });
+
+  it('should allow customizing the revoke response through a beforeRevoke event', async () => {
+    service.once('beforeRevoke', (revokeResponse) => {
+      /* eslint-disable no-param-reassign */
+      revokeResponse.body = '';
+      revokeResponse.statusCode = 204;
+      /* eslint-enable no-param-reassign */
+    });
+    const res = await request(service.requestHandler)
+      .post('/revoke')
+      .type('form')
+      .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
+      .send({
+        token: 'authorization_code',
+        token_type_hint: 'refresh_token',
+      })
+      .expect(204);
+
+    expect(res.text).toBeFalsy();
   });
 });
 
