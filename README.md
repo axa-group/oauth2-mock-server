@@ -82,6 +82,7 @@ It also provides a convenient way, through event emitters, to programatically cu
 - The JWT access token
 - The token endpoint response body and status
 - The userinfo endpoint response body and status
+- The revoke endpoint response body and status
 
 This is particularly useful when expecting the oidc service to behave in a specific way on one single test.
 
@@ -108,6 +109,13 @@ service.issuer.once('beforeSigning', (token) => {
   const timestamp = Math.floor(Date.now() / 1000);
   token.payload.exp = timestamp + 400;
 });
+
+//Simulates a custom token revocation body
+service.once('beforeRevoke', (revokeResponse) => {
+  revokeResponse.body = {
+    result: 'revoked'
+  };
+});
 ```
 
 ## Supported endpoints
@@ -130,14 +138,18 @@ Issues access tokens. Currently, this endpoint is limited to:
 - Authorization code grant
 - Refresh token grant
 
-### GET /authorize
+### GET `/authorize`
 
 It simulates the user authentication. It will automatically redirect to the callback endpoint sent as parameter.
 It currently supports only 'code' response_type.
 
-### GET /userinfo
+### GET `/userinfo`
 
 It provides extra userinfo claims.
+
+### POST `/revoke`
+
+It simulates a token revocation. This endpoint should always return 200 as stated by [RFC 7009](https://tools.ietf.org/html/rfc7009#section-2.2).
 
 ## Command-Line Interface
 
