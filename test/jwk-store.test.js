@@ -88,7 +88,7 @@ describe('JWK Store', () => {
     const jwks = store.toJSON();
 
     expect(jwks.keys).toHaveLength(3);
-    expect(jwks.keys.map(key => key.kid).sort()).toEqual(['key-one', 'key-two', 'key-two']);
+    expect(jwks.keys.map((key) => key.kid).sort()).toEqual(['key-one', 'key-two', 'key-two']);
 
     jwks.keys.forEach((jwk) => {
       expect(store.get(jwk.kid)).not.toBeNull();

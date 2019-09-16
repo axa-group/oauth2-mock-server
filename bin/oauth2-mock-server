@@ -53,7 +53,7 @@ function cli(...args) {
 }
 
 function parseCliArgs(args) {
-  const opts = Object.assign({}, defaultOptions);
+  const opts = { ...defaultOptions };
 
   while (args.length > 0) {
     const arg = args.shift();

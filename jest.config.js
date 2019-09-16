@@ -7,7 +7,7 @@ module.exports = {
   coveragePathIgnorePatterns: ['<rootDir>/test/'],
   reporters: [
     'default',
-    ['jest-junit', { output: 'TestResults/testresults.xml' }],
+    ['jest-junit', { outputDirectory: 'TestResults', outputName: 'testresults.xml' }],
   ],
   coverageReporters: ['text', 'html', 'cobertura'],
 };

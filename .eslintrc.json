@@ -5,12 +5,13 @@
   },
   "extends": "airbnb-base",
   "parserOptions": {
-    "ecmaVersion": 2017,
+    "ecmaVersion": 2018,
     "sourceType": "script"
   },
   "rules": {
     "linebreak-style": "off",
     "no-use-before-define": [ "error", { "functions": false } ],
+    "strict": [ "error", "global" ],
     "valid-jsdoc": "warn"
   }
 }
