@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [1.3.3](https://github.com/axa-group/oauth2-mock-server/compare/v1.3.2...v1.3.3) — 2019-09-25
+
+### Security
+
+- Update `npm` dependencies to fix:
+  - [CVE-2019-15657](https://nvd.nist.gov/vuln/detail/CVE-2019-15657)
+  - [CVE-2019-10746](https://nvd.nist.gov/vuln/detail/CVE-2019-10746)
+  - [CVE-2019-10747](https://nvd.nist.gov/vuln/detail/CVE-2019-10747)
+
+### Changed
+
+- Update license's legal entity.
+
 ## [1.3.2](https://github.com/axa-group/oauth2-mock-server/compare/v1.3.1...v1.3.2) — 2019-08-09
 
 ### Security

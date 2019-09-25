@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
 /**
- * Copyright (c) AXA Partners
+ * Copyright (c) AXA Assistance France
  *
- * Licensed under the AXA Partners License (the "License"); you
+ * Licensed under the AXA Assistance France License (the "License"); you
  * may not use this file except in compliance with the License.
  * A copy of the License can be found in the LICENSE.md file distributed
  * together with this file.
@@ -53,7 +53,7 @@ function cli(...args) {
 }
 
 function parseCliArgs(args) {
-  const opts = Object.assign({}, defaultOptions);
+  const opts = { ...defaultOptions };
 
   while (args.length > 0) {
     const arg = args.shift();
