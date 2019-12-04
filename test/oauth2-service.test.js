@@ -80,6 +80,31 @@ describe('OAuth 2 service', () => {
     expect(decoded.scope).toEqual(res.body.scope);
   });
 
+  it('should expose a token endpoint that handles Client Credentials grants with clientId as aud when setting basic authorization', async () => {
+    const res = await tokenRequest(service.requestHandler)
+      .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
+      .send({
+        grant_type: 'client_credentials',
+        scope: 'urn:first-scope urn:second-scope',
+      })
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      access_token: expect.any(String),
+      token_type: 'Bearer',
+      expires_in: 3600,
+      scope: 'urn:first-scope urn:second-scope',
+    });
+
+    const key = service.issuer.keys.get('test-rsa-key');
+
+    const decoded = jwt.verify(res.body.access_token, key.toPEM(false));
+
+    expect(decoded.iss).toEqual(service.issuer.url);
+    expect(decoded.scope).toEqual(res.body.scope);
+    expect(decoded.aud).toEqual('dummy_client_id');
+  });
+
   it('should expose a token endpoint that handles Resource Owner Password Credentials grants', async () => {
     const res = await request(service.requestHandler)
       .post('/token')
