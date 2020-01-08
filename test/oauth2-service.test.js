@@ -144,6 +144,45 @@ describe('OAuth 2 service', () => {
     });
   });
 
+
+  it('should expose a token endpoint that handles authorization_code grants without the basic authorization', async () => {
+    const res = await request(service.requestHandler)
+      .post('/token')
+      .type('form')
+      .send({
+        grant_type: 'authorization_code',
+        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+        redirect_uri: 'https://example.com/callback',
+        client_id: 'client_id_sample',
+      })
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      access_token: expect.any(String),
+      token_type: 'Bearer',
+      expires_in: 3600,
+      scope: 'dummy',
+      id_token: expect.any(String),
+      refresh_token: expect.any(String),
+    });
+
+    const key = service.issuer.keys.get('test-rsa-key');
+
+    const decoded = jwt.verify(res.body.access_token, key.toPEM(false));
+
+    expect(decoded).toMatchObject({
+      iss: service.issuer.url,
+      scope: 'dummy',
+      sub: 'johndoe',
+      amr: ['pwd'],
+    });
+
+    const decodedIdToken = jwt.verify(res.body.id_token, key.toPEM(false));
+    expect(decodedIdToken).toMatchObject({
+      aud: 'client_id_sample',
+    });
+  });
+
   it('should expose a token endpoint that handles refresh_token grants', async () => {
     const res = await request(service.requestHandler)
       .post('/token')
