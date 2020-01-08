@@ -341,6 +341,20 @@ describe('OAuth 2 service', () => {
 
     expect(res.text).toBeFalsy();
   });
+
+  it('should expose CORS headers in a GET request', async () => {
+    await request(service.requestHandler)
+      .get('/.well-known/openid-configuration')
+      .expect(200)
+      .expect('Access-Control-Allow-Origin', '*');
+  });
+
+  it('should expose CORS headers in an OPTIONS request', async () => {
+    await request(service.requestHandler)
+      .options('/token')
+      .expect(204)
+      .expect('Access-Control-Allow-Origin', '*');
+  });
 });
 
 function tokenRequest(app) {
