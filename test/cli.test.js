@@ -62,7 +62,7 @@ describe('CLI', () => {
   });
 
   it('should allow importing JSON-formatted keys', async () => {
-    const res = await executeCli('--jwk', 'test/keys/test-rsa-key.json', '--jwk', 'test/keys/test-ec-key.json', '--jwk', 'test/keys/test-oct-key.json');
+    const res = await executeCli('--jwk', 'test/keys/test-rsa-key.json', '--jwk', 'test/keys/test-ec-key.json', '--jwk', 'test/keys/test-oct-key.json', '-p', '0');
 
     expect(res.stdout).toMatch(/^Added key with kid "test-rsa-key"$/m);
     expect(res.stdout).toMatch(/^Added key with kid "test-ec-key"$/m);
@@ -76,7 +76,7 @@ describe('CLI', () => {
   });
 
   it('should allow importing PEM-encoded keys', async () => {
-    const res = await executeCli('--pem', 'test/keys/test-rsa-key.pem', '--pem', 'test/keys/test-ec-key.pem');
+    const res = await executeCli('--pem', 'test/keys/test-rsa-key.pem', '--pem', 'test/keys/test-ec-key.pem', '-p', '0');
 
     expect(res.stdout).toMatch(/^Added key with kid "test-rsa-key"$/m);
     expect(res.stdout).toMatch(/^Added key with kid "test-ec-key"$/m);
@@ -91,7 +91,7 @@ describe('CLI', () => {
     const fs = require('fs'); /* eslint-disable-line global-require */
     const wfn = jest.spyOn(fs, 'writeFileSync').mockImplementation();
 
-    const res = await executeCli('--save-jwk');
+    const res = await executeCli('--save-jwk', '-p', '0');
 
     const key = res.result.issuer.keys.get();
     expect(key).toHaveProperty('kid');
@@ -111,7 +111,7 @@ describe('CLI', () => {
     const fs = require('fs'); /* eslint-disable-line global-require */
     const wfn = jest.spyOn(fs, 'writeFileSync').mockImplementation();
 
-    const res = await executeCli('--save-pem');
+    const res = await executeCli('--save-pem', '-p', '0');
 
     const key = res.result.issuer.keys.get();
     expect(key).toHaveProperty('kid');
