@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [1.4.0](https://github.com/axa-group/oauth2-mock-server/compare/v1.3.3...v1.4.0) — 2020-01-15
+
+### Security
+
+- Update `npm` dependencies to fix:
+  - [NPM Security Advisory 1164](https://www.npmjs.com/advisories/1164)
+  - [NPM Security Advisory 1300](https://www.npmjs.com/advisories/1300)
+  - [NPM Security Advisory 1316](https://www.npmjs.com/advisories/1316)
+  - [NPM Security Advisory 1324](https://www.npmjs.com/advisories/1324)
+  - [NPM Security Advisory 1325](https://www.npmjs.com/advisories/1325)
+
+### Fixed
+
+- Add missing `aud` claim under Authorization Code Flow
+
+### Added
+
+- Add CORS support
+
 ## [1.3.3](https://github.com/axa-group/oauth2-mock-server/compare/v1.3.2...v1.3.3) — 2019-09-25
 
 ### Security

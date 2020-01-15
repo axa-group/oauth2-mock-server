@@ -343,17 +343,19 @@ describe('OAuth 2 service', () => {
   });
 
   it('should expose CORS headers in a GET request', async () => {
-    await request(service.requestHandler)
+    const res = await request(service.requestHandler)
       .get('/.well-known/openid-configuration')
-      .expect(200)
-      .expect('Access-Control-Allow-Origin', '*');
+      .expect(200);
+
+    expect(res.headers['access-control-allow-origin']).toBe('*');
   });
 
   it('should expose CORS headers in an OPTIONS request', async () => {
-    await request(service.requestHandler)
+    const res = await request(service.requestHandler)
       .options('/token')
-      .expect(204)
-      .expect('Access-Control-Allow-Origin', '*');
+      .expect(204);
+
+    expect(res.headers['access-control-allow-origin']).toBe('*');
   });
 });
 

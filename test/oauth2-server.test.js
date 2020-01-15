@@ -23,7 +23,7 @@ describe('OAuth 2 Server', () => {
     await server.start(null, 'localhost');
     expect(server.issuer.url).toEqual(`http://localhost:${server.address().port}`);
 
-    await expect(server.stop());
+    await expect(server.stop()).resolves.not.toBeDefined();
   });
 
   it('should expose the oauth2 service', () => {
