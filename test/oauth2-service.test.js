@@ -2,6 +2,7 @@
 
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
+const { IncomingMessage } = require('http');
 const OAuth2Issuer = require('../lib/oauth2-issuer');
 const OAuth2Service = require('../lib/oauth2-service');
 const testKeys = require('./keys');
@@ -248,7 +249,8 @@ describe('OAuth 2 service', () => {
   });
 
   it('should be able to transform the token endpoint response', async () => {
-    service.once('beforeResponse', (tokenEndpointResponse) => {
+    service.once('beforeResponse', (tokenEndpointResponse, req) => {
+      expect(req).toBeInstanceOf(IncomingMessage);
       /* eslint-disable no-param-reassign */
       tokenEndpointResponse.body.expires_in = 9000;
       tokenEndpointResponse.body.some_stuff = 'whatever';
@@ -289,7 +291,8 @@ describe('OAuth 2 service', () => {
   });
 
   it('should allow customizing the userinfo response through a beforeUserinfo event', async () => {
-    service.once('beforeUserinfo', (userInfoResponse) => {
+    service.once('beforeUserinfo', (userInfoResponse, req) => {
+      expect(req).toBeInstanceOf(IncomingMessage);
       /* eslint-disable no-param-reassign */
       userInfoResponse.body = {
         error: 'invalid_token',
@@ -323,7 +326,8 @@ describe('OAuth 2 service', () => {
   });
 
   it('should allow customizing the revoke response through a beforeRevoke event', async () => {
-    service.once('beforeRevoke', (revokeResponse) => {
+    service.once('beforeRevoke', (revokeResponse, req) => {
+      expect(req).toBeInstanceOf(IncomingMessage);
       /* eslint-disable no-param-reassign */
       revokeResponse.body = '';
       revokeResponse.statusCode = 204;

@@ -88,7 +88,7 @@ This is particularly useful when expecting the oidc service to behave in a speci
 
 ```js
 //Force the oidc service to provide an invalid_grant response on next call to the token endpoint
-service.once('beforeResponse', (tokenEndpointResponse) => {
+service.once('beforeResponse', (tokenEndpointResponse, req) => {
   tokenEndpointResponse.body = {
     error: 'invalid_grant'
   };
@@ -96,7 +96,7 @@ service.once('beforeResponse', (tokenEndpointResponse) => {
 });
 
 //Force the oidc service to provide an error on next call to userinfo endpoint
-service.once('beforeUserinfo', (userInfoResponse) => {
+service.once('beforeUserinfo', (userInfoResponse, req) => {
   userInfoResponse.body = {
     error: 'invalid_token',
     error_message: 'token is expired',
@@ -111,7 +111,7 @@ service.issuer.once('beforeSigning', (token) => {
 });
 
 //Simulates a custom token revocation body
-service.once('beforeRevoke', (revokeResponse) => {
+service.once('beforeRevoke', (revokeResponse, req) => {
   revokeResponse.body = {
     result: 'revoked'
   };
