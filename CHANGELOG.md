@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Add HTTP request object to `OAuth2Service`'s events
+- Add `beforeTokenSigning` event to `OAuth2Service`
 
 ## [1.4.0](https://github.com/axa-group/oauth2-mock-server/compare/v1.3.3...v1.4.0) — 2020-01-15
 
