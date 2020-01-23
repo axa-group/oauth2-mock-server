@@ -2,6 +2,7 @@
 
 const request = require('supertest');
 const jwt = require('jsonwebtoken');
+const { IncomingMessage } = require('http');
 const OAuth2Issuer = require('../lib/oauth2-issuer');
 const OAuth2Service = require('../lib/oauth2-service');
 const testKeys = require('./keys');
@@ -248,7 +249,8 @@ describe('OAuth 2 service', () => {
   });
 
   it('should be able to transform the token endpoint response', async () => {
-    service.once('beforeResponse', (tokenEndpointResponse) => {
+    service.once('beforeResponse', (tokenEndpointResponse, req) => {
+      expect(req).toBeInstanceOf(IncomingMessage);
       /* eslint-disable no-param-reassign */
       tokenEndpointResponse.body.expires_in = 9000;
       tokenEndpointResponse.body.some_stuff = 'whatever';
@@ -278,6 +280,33 @@ describe('OAuth 2 service', () => {
     });
   });
 
+  it('should allow customizing the token response through a beforeTokenSigning event', async () => {
+    service.once('beforeTokenSigning', (token, req) => {
+      expect(req).toBeInstanceOf(IncomingMessage);
+      /* eslint-disable no-param-reassign */
+      token.payload.custom_header = req.headers['custom-header'];
+      /* eslint-enable no-param-reassign */
+    });
+
+    const res = await tokenRequest(service.requestHandler)
+      .set('Custom-Header', 'custom-token-value')
+      .send({
+        grant_type: 'client_credentials',
+        scope: 'a-test-scope',
+      })
+      .expect(200);
+
+    const key = service.issuer.keys.get('test-rsa-key');
+
+    const decoded = jwt.verify(res.body.access_token, key.toPEM(false));
+
+    expect(decoded).toMatchObject({
+      iss: service.issuer.url,
+      scope: 'a-test-scope',
+      custom_header: 'custom-token-value',
+    });
+  });
+
   it('should expose the userinfo endpoint', async () => {
     const res = await request(service.requestHandler)
       .get('/userinfo')
@@ -289,7 +318,8 @@ describe('OAuth 2 service', () => {
   });
 
   it('should allow customizing the userinfo response through a beforeUserinfo event', async () => {
-    service.once('beforeUserinfo', (userInfoResponse) => {
+    service.once('beforeUserinfo', (userInfoResponse, req) => {
+      expect(req).toBeInstanceOf(IncomingMessage);
       /* eslint-disable no-param-reassign */
       userInfoResponse.body = {
         error: 'invalid_token',
@@ -323,7 +353,8 @@ describe('OAuth 2 service', () => {
   });
 
   it('should allow customizing the revoke response through a beforeRevoke event', async () => {
-    service.once('beforeRevoke', (revokeResponse) => {
+    service.once('beforeRevoke', (revokeResponse, req) => {
+      expect(req).toBeInstanceOf(IncomingMessage);
       /* eslint-disable no-param-reassign */
       revokeResponse.body = '';
       revokeResponse.statusCode = 204;
