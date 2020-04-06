@@ -19,7 +19,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { OAuth2Server } = require('../');
+const { OAuth2Server } = require('..');
 
 /* eslint no-console: off */
 
