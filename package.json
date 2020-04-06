@@ -1,6 +1,6 @@
 {
   "name": "oauth2-mock-server",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "description": "OAuth 2 mock server",
   "keywords": [
     "oauth",
