@@ -161,7 +161,18 @@ It simulates a token revocation. This endpoint should always return 200 as state
 
 ## Command-Line Interface
 
-The server can be run from the command line. Run `oauth2-mock-server --help` for details on its utilization.
+The server can be run from the command line. You can either install it globally:
+
+```shell
+npm install -g oauth2-mock-server
+oauth2-mock-server --help
+```
+
+or run it directly:
+
+```shell
+npx oauth2-mock-server --help
+```
 
 ## Attributions
 
