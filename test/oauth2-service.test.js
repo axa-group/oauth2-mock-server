@@ -216,6 +216,69 @@ describe('OAuth 2 service', () => {
     });
   });
 
+  it('should expose a token endpoint that remembers nonce', async () => {
+    await request(service.requestHandler)
+      .get('/authorize')
+      .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754');
+
+    const res = await request(service.requestHandler)
+      .post('/token')
+      .type('form')
+      .send({
+        grant_type: 'authorization_code',
+        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+        redirect_uri: 'https://example.com/callback',
+        client_id: 'abcecedf',
+      })
+      .expect(200);
+
+    const key = service.issuer.keys.get('test-rsa-key');
+
+    const decoded = jwt.verify(res.body.id_token, key.toPEM(false));
+
+    expect(decoded).toMatchObject({
+      sub: 'johndoe',
+      aud: 'abcecedf',
+      nonce: '21ba8e4a-26af-4538-b98a-bccf031f6754',
+    });
+  });
+
+  it('should expose a token endpoint that forgets nonce used', async () => {
+    await request(service.requestHandler)
+      .get('/authorize')
+      .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754');
+
+    await request(service.requestHandler)
+      .post('/token')
+      .type('form')
+      .send({
+        grant_type: 'authorization_code',
+        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+        redirect_uri: 'https://example.com/callback',
+        client_id: 'abcecedf',
+      });
+
+    const res = await request(service.requestHandler)
+      .post('/token')
+      .type('form')
+      .send({
+        grant_type: 'authorization_code',
+        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+        redirect_uri: 'https://example.com/callback',
+        client_id: 'abcecedf',
+      })
+      .expect(200);
+
+    const key = service.issuer.keys.get('test-rsa-key');
+
+    const decoded = jwt.verify(res.body.id_token, key.toPEM(false));
+
+    expect(decoded).toMatchObject({
+      sub: 'johndoe',
+      aud: 'abcecedf',
+    });
+  });
+
   it('should redirect to callback url keeping state when calling authorize endpoint with code response type', async () => {
     const res = await request(service.requestHandler)
       .get('/authorize')
