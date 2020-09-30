@@ -25,11 +25,11 @@ Generally we like to see pull requests that
 To run tests locally, first install all dependencies.
 
 ```shell
-npm install
+yarn install
 ```
 
 From the root directory, run the tests.
 
 ```shell
-npm test
+yarn test
 ```

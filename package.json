@@ -19,7 +19,8 @@
   },
   "license": "MIT",
   "engines": {
-    "node": ">=8.0.0"
+    "node": ">=8.0.0",
+    "yarn": "^1.15.2"
   },
   "repository": {
     "type": "git",
@@ -39,9 +40,8 @@
   "scripts": {
     "cleanup:testresults": "rimraf TestResults",
     "eslint": "eslint . bin/*",
-    "jest": "jest",
-    "pretest": "npm run cleanup:testresults && npm run eslint",
-    "test": "npm run jest"
+    "pretest": "yarn cleanup:testresults && yarn eslint",
+    "test": "yarn jest"
   },
   "dependencies": {
     "basic-auth": "^2.0.1",
