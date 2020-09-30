@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "editorconfig.editorconfig",
+    "dbaeumer.vscode-eslint",
+    "firsttris.vscode-jest-runner",
+    "redhat.vscode-yaml",
+  ]
+}
