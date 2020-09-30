@@ -19,7 +19,7 @@
   },
   "license": "MIT",
   "engines": {
-    "node": ">=8.0.0",
+    "node": ">=10.0.0",
     "yarn": "^1.15.2"
   },
   "repository": {
@@ -49,17 +49,17 @@
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "jsonwebtoken": "^8.5.1",
-    "node-jose": "^1.1.4",
-    "uuid": "^7.0.3"
+    "node-jose": "^2.0.0",
+    "uuid": "^8.3.0"
   },
   "devDependencies": {
-    "eslint": "^6.8.0",
-    "eslint-config-airbnb-base": "^14.1.0",
-    "eslint-plugin-import": "^2.20.2",
-    "eslint-plugin-jest": "^23.8.2",
-    "jest": "^25.2.7",
-    "jest-junit": "^10.0.0",
+    "eslint": "^7.10.0",
+    "eslint-config-airbnb-base": "^14.2.0",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-jest": "^24.0.2",
+    "jest": "^26.4.2",
+    "jest-junit": "^11.1.0",
     "rimraf": "^3.0.2",
-    "supertest": "^4.0.2"
+    "supertest": "^5.0.0"
   }
 }

@@ -145,7 +145,6 @@ describe('OAuth 2 service', () => {
     });
   });
 
-
   it('should expose a token endpoint that handles authorization_code grants without the basic authorization', async () => {
     const res = await request(service.requestHandler)
       .post('/token')
