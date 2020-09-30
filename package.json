@@ -50,7 +50,7 @@
     "express": "^4.17.1",
     "jsonwebtoken": "^8.5.1",
     "node-jose": "^1.1.4",
-    "uuid": "^7.0.3"
+    "uuid": "^8.3.0"
   },
   "devDependencies": {
     "eslint": "^6.8.0",
