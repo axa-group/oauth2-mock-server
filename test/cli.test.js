@@ -2,7 +2,7 @@
 
 const { exec } = require('./lib/child-script');
 
-const cliPath = require.resolve('../bin/oauth2-mock-server');
+const cliPath = require.resolve('../bin/oauth2-mock-server.js');
 
 describe('CLI', () => {
   beforeEach(() => {

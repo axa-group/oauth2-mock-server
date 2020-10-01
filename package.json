@@ -28,7 +28,7 @@
   },
   "main": "index.js",
   "bin": {
-    "oauth2-mock-server": "./bin/oauth2-mock-server"
+    "oauth2-mock-server": "./bin/oauth2-mock-server.js"
   },
   "files": [
     "CHANGELOG.md",
@@ -39,7 +39,7 @@
   ],
   "scripts": {
     "cleanup:testresults": "rimraf TestResults",
-    "eslint": "eslint . bin/*",
+    "eslint": "eslint .",
     "pretest": "yarn cleanup:testresults && yarn eslint",
     "test": "yarn jest"
   },
