@@ -68,7 +68,7 @@ let pemKey = fs.readFileSync('some-key.pem');
 await server.issuer.keys.addPEM(pemKey, 'some-key');
 ```
 
-JSON Web Tokens (JWT) can be built programatically:
+JSON Web Tokens (JWT) can be built programmatically:
 
 ```js
 const request = require('request');
@@ -84,7 +84,7 @@ request.get(
 );
 ```
 
-It also provides a convenient way, through event emitters, to programatically customize:
+It also provides a convenient way, through event emitters, to programmatically customize:
 
 - The JWT access token
 - The token endpoint response body and status
