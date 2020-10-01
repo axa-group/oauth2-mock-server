@@ -1,10 +1,10 @@
 environment:
   matrix:
-    - nodejs_version: "8"
     - nodejs_version: "10"
+    - nodejs_version: "12"
 
 cache:
-  - node_modules   
+  - node_modules
 
 platform:
   - x86
@@ -21,14 +21,11 @@ matrix:
 
 install:
   - ps: Install-Product node $env:nodejs_version $env:platform
-  - npm install
-
-before_build:
-- npm run eslint
+  - yarn install --frozen-lock-file
 
 test_script:
   - node --version
-  - npm --version
-  - npm test
+  - yarn --version
+  - yarn test
 
 build: off

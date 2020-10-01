@@ -13,12 +13,19 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 ## Development prerequisites
 
-- [Node.js 8.0+](https://nodejs.org/)
+- [Node.js 10.0+](https://nodejs.org/)
+- [Yarn 1.15.2+](https://classic.yarnpkg.com/lang/en/)
 
 ## How to use
 
 Add it to your Node.js project as a development dependency:
 
+With yarn...
+```shell
+yarn add -D oauth2-mock-server
+```
+
+...or with npm
 ```shell
 npm install --save-dev oauth2-mock-server
 ```

@@ -9,8 +9,8 @@ cache:
     - node_modules
 
 node_js:
-  - 8
   - 10
+  - 12
 
 before_script:
   # Add an IPv6 config - see the corresponding Travis issue
@@ -18,6 +18,12 @@ before_script:
   - if [ "${TRAVIS_OS_NAME}" == "linux" ]; then
       sudo sh -c 'echo 0 > /proc/sys/net/ipv6/conf/all/disable_ipv6';
     fi
+
+install:
+  - yarn install --frozen-lock-file
+
+script:
+  - yarn test
 
 branches:
  only:
