@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [2.0.0](https://github.com/axa-group/oauth2-mock-server/compare/v1.5.1...v1.6.0) — 2020-10-01
+
+### Added
+
+- Honor OpenID Connect `nonce` ([#34](https://github.com/axa-group/oauth2-mock-server/pull/34) by [@HASHIMOTO-Takafumi](https://github.com/HASHIMOTO-Takafumi))
+
+### Removed
+
+- No longer support Node 8
+
 ## [1.5.1](https://github.com/axa-group/oauth2-mock-server/compare/v1.5.0...v1.5.1) — 2020-04-06
 
 ### Security
