@@ -1,7 +1,5 @@
-'use strict';
-
-const request = require('supertest');
-const OAuth2Server = require('../lib/oauth2-server');
+import request from 'supertest';
+import { OAuth2Server } from '../src/lib/oauth2-server';
 
 describe('OAuth 2 Server', () => {
   it('should be able to start and stop the server', async () => {
@@ -20,7 +18,7 @@ describe('OAuth 2 Server', () => {
 
     expect(server.issuer.url).toBeNull();
 
-    await server.start(null, 'localhost');
+    await server.start(undefined, 'localhost');
     expect(server.issuer.url).toEqual(`http://localhost:${server.address().port}`);
 
     await expect(server.stop()).resolves.not.toBeDefined();

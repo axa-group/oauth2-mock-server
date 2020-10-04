@@ -15,31 +15,35 @@
  * limitations under the License.
  */
 
-'use strict';
+import { readFile, writeFileSync } from 'fs';
+import { promisify } from 'util';
+import { JWK } from 'node-jose';
+import path from 'path';
 
-const fs = require('fs');
-const path = require('path');
-const { OAuth2Server } = require('..');
+import { OAuth2Server } from './index';
+import { assertIsString, shift } from './lib/helpers';
+import type { Options } from './lib/types';
+
+const readFileAsync = promisify(readFile);
 
 /* eslint no-console: off */
 
-const defaultOptions = {
-  host: undefined,
+const defaultOptions: Options = {
   port: 8080,
   keys: [],
   saveJWK: false,
   savePEM: false,
 };
 
-module.exports = cli(...process.argv.slice(2));
+module.exports = cli(process.argv.slice(2));
 
-function cli(...args) {
+async function cli(args: string[]): Promise<OAuth2Server | null> {
   let options;
 
   try {
-    options = parseCliArgs(args);
+    options = await parseCliArgs(args);
   } catch (err) {
-    console.error(err.message);
+    console.error(err instanceof Error ? err.message : err);
     process.exitCode = 1;
     return Promise.reject(err);
   }
@@ -52,11 +56,11 @@ function cli(...args) {
   return startServer(options);
 }
 
-function parseCliArgs(args) {
+async function parseCliArgs(args: string[]): Promise<Options | null> {
   const opts = { ...defaultOptions };
 
   while (args.length > 0) {
-    const arg = args.shift();
+    const arg = shift(args);
 
     switch (arg) {
       case '-h':
@@ -64,16 +68,16 @@ function parseCliArgs(args) {
         showHelp();
         return null;
       case '-a':
-        opts.host = args.shift();
+        opts.host = shift(args);
         break;
       case '-p':
-        opts.port = parsePort(args.shift());
+        opts.port = parsePort(shift(args));
         break;
       case '--jwk':
-        opts.keys.push(parseJWK(args.shift()));
+        opts.keys.push(await parseJWK(shift(args)));
         break;
       case '--pem':
-        opts.keys.push(parsePEM(args.shift()));
+        opts.keys.push(await parsePEM(shift(args)));
         break;
       case '--save-jwk':
         opts.saveJWK = true;
@@ -90,7 +94,7 @@ function parseCliArgs(args) {
 }
 
 function showHelp() {
-  const scriptName = path.basename(__filename, '.js');
+  const scriptName = path.basename(__filename, '.ts');
   console.log(`Usage: ${scriptName} [options]
        ${scriptName} -a localhost -p 8080
 
@@ -115,7 +119,7 @@ will be generated. This key can then be saved to disk with the --save-jwk
 or --save-pem options for later reuse.`);
 }
 
-function parsePort(portStr) {
+function parsePort(portStr: string) {
   const port = parseInt(portStr, 10);
 
   if (Number.isNaN(port) || port < 0 || port > 65535) {
@@ -125,47 +129,44 @@ function parsePort(portStr) {
   return port;
 }
 
-function parseJWK(filename) {
-  const jwkStr = fs.readFileSync(filename, 'utf8');
-  return JSON.parse(jwkStr);
+async function parseJWK(filename: string): Promise<JWK.Key> {
+  const jwkStr = await readFileAsync(filename, 'utf8');
+  return await JWK.asKey(jwkStr);
 }
 
-function parsePEM(filename) {
-  return {
+async function parsePEM(filename: string): Promise<JWK.Key> {
+  const pem = await readFileAsync(filename, 'utf8');
+  return await JWK.asKey(pem, 'pem', {
     kid: path.parse(filename).name,
-    pem: fs.readFileSync(filename, 'utf8'),
-  };
+  });
 }
 
-function saveJWK(keys) {
+function saveJWK(keys: JWK.Key[]) {
   keys.forEach((key) => {
     const filename = `${key.kid}.json`;
-    fs.writeFileSync(filename, JSON.stringify(key.toJSON(true), null, 2));
+    writeFileSync(filename, JSON.stringify(key.toJSON(true), null, 2));
     console.log(`JSON web key written to file "${filename}".`);
   });
 }
 
-function savePEM(keys) {
+function savePEM(keys: JWK.Key[]) {
   keys.forEach((key) => {
     const filename = `${key.kid}.pem`;
-    fs.writeFileSync(filename, key.toPEM(true));
+    writeFileSync(filename, key.toPEM(true));
     console.log(`PEM-encoded key written to file "${filename}".`);
   });
 }
 
-async function startServer(opts) {
+async function startServer(opts: Options) {
   const server = new OAuth2Server();
 
-  await Promise.all(opts.keys.map(async (key) => {
-    let jwk;
-    if (key.pem) {
-      jwk = await server.issuer.keys.addPEM(key.pem, key.kid);
-    } else {
-      jwk = await server.issuer.keys.add(key);
-    }
+  await Promise.all(
+    opts.keys.map(async (key) => {
+      const jwk = await server.issuer.keys.add(key);
 
-    console.log(`Added key with kid "${jwk.kid}"`);
-  }));
+      console.log(`Added key with kid "${jwk.kid}"`);
+    })
+  );
 
   if (opts.keys.length === 0) {
     const jwk = await server.issuer.keys.generateRSA(1024);
@@ -188,8 +189,10 @@ async function startServer(opts) {
   const hostname = addr.family === 'IPv6' ? `[${addr.address}]` : addr.address;
 
   console.log(`OAuth 2 server listening on http://${hostname}:${addr.port}`);
+  assertIsString(server.issuer.url, 'Empty host');
   console.log(`OAuth 2 issuer is ${server.issuer.url}`);
 
+  // eslint-disable-next-line @typescript-eslint/no-misused-promises
   process.once('SIGINT', async () => {
     await server.stop();
     console.log('OAuth 2 server has been stopped.');

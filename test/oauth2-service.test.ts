@@ -1,19 +1,19 @@
-'use strict';
+import request from 'supertest';
+import jwt from 'jsonwebtoken';
+import { IncomingMessage } from 'http';
+import type { Express } from 'express';
 
-const request = require('supertest');
-const jwt = require('jsonwebtoken');
-const { IncomingMessage } = require('http');
-const OAuth2Issuer = require('../lib/oauth2-issuer');
-const OAuth2Service = require('../lib/oauth2-service');
-const testKeys = require('./keys');
+import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
+import { OAuth2Service } from '../src/lib/oauth2-service';
+import * as testKeys from './keys';
 
 describe('OAuth 2 service', () => {
-  let service;
+  let service: OAuth2Service;
 
   beforeAll(async () => {
     const issuer = new OAuth2Issuer();
     issuer.url = 'https://issuer.example.com';
-    await issuer.keys.add(testKeys.get('test-rsa-key.json'));
+    await issuer.keys.add(testKeys.getParsed('test-rsa-key.json'));
 
     service = new OAuth2Service(issuer);
   });
@@ -24,20 +24,21 @@ describe('OAuth 2 service', () => {
       .expect(200);
 
     const { url } = service.issuer;
+    expect(url).not.toBeNull();
 
     expect(res.body).toMatchObject({
       issuer: url,
-      token_endpoint: `${url}/token`,
-      authorization_endpoint: `${url}/authorize`,
-      userinfo_endpoint: `${url}/userinfo`,
+      token_endpoint: `${url!}/token`,
+      authorization_endpoint: `${url!}/authorize`,
+      userinfo_endpoint: `${url!}/userinfo`,
       token_endpoint_auth_methods_supported: ['none'],
-      jwks_uri: `${url}/jwks`,
+      jwks_uri: `${url!}/jwks`,
       response_types_supported: ['code'],
       grant_types_supported: ['client_credentials', 'authorization_code', 'password'],
       token_endpoint_auth_signing_alg_values_supported: ['RS256'],
       response_modes_supported: ['query'],
       id_token_signing_alg_values_supported: ['RS256'],
-      revocation_endpoint: `${url}/revoke`,
+      revocation_endpoint: `${url!}/revoke`,
     });
   });
 
@@ -74,11 +75,15 @@ describe('OAuth 2 service', () => {
     });
 
     const key = service.issuer.keys.get('test-rsa-key');
+    expect(key).not.toBeNull();
 
-    const decoded = jwt.verify(res.body.access_token, key.toPEM(false));
+    const resBody = res.body as { access_token: string; scope: string };
+    const decoded = jwt.verify(resBody.access_token, key!.toPEM(false));
 
-    expect(decoded.iss).toEqual(service.issuer.url);
-    expect(decoded.scope).toEqual(res.body.scope);
+    expect(decoded).toMatchObject({
+      iss: service.issuer.url,
+      scope: resBody.scope,
+    });
   });
 
   it('should expose a token endpoint that handles Resource Owner Password Credentials grants', async () => {
@@ -100,13 +105,16 @@ describe('OAuth 2 service', () => {
       refresh_token: expect.any(String),
     });
 
-    const key = service.issuer.keys.get('test-rsa-key');
+    const resBody = res.body as { access_token: string; scope: string };
 
-    const decoded = jwt.verify(res.body.access_token, key.toPEM(false));
+    const key = service.issuer.keys.get('test-rsa-key');
+    expect(key).not.toBeNull();
+
+    const decoded = jwt.verify(resBody.access_token, key!.toPEM(false));
 
     expect(decoded).toMatchObject({
       iss: service.issuer.url,
-      scope: res.body.scope,
+      scope: resBody.scope,
       sub: 'the-resource-owner@example.com',
       amr: ['pwd'],
     });
@@ -134,8 +142,10 @@ describe('OAuth 2 service', () => {
     });
 
     const key = service.issuer.keys.get('test-rsa-key');
+    expect(key).not.toBeNull();
 
-    const decoded = jwt.verify(res.body.access_token, key.toPEM(false));
+    const resBody = res.body as { access_token: string };
+    const decoded = jwt.verify(resBody.access_token, key!.toPEM(false));
 
     expect(decoded).toMatchObject({
       iss: service.issuer.url,
@@ -167,8 +177,14 @@ describe('OAuth 2 service', () => {
     });
 
     const key = service.issuer.keys.get('test-rsa-key');
+    expect(key).not.toBeNull();
 
-    const decoded = jwt.verify(res.body.access_token, key.toPEM(false));
+    const resBody = res.body as {
+      access_token: string;
+      scope: string;
+      id_token: string;
+    };
+    const decoded = jwt.verify(resBody.access_token, key!.toPEM(false));
 
     expect(decoded).toMatchObject({
       iss: service.issuer.url,
@@ -177,7 +193,7 @@ describe('OAuth 2 service', () => {
       amr: ['pwd'],
     });
 
-    const decodedIdToken = jwt.verify(res.body.id_token, key.toPEM(false));
+    const decodedIdToken = jwt.verify(resBody.id_token, key!.toPEM(false));
     expect(decodedIdToken).toMatchObject({
       aud: 'client_id_sample',
     });
@@ -204,8 +220,10 @@ describe('OAuth 2 service', () => {
     });
 
     const key = service.issuer.keys.get('test-rsa-key');
+    expect(key).not.toBeNull();
 
-    const decoded = jwt.verify(res.body.access_token, key.toPEM(false));
+    const resBody = res.body as { access_token: string };
+    const decoded = jwt.verify(resBody.access_token, key!.toPEM(false));
 
     expect(decoded).toMatchObject({
       iss: service.issuer.url,
@@ -232,8 +250,13 @@ describe('OAuth 2 service', () => {
       .expect(200);
 
     const key = service.issuer.keys.get('test-rsa-key');
+    expect(key).not.toBeNull();
 
-    const decoded = jwt.verify(res.body.id_token, key.toPEM(false));
+    expect(res.body).toMatchObject({
+      id_token: expect.any(String),
+    });
+    const resBody = res.body as { id_token: string };
+    const decoded = jwt.verify(resBody.id_token, key!.toPEM(false));
 
     expect(decoded).toMatchObject({
       sub: 'johndoe',
@@ -263,8 +286,13 @@ describe('OAuth 2 service', () => {
       .expect(200);
 
     const key = service.issuer.keys.get('test-rsa-key');
+    expect(key).not.toBeNull();
 
-    const decoded = jwt.verify(res.body.id_token, key.toPEM(false));
+    expect(res.body).toMatchObject({
+      id_token: expect.any(String),
+    });
+    const resBody = res.body as { id_token: string };
+    const decoded = jwt.verify(resBody.id_token, key!.toPEM(false));
 
     expect(decoded).toMatchObject({
       sub: 'johndoe',
@@ -300,8 +328,13 @@ describe('OAuth 2 service', () => {
       .expect(200);
 
     const key = service.issuer.keys.get('test-rsa-key');
+    expect(key).not.toBeNull();
 
-    const decoded = jwt.verify(res.body.id_token, key.toPEM(false));
+    expect(res.body).toMatchObject({
+      id_token: expect.any(String),
+    });
+    const resBody = res.body as { id_token: string };
+    const decoded = jwt.verify(resBody.id_token, key!.toPEM(false));
 
     expect(decoded).toMatchObject({
       sub: 'johndoe',
@@ -316,7 +349,11 @@ describe('OAuth 2 service', () => {
       .redirects(0)
       .expect(302);
 
-    expect(res.headers.location).toMatch(/http:\/\/example\.com\/callback\?code=[^&]*&scope=dummy_scope&state=state123/);
+    expect(res).toMatchObject({
+      headers: {
+        location: expect.stringMatching(/http:\/\/example\.com\/callback\?code=[^&]*&scope=dummy_scope&state=state123/)
+      }
+    })
   });
 
   it('should redirect to callback url with an error and keeping state when calling authorize endpoint with an invalid response type', async () => {
@@ -326,7 +363,11 @@ describe('OAuth 2 service', () => {
       .redirects(0)
       .expect(302);
 
-    expect(res.headers.location).toMatch('http://example.com/callback?error=unsupported_response_type&error_description=The+authorization+server+does+not+support+obtaining+an+access+token+using+this+response_type.&state=state123');
+    expect(res).toMatchObject({
+      headers: {
+        location: 'http://example.com/callback?error=unsupported_response_type&error_description=The+authorization+server+does+not+support+obtaining+an+access+token+using+this+response_type.&state=state123'
+      }
+    })
   });
 
   it('should not handle token requests unsupported grant types', async () => {
@@ -344,11 +385,9 @@ describe('OAuth 2 service', () => {
   it('should be able to transform the token endpoint response', async () => {
     service.once('beforeResponse', (tokenEndpointResponse, req) => {
       expect(req).toBeInstanceOf(IncomingMessage);
-      /* eslint-disable no-param-reassign */
       tokenEndpointResponse.body.expires_in = 9000;
       tokenEndpointResponse.body.some_stuff = 'whatever';
       tokenEndpointResponse.statusCode = 302;
-      /* eslint-enable no-param-reassign */
     });
 
     const res = await request(service.requestHandler)
@@ -376,9 +415,7 @@ describe('OAuth 2 service', () => {
   it('should allow customizing the token response through a beforeTokenSigning event', async () => {
     service.once('beforeTokenSigning', (token, req) => {
       expect(req).toBeInstanceOf(IncomingMessage);
-      /* eslint-disable no-param-reassign */
       token.payload.custom_header = req.headers['custom-header'];
-      /* eslint-enable no-param-reassign */
     });
 
     const res = await tokenRequest(service.requestHandler)
@@ -390,8 +427,14 @@ describe('OAuth 2 service', () => {
       .expect(200);
 
     const key = service.issuer.keys.get('test-rsa-key');
+    expect(key).not.toBeNull();
 
-    const decoded = jwt.verify(res.body.access_token, key.toPEM(false));
+    expect(res.body).toMatchObject({
+      access_token: expect.any(String),
+    });
+    const resBody = res.body as { access_token: string };
+
+    const decoded = jwt.verify(resBody.access_token, key!.toPEM(false));
 
     expect(decoded).toMatchObject({
       iss: service.issuer.url,
@@ -413,13 +456,11 @@ describe('OAuth 2 service', () => {
   it('should allow customizing the userinfo response through a beforeUserinfo event', async () => {
     service.once('beforeUserinfo', (userInfoResponse, req) => {
       expect(req).toBeInstanceOf(IncomingMessage);
-      /* eslint-disable no-param-reassign */
       userInfoResponse.body = {
         error: 'invalid_token',
         error_message: 'token is expired',
       };
       userInfoResponse.statusCode = 401;
-      /* eslint-enable no-param-reassign */
     });
     const res = await request(service.requestHandler)
       .get('/userinfo')
@@ -448,10 +489,8 @@ describe('OAuth 2 service', () => {
   it('should allow customizing the revoke response through a beforeRevoke event', async () => {
     service.once('beforeRevoke', (revokeResponse, req) => {
       expect(req).toBeInstanceOf(IncomingMessage);
-      /* eslint-disable no-param-reassign */
       revokeResponse.body = '';
       revokeResponse.statusCode = 204;
-      /* eslint-enable no-param-reassign */
     });
     const res = await request(service.requestHandler)
       .post('/revoke')
@@ -471,7 +510,9 @@ describe('OAuth 2 service', () => {
       .get('/.well-known/openid-configuration')
       .expect(200);
 
-    expect(res.headers['access-control-allow-origin']).toBe('*');
+    expect(res).toMatchObject({
+      headers: { 'access-control-allow-origin': '*' },
+    });
   });
 
   it('should expose CORS headers in an OPTIONS request', async () => {
@@ -479,18 +520,22 @@ describe('OAuth 2 service', () => {
       .options('/token')
       .expect(204);
 
-    expect(res.headers['access-control-allow-origin']).toBe('*');
+    expect(res).toMatchObject({
+      headers: { 'access-control-allow-origin': '*' },
+    });
   });
 });
 
-function getCode(response) {
-  const parts = response.header.location.split('?', 2);
-  return parts[1].split('&')
-    .find((query) => query.startsWith('code='))
-    .split('=', 2)[1];
+function getCode(response: request.Response) {
+  expect(response).toMatchObject({
+    header: { location: expect.any(String) },
+  });
+  const parsed = response as { header: { location: string } };
+  const url = new URL(parsed.header.location);
+  return url.searchParams.get('code');
 }
 
-function tokenRequest(app) {
+function tokenRequest(app: Express) {
   return request(app)
     .post('/token')
     .type('form')

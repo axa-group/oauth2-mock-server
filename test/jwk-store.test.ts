@@ -1,7 +1,5 @@
-'use strict';
-
-const JWKStore = require('../lib/jwk-store');
-const testKeys = require('./keys');
+import { JWKStore } from '../src/lib/jwk-store';
+import * as testKeys from './keys';
 
 describe('JWK Store', () => {
   it('should be able to generate a new RSA key', async () => {
@@ -17,9 +15,9 @@ describe('JWK Store', () => {
   });
 
   it.each([
-    ['RSA', testKeys.get('test-rsa-key.json'), 512],
-    ['EC', testKeys.get('test-ec-key.json'), 256],
-    ['oct', testKeys.get('test-oct-key.json'), 512],
+    ['RSA', testKeys.getParsed('test-rsa-key.json'), 512],
+    ['EC', testKeys.getParsed('test-ec-key.json'), 256],
+    ['oct', testKeys.getParsed('test-oct-key.json'), 512],
   ])('should be able to add a JWK \'%s\' key to the store', async (keyType, testKey, expectedLength) => {
     const store = new JWKStore();
     const key = await store.add(testKey);
@@ -37,7 +35,7 @@ describe('JWK Store', () => {
     ['EC', testKeys.get('test-ec-key.pem'), 256],
   ])('should be able to add a PEM-encoded \'%s\' key to the store', async (keyType, testPEMKey, expectedLength) => {
     const store = new JWKStore();
-    const key = await store.addPEM(testPEMKey, null, 'sig');
+    const key = await store.addPEM(testPEMKey);
 
     expect(key).toMatchObject({
       length: expectedLength,
@@ -69,7 +67,7 @@ describe('JWK Store', () => {
     expect(stored3).toBeNull();
   });
 
-  it('should return null when trying to retrieve a key from an empty store', async () => {
+  it('should return null when trying to retrieve a key from an empty store', () => {
     const store = new JWKStore();
 
     const res1 = store.get();
@@ -86,11 +84,22 @@ describe('JWK Store', () => {
     await store.generateRSA(512, 'key-two');
 
     const jwks = store.toJSON();
+    expect(jwks).toHaveProperty("keys");
+    expect(jwks.keys).toBeInstanceOf(Array)
 
-    expect(jwks.keys).toHaveLength(3);
-    expect(jwks.keys.map((key) => key.kid).sort()).toEqual(['key-one', 'key-two', 'key-two']);
+    const keys = jwks.keys as unknown[];
+    expect(keys).toHaveLength(3);
 
-    jwks.keys.forEach((jwk) => {
+    for (const key of keys) {
+      expect(key).toBeInstanceOf(Object);
+      expect(key).toHaveProperty("kid");
+      expect(typeof (key as Record<string, unknown>).kid).toBe("string")
+    }
+
+    const keysWithKid = keys as { kid: string }[]
+    expect(keysWithKid.map((key) => key.kid).sort()).toEqual(['key-one', 'key-two', 'key-two']);
+
+    keysWithKid.forEach((jwk) => {
       expect(store.get(jwk.kid)).not.toBeNull();
 
       ['e', 'n'].forEach((prop) => {

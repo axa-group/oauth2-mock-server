@@ -1,17 +1,30 @@
 {
   "root": true,
-  "env": {
-    "node": true
-  },
-  "extends": "airbnb-base",
+  "parser": "@typescript-eslint/parser",
   "parserOptions": {
     "ecmaVersion": 2018,
-    "sourceType": "script"
+    "sourceType": "module",
+    "project": "./tsconfig.json"
   },
+  "plugins": ["@typescript-eslint", "import", "jest", "jsdoc"],
+  "extends": [
+    "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
+    "plugin:@typescript-eslint/recommended-requiring-type-checking",
+    "prettier/@typescript-eslint",
+    "plugin:import/errors",
+    "plugin:import/warnings",
+    "plugin:import/typescript",
+    "plugin:jsdoc/recommended",
+    "plugin:jest/recommended",
+    "plugin:prettier/recommended"
+  ],
   "rules": {
-    "linebreak-style": "off",
-    "no-use-before-define": [ "error", { "functions": false } ],
-    "strict": [ "error", "global" ],
-    "valid-jsdoc": "warn"
+    "jsdoc/require-jsdoc": [
+      "warn",
+      {
+        "publicOnly": true
+      }
+    ]
   }
 }
