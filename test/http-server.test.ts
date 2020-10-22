@@ -1,7 +1,6 @@
-'use strict';
-
-const request = require('supertest');
-const HttpServer = require('../lib/http-server');
+import { RequestListener } from 'http';
+import request from 'supertest';
+import { HttpServer } from '../src/lib/http-server';
 
 describe('HTTP Server', () => {
   it('should be able to start and stop the server', async () => {
@@ -62,7 +61,7 @@ describe('HTTP Server', () => {
   });
 });
 
-function dummyHandler(req, res) {
+const dummyHandler: RequestListener = (_req, res) => {
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');
   res.end('{ "value": "Dummy response" }');

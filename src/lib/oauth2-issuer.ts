@@ -15,55 +15,68 @@
 
 /**
  * OAuth2 Issuer library
+ *
  * @module lib/oauth2-issuer
  */
 
-'use strict';
+import jwt from 'jsonwebtoken';
+import { EventEmitter } from 'events';
+import { JWK } from 'node-jose';
 
-const jwt = require('jsonwebtoken');
-const { EventEmitter } = require('events');
-const JWKStore = require('./jwk-store');
-
-const keys = Symbol('keys');
+import { JWKStore } from './jwk-store';
+import { assertIsAlgorithm, assertIsString } from './helpers';
+import type { Header, MutableToken, Payload, ScopesOrTransform } from './types';
 
 /**
  * Represents an OAuth 2 issuer.
  */
-class OAuth2Issuer extends EventEmitter {
+export class OAuth2Issuer extends EventEmitter {
+  /**
+   * Sets or returns the issuer URL.
+   *
+   * @type {string}
+   */
+  url: string | null;
+
+  #keys: JWKStore;
+
   /**
    * Creates a new instance of HttpServer.
    */
   constructor() {
     super();
-    /**
-     * Sets or returns the issuer URL.
-     * @type {String}
-     */
     this.url = null;
 
-    this[keys] = new JWKStore();
+    this.#keys = new JWKStore();
   }
 
   /**
    * Returns the key store.
+   *
    * @type {JWKStore}
    */
-  get keys() {
-    return this[keys];
+  get keys(): JWKStore {
+    return this.#keys;
   }
 
   /**
    * Builds a JWT with the provided 'kid'.
-   * @param {Boolean} signed A value that indicates whether or not to sign the JWT.
-   * @param {String} [kid] The 'kid' of the key that will be used to sign the JWT.
+   *
+   * @param {boolean} signed A value that indicates whether or not to sign the JWT.
+   * @param {string} [kid] The 'kid' of the key that will be used to sign the JWT.
    *     If omitted, the next key in the round-robin will be used.
-   * @param {(String|Array<String>|jwtTransform)} [scopesOrTransform] A scope, array of scopes,
+   * @param {ScopesOrTransform} [scopesOrTransform] A scope, array of scopes,
    *     or JWT transformation callback.
-   * @param {Number} [expiresIn] Time in seconds for the JWT to expire. Default: 3600 seconds.
-   * @returns {String} The produced JWT.
+   * @param {number} [expiresIn] Time in seconds for the JWT to expire. Default: 3600 seconds.
+   * @returns {string} The produced JWT.
    * @fires OAuth2Issuer#beforeSigning
    */
-  buildToken(signed, kid, scopesOrTransform, expiresIn) {
+  buildToken(
+    signed: boolean,
+    kid?: string,
+    scopesOrTransform?: ScopesOrTransform,
+    expiresIn = 3600
+  ): string {
     const key = this.keys.get(kid);
 
     if (!key) {
@@ -72,14 +85,16 @@ class OAuth2Issuer extends EventEmitter {
 
     const timestamp = Math.floor(Date.now() / 1000);
 
-    const header = {
+    const header: Header = {
       kid: key.kid,
     };
 
-    const payload = {
+    assertIsString(this.url, 'Unknown issuer url');
+
+    const payload: Payload = {
       iss: this.url,
       iat: timestamp,
-      exp: timestamp + (expiresIn || 3600),
+      exp: timestamp + expiresIn,
       nbf: timestamp - 10,
     };
 
@@ -91,22 +106,21 @@ class OAuth2Issuer extends EventEmitter {
       scopesOrTransform(header, payload);
     }
 
-    const token = {
+    const token: MutableToken = {
       header,
       payload,
     };
 
     /**
      * Before signing event.
+     *
      * @event OAuth2Issuer#beforeSigning
-     * @param {object} token The JWT header and payload.
-     * @param {object} token.header The JWT header.
-     * @param {object} token.payload The JWT payload.
+     * @param {MutableToken} token The JWT header and payload.
      */
     this.emit('beforeSigning', token);
 
-    const options = {
-      algorithm: ((arguments.length === 0 || signed) ? getKeyAlg(key) : 'none'),
+    const options: jwt.SignOptions = {
+      algorithm: arguments.length === 0 || signed ? getKeyAlg(key) : 'none',
       header: token.header,
     };
 
@@ -114,30 +128,32 @@ class OAuth2Issuer extends EventEmitter {
   }
 }
 
-function getKeyAlg(key) {
+function getKeyAlg(key: JWK.Key): jwt.Algorithm {
   if (key.alg) {
+    assertIsAlgorithm(key.alg);
     return key.alg;
   }
 
   switch (key.kty) {
     case 'RSA':
       return 'RS256';
-    case 'EC':
-      /* eslint-disable-next-line no-bitwise */
-      return `ES${key.length & 0xFFF0}`;
+    case 'EC': {
+      const length = key.length & 0xfff0;
+      const alg = `ES${length}`;
+      assertIsAlgorithm(alg);
+      return alg;
+    }
     default:
       return 'HS256';
   }
 }
 
-function getSecret(key) {
+function getSecret(key: JWK.Key): string {
   switch (key.kty) {
     case 'RSA':
     case 'EC':
       return key.toPEM(true);
     default:
-      return key.toObject(true).k;
+      return (key.toJSON(true) as { k: string }).k;
   }
 }
-
-module.exports = OAuth2Issuer;

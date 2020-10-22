@@ -13,14 +13,6 @@
  * limitations under the License.
  */
 
-'use strict';
-
-const JWKStore = require('./lib/jwk-store');
-const OAuth2Issuer = require('./lib/oauth2-issuer');
-const OAuth2Server = require('./lib/oauth2-server');
-
-module.exports = {
-  JWKStore,
-  OAuth2Issuer,
-  OAuth2Server,
-};
+export { JWKStore } from './lib/jwk-store';
+export { OAuth2Issuer } from './lib/oauth2-issuer';
+export { OAuth2Server } from './lib/oauth2-server';

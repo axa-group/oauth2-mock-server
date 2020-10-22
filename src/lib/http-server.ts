@@ -15,67 +15,71 @@
 
 /**
  * HTTP Server library
+ *
  * @module lib/http-server
  */
 
-'use strict';
+import { Server, RequestListener, createServer } from 'http';
+import type { AddressInfo } from 'net';
 
-const http = require('http');
-
-const server = Symbol('server');
+import { assertIsAddressInfo } from './helpers';
 
 /**
  * Provides a restartable wrapper for http.CreateServer().
  */
-class HttpServer {
-  /**
-   * @callback requestHandler
-   * @param {http.IncomingMessage} request The incoming message.
-   * @param {http.ServerResponse} response The server response.
-   */
+export class HttpServer {
+  #server: Server;
 
   /**
    * Creates a new instance of HttpServer.
-   * @param {requestHandler} requestListener The function that will handle the server's requests.
+   *
+   * @param {RequestListener} requestListener The function that will handle the server's requests.
    */
-  constructor(requestListener) {
-    this[server] = http.createServer(requestListener);
+  constructor(requestListener: RequestListener) {
+    this.#server = createServer(requestListener);
   }
 
   /**
    * Returns a value indicating whether or not the server is listening for connections.
-   * @type {Boolean}
+   *
+   * @type {boolean}
    */
-  get listening() {
-    return this[server].listening;
+  get listening(): boolean {
+    return this.#server.listening;
   }
 
   /**
    * Returns the bound address, family name and port where the server is listening,
    * or null if the server has not been started.
+   *
    * @returns {AddressInfo} The server bound address information.
    */
-  address() {
+  address(): AddressInfo {
     if (!this.listening) {
       throw new Error('Server is not started.');
     }
 
-    return this[server].address();
+    const address = this.#server.address();
+
+    assertIsAddressInfo(address);
+
+    return address;
   }
 
   /**
    * Starts the server.
-   * @param {Number} [port] Port number. If omitted, it will be assigned by the operating system.
-   * @param {String} [host] Host name.
+   *
+   * @param {number} [port] Port number. If omitted, it will be assigned by the operating system.
+   * @param {string} [host] Host name.
    * @returns {Promise<void>} A promise that resolves when the server has been started.
    */
-  async start(port, host) {
+  async start(port?: number, host?: string): Promise<Server> {
     if (this.listening) {
       throw new Error('Server has already been started.');
     }
 
     return new Promise((resolve, reject) => {
-      this[server]
+      this.#server
         .listen(port, host)
         .on('listening', resolve)
         .on('error', reject);
@@ -84,15 +88,16 @@ class HttpServer {
 
   /**
    * Stops the server.
+   *
    * @returns {Promise} Resolves when the server has been stopped.
    */
-  async stop() {
+  async stop(): Promise<void> {
     if (!this.listening) {
       throw new Error('Server is not started.');
     }
 
     return new Promise((resolve, reject) => {
-      this[server].close((err) => {
+      this.#server.close((err) => {
         if (err) {
           return reject(err);
         }
@@ -102,5 +107,3 @@ class HttpServer {
     });
   }
 }
-
-module.exports = HttpServer;

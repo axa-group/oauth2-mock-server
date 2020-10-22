@@ -19,47 +19,71 @@
   },
   "license": "MIT",
   "engines": {
-    "node": ">=10.0.0",
+    "node": "^10.13 || ^12.13",
     "yarn": "^1.15.2"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/axa-group/oauth2-mock-server.git"
   },
-  "main": "index.js",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
   "bin": {
-    "oauth2-mock-server": "./bin/oauth2-mock-server.js"
+    "oauth2-mock-server": "./dist/oauth2-mock-server.js"
   },
   "files": [
     "CHANGELOG.md",
+    "LICENSE.md",
     "README.md",
-    "index.js",
-    "bin/",
-    "lib/"
+    "dist/**/*.*"
   ],
   "scripts": {
+    "build:clean": "rimraf ./dist",
+    "prebuild": "yarn build:clean",
+    "build": "tsc -p ./tsconfig.build.json",
     "cleanup:testresults": "rimraf TestResults",
-    "eslint": "eslint .",
-    "pretest": "yarn cleanup:testresults && yarn eslint",
+    "prelint": "tsc --noEmit",
+    "lint": "eslint --cache --cache-location .cache/ --ext=.js,.ts src test --max-warnings 0",
+    "pretest": "yarn cleanup:testresults && yarn lint",
     "test": "yarn jest"
   },
   "dependencies": {
+    "@types/node-jose": "^1.1.5",
     "basic-auth": "^2.0.1",
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",
     "jsonwebtoken": "^8.5.1",
+    "lodash.isplainobject": "^4.0.6",
     "node-jose": "^2.0.0",
     "uuid": "^8.3.0"
   },
   "devDependencies": {
+    "@types/basic-auth": "^1.1.3",
+    "@types/body-parser": "^1.19.0",
+    "@types/cors": "^2.8.7",
+    "@types/express": "^4.17.8",
+    "@types/jest": "^26.0.14",
+    "@types/jsonwebtoken": "^8.5.0",
+    "@types/lodash.isplainobject": "^4.0.6",
+    "@types/node": "^10.17.35",
+    "@types/supertest": "^2.0.10",
+    "@types/uuid": "^8.3.0",
+    "@typescript-eslint/eslint-plugin": "^4.3.0",
+    "@typescript-eslint/parser": "^4.3.0",
     "eslint": "^7.10.0",
-    "eslint-config-airbnb-base": "^14.2.0",
+    "eslint-config-prettier": "^6.12.0",
     "eslint-plugin-import": "^2.22.1",
     "eslint-plugin-jest": "^24.0.2",
+    "eslint-plugin-jsdoc": "^30.6.3",
+    "eslint-plugin-prettier": "^3.1.4",
     "jest": "^26.4.2",
     "jest-junit": "^11.1.0",
+    "prettier": "^2.1.2",
     "rimraf": "^3.0.2",
-    "supertest": "^5.0.0"
+    "supertest": "^5.0.0",
+    "ts-jest": "^26.4.1",
+    "ts-node": "^9.0.0",
+    "typescript": "^4.0.3"
   }
 }

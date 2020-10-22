@@ -15,24 +15,26 @@
 
 /**
  * OAuth2 HTTP Server library
+ *
  * @module lib/oauth2-server
  */
 
-'use strict';
+import { URL } from 'url';
+import { isIP, AddressInfo } from 'net';
+import { Server } from 'http';
 
-const { URL } = require('url');
-const net = require('net');
-const HttpServer = require('./http-server');
-const OAuth2Issuer = require('./oauth2-issuer');
-const OAuth2Service = require('./oauth2-service');
-
-const issuer = Symbol('issuer');
-const service = Symbol('service');
+import { HttpServer } from './http-server';
+import { OAuth2Issuer } from './oauth2-issuer';
+import { OAuth2Service } from './oauth2-service';
+import { assertIsAddressInfo } from './helpers';
 
 /**
  * Represents an OAuth2 HTTP server.
  */
-class OAuth2Server extends HttpServer {
+export class OAuth2Server extends HttpServer {
+  private _service: OAuth2Service;
+  private _issuer: OAuth2Issuer;
+
   /**
    * Creates a new instance of OAuth2Server.
    */
@@ -42,69 +44,81 @@ class OAuth2Server extends HttpServer {
 
     super(serv.requestHandler);
 
-    this[issuer] = iss;
-    this[service] = serv;
+    this._issuer = iss;
+    this._service = serv;
   }
 
   /**
    * Returns the OAuth2Issuer instance used by the server.
+   *
    * @type {OAuth2Issuer}
    */
-  get issuer() {
-    return this[issuer];
+  get issuer(): OAuth2Issuer {
+    return this._issuer;
   }
 
   /**
    * Returns the OAuth2Service instance used by the server.
+   *
    * @type {OAuth2Service}
    */
-  get service() {
-    return this[service];
+  get service(): OAuth2Service {
+    return this._service;
   }
 
   /**
    * Returns a value indicating whether or not the server is listening for connections.
-   * @type {Boolean}
+   *
+   * @type {boolean}
    */
-  get listening() {
+  get listening(): boolean {
     return super.listening;
   }
 
   /**
    * Returns the bound address, family name and port where the server is listening,
    * or null if the server has not been started.
+   *
    * @returns {AddressInfo} The server bound address information.
    */
-  address() {
-    return super.address();
+  address(): AddressInfo {
+    const address = super.address();
+
+    assertIsAddressInfo(address);
+
+    return address;
   }
 
   /**
    * Starts the server.
-   * @param {Number} [port] Port number. If omitted, it will be assigned by the operating system.
-   * @param {String} [host] Host name.
+   *
+   * @param {number} [port] Port number. If omitted, it will be assigned by the operating system.
+   * @param {string} [host] Host name.
    * @returns {Promise<void>} A promise that resolves when the server has been started.
    */
-  async start(port, host) {
-    await super.start(port, host);
+  async start(port?: number, host?: string): Promise<Server> {
+    const server = await super.start(port, host);
 
     /* istanbul ignore else */
     if (!this.issuer.url) {
       this.issuer.url = buildIssuerUrl(host, this.address().port);
     }
+
+    return server;
   }
 
   /**
    * Stops the server.
+   *
    * @returns {Promise} Resolves when the server has been stopped.
    */
-  async stop() {
+  async stop(): Promise<void> {
     await super.stop();
-    this[issuer].url = null;
+    this._issuer.url = null;
   }
 }
 
-function buildIssuerUrl(host, port) {
+function buildIssuerUrl(host: string | undefined, port: number) {
   const url = new URL(`http://localhost:${port}`);
 
   if (host && !coversLocalhost(host)) {
@@ -114,8 +128,8 @@ function buildIssuerUrl(host, port) {
   return url.origin;
 }
 
-function coversLocalhost(address) {
-  switch (net.isIP(address)) {
+function coversLocalhost(address: string) {
+  switch (isIP(address)) {
     case 4:
       return address === '0.0.0.0' || address.startsWith('127.');
     case 6:
@@ -124,5 +138,3 @@ function coversLocalhost(address) {
       return false;
   }
 }
-
-module.exports = OAuth2Server;

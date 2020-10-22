@@ -22,5 +22,11 @@ jobs:
       - name: Yarn install
         run: yarn install
 
+      - name: Transpile
+        run: yarn build
+
       - name: Lint and run tests
         run: yarn test
+
+      - name: Pack
+        run: npm pack

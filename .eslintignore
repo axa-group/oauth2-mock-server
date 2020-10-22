@@ -1,3 +1,4 @@
 node_modules/
 TestResults/
 .vscode
+dist/
