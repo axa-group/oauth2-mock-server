@@ -1,6 +1,6 @@
 {
   "name": "oauth2-mock-server",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "OAuth 2 mock server",
   "keywords": [
     "oauth",
@@ -44,6 +44,7 @@
     "cleanup:testresults": "rimraf TestResults",
     "prelint": "tsc --noEmit",
     "lint": "eslint --cache --cache-location .cache/ --ext=.js,.ts src test --max-warnings 0",
+    "prepack": "yarn build --tsBuildInfoFile null --incremental false",
     "pretest": "yarn cleanup:testresults && yarn lint",
     "test": "yarn jest"
   },
