@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [3.0.1](https://github.com/axa-group/oauth2-mock-server/compare/v3.0.0...v3.0.1) — 2020-10-23
+
+### Fixed
+
+- Include missing files on pack/publish
+
 ## [3.0.0](https://github.com/axa-group/oauth2-mock-server/compare/v2.0.0...v3.0.0) — 2020-10-22
 
 ### Added
