@@ -44,6 +44,7 @@
     "cleanup:testresults": "rimraf TestResults",
     "prelint": "tsc --noEmit",
     "lint": "eslint --cache --cache-location .cache/ --ext=.js,.ts src test --max-warnings 0",
+    "prepack": "yarn build --tsBuildInfoFile null --incremental false",
     "pretest": "yarn cleanup:testresults && yarn lint",
     "test": "yarn jest"
   },
