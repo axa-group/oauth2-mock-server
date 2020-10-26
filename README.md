@@ -111,18 +111,18 @@ service.once('beforeUserinfo', (userInfoResponse, req) => {
   userInfoResponse.statusCode = 401;
 });
 
+//Modify the expiration time on next token produced
+service.once('beforeTokenSigning', (token, _req) => {
+  const timestamp = Math.floor(Date.now() / 1000);
+  token.payload.exp = timestamp + 400;
+});
+
 //Add the client ID to a token
 const basicAuth = require('basic-auth');
 service.once('beforeTokenSigning', (token, req) => {
   const credentials = basicAuth(req);
   const clientId = credentials ? credentials.name : req.body.client_id;
   token.payload.client_id = clientId;
-});
-
-//Modify the expiration time on next token produced
-service.issuer.once('beforeSigning', (token) => {
-  const timestamp = Math.floor(Date.now() / 1000);
-  token.payload.exp = timestamp + 400;
 });
 
 //Simulates a custom token revocation body
