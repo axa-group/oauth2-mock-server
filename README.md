@@ -18,6 +18,8 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 ## How to use
 
+### Installation
+
 Add it to your Node.js project as a development dependency:
 
 With yarn...
@@ -29,6 +31,8 @@ yarn add -D oauth2-mock-server
 ```shell
 npm install --save-dev oauth2-mock-server
 ```
+
+### Quickstart
 
 Here is an example for creating and running a server instance with a single random RSA key:
 
@@ -83,6 +87,8 @@ request.get(
     function callback(err, res, body) { /* ... */ }
 );
 ```
+
+### Customization hooks
 
 It also provides a convenient way, through event emitters, to programmatically customize:
 
