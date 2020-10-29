@@ -44,3 +44,14 @@ export type ScopesOrTransform = string | string[] | JwtTransform;
 export interface JwtTransform {
   (header: Header, payload: Payload): void;
 }
+
+export enum PublicEvents {
+  BeforeTokenSigning = 'beforeTokenSigning',
+  BeforeResponse = 'beforeResponse',
+  BeforeUserinfo = 'beforeUserinfo',
+  BeforeRevoke = 'beforeRevoke',
+}
+
+export enum InternalEvents {
+  BeforeSigning = 'beforeSigning',
+}

@@ -26,6 +26,7 @@ import { JWK } from 'node-jose';
 import { JWKStore } from './jwk-store';
 import { assertIsAlgorithm, assertIsString } from './helpers';
 import type { Header, MutableToken, Payload, ScopesOrTransform } from './types';
+import { InternalEvents } from './types';
 
 /**
  * Represents an OAuth 2 issuer.
@@ -117,7 +118,7 @@ export class OAuth2Issuer extends EventEmitter {
      * @event OAuth2Issuer#beforeSigning
      * @param {MutableToken} token The JWT header and payload.
      */
-    this.emit('beforeSigning', token);
+    this.emit(InternalEvents.BeforeSigning, token);
 
     const options: jwt.SignOptions = {
       algorithm: arguments.length === 0 || signed ? getKeyAlg(key) : 'none',

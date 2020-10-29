@@ -18,6 +18,8 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 ## How to use
 
+### Installation
+
 Add it to your Node.js project as a development dependency:
 
 With yarn...
@@ -29,6 +31,8 @@ yarn add -D oauth2-mock-server
 ```shell
 npm install --save-dev oauth2-mock-server
 ```
+
+### Quickstart
 
 Here is an example for creating and running a server instance with a single random RSA key:
 
@@ -84,54 +88,67 @@ request.get(
 );
 ```
 
+### Customization hooks
+
 It also provides a convenient way, through event emitters, to programmatically customize:
 
 - The JWT access token
+
+  ```js
+  //Modify the expiration time on next token produced
+  service.once('beforeTokenSigning', (token, _req) => {
+    const timestamp = Math.floor(Date.now() / 1000);
+    token.payload.exp = timestamp + 400;
+  });
+  ```
+
+  ```js
+  //Add the client ID to a token
+  const basicAuth = require('basic-auth');
+  service.once('beforeTokenSigning', (token, req) => {
+    const credentials = basicAuth(req);
+    const clientId = credentials ? credentials.name : req.body.client_id;
+    token.payload.client_id = clientId;
+  });
+  ```
+
 - The token endpoint response body and status
+
+  ```js
+  //Force the oidc service to provide an invalid_grant response on next call to the token endpoint
+  service.once('beforeResponse', (tokenEndpointResponse, req) => {
+    tokenEndpointResponse.body = {
+      error: 'invalid_grant',
+    };
+    tokenEndpointResponse.statusCode = 400;
+  });
+  ```
+
 - The userinfo endpoint response body and status
+
+  ```js
+  //Force the oidc service to provide an error on next call to userinfo endpoint
+  service.once('beforeUserinfo', (userInfoResponse, req) => {
+    userInfoResponse.body = {
+      error: 'invalid_token',
+      error_message: 'token is expired',
+    };
+    userInfoResponse.statusCode = 401;
+  });
+  ```
+
 - The revoke endpoint response body and status
 
+  ```js
+  //Simulates a custom token revocation body
+  service.once('beforeRevoke', (revokeResponse, req) => {
+    revokeResponse.body = {
+      result: 'revoked',
+    };
+  });
+  ```
+
 This is particularly useful when expecting the oidc service to behave in a specific way on one single test.
-
-```js
-//Force the oidc service to provide an invalid_grant response on next call to the token endpoint
-service.once('beforeResponse', (tokenEndpointResponse, req) => {
-  tokenEndpointResponse.body = {
-    error: 'invalid_grant'
-  };
-  tokenEndpointResponse.statusCode = 400;
-});
-
-//Force the oidc service to provide an error on next call to userinfo endpoint
-service.once('beforeUserinfo', (userInfoResponse, req) => {
-  userInfoResponse.body = {
-    error: 'invalid_token',
-    error_message: 'token is expired',
-  };
-  userInfoResponse.statusCode = 401;
-});
-
-//Add the client ID to a token
-const basicAuth = require('basic-auth');
-service.once('beforeTokenSigning', (token, req) => {
-  const credentials = basicAuth(req);
-  const clientId = credentials ? credentials.name : req.body.client_id;
-  token.payload.client_id = clientId;
-});
-
-//Modify the expiration time on next token produced
-service.issuer.once('beforeSigning', (token) => {
-  const timestamp = Math.floor(Date.now() / 1000);
-  token.payload.exp = timestamp + 400;
-});
-
-//Simulates a custom token revocation body
-service.once('beforeRevoke', (revokeResponse, req) => {
-  revokeResponse.body = {
-    result: 'revoked'
-  };
-});
-```
 
 ## Supported endpoints
 

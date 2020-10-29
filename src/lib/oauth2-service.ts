@@ -35,6 +35,7 @@ import type {
   MutableToken,
   ScopesOrTransform,
 } from './types';
+import { InternalEvents, PublicEvents } from './types';
 
 const OPENID_CONFIGURATION_PATH = '/.well-known/openid-configuration';
 const TOKEN_ENDPOINT_PATH = '/token';
@@ -93,7 +94,7 @@ export class OAuth2Service extends EventEmitter {
     expiresIn: number,
     req: IncomingMessage
   ): string {
-    this.issuer.once('beforeSigning', (token: MutableToken) => {
+    this.issuer.once(InternalEvents.BeforeSigning, (token: MutableToken) => {
       /**
        * Before token signing event.
        *
@@ -101,7 +102,7 @@ export class OAuth2Service extends EventEmitter {
        * @param {MutableToken} token The unsigned JWT header and payload.
        * @param {IncomingMessage} req The incoming HTTP request.
        */
-      this.emit('beforeTokenSigning', token, req);
+      this.emit(PublicEvents.BeforeTokenSigning, token, req);
     });
 
     return this.issuer.buildToken(
@@ -262,7 +263,7 @@ export class OAuth2Service extends EventEmitter {
      * @param {MutableResponse} response The response body and status code.
      * @param {IncomingMessage} req The incoming HTTP request.
      */
-    this.emit('beforeResponse', tokenEndpointResponse, req);
+    this.emit(PublicEvents.BeforeResponse, tokenEndpointResponse, req);
 
     return res
       .status(tokenEndpointResponse.statusCode)
@@ -327,7 +328,7 @@ export class OAuth2Service extends EventEmitter {
      * @param {MutableResponse} response The response body and status code.
      * @param {IncomingMessage} req The incoming HTTP request.
      */
-    this.emit('beforeUserinfo', userInfoResponse, req);
+    this.emit(PublicEvents.BeforeUserinfo, userInfoResponse, req);
 
     res.status(userInfoResponse.statusCode).json(userInfoResponse.body);
   };
@@ -345,7 +346,7 @@ export class OAuth2Service extends EventEmitter {
      * @param {MutableResponse} response The response body and status code.
      * @param {IncomingMessage} req The incoming HTTP request.
      */
-    this.emit('beforeRevoke', revokeResponse, req);
+    this.emit(PublicEvents.BeforeRevoke, revokeResponse, req);
 
     return res.status(revokeResponse.statusCode).json(revokeResponse.body);
   };
