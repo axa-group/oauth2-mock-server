@@ -61,7 +61,11 @@ export class JWKStore {
    * @returns {Promise<JWK.Key>} The promise for the added key.
    */
   async add(jwk: JWK.Key): Promise<JWK.Key> {
-    const jwkUse: JWK.Key = { ...jwk, use: 'sig' };
+    const jwkUse: JWK.Key = { ...jwk };
+
+    if (!('use' in jwkUse)) {
+      Object.assign(jwkUse, { use: 'sig' });
+    }
 
     const key = await this.#store.add(jwkUse);
     this.#keyRotator.add(key);
