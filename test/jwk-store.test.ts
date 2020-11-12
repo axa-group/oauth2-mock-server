@@ -1,3 +1,4 @@
+import type { JWK } from 'node-jose';
 import { JWKStore } from '../src/lib/jwk-store';
 import * as testKeys from './keys';
 
@@ -122,4 +123,40 @@ describe('JWK Store', () => {
       expect(jwk).toHaveProperty(prop);
     });
   });
+
+  it('should normalize key "use" value to "sig" when unset', async () => {
+    const initialKey = testKeys.getParsed('test-rsa-key.json')
+
+    expect(initialKey).not.toHaveProperty("use");
+
+    const store = new JWKStore();
+    const key = await store.add(initialKey);
+
+    expect(key).toHaveProperty("use");
+    expect(key.use).toEqual("sig")
+
+    const retrievedKey = store.get(key.kid)
+
+    expect(retrievedKey).toHaveProperty("use");
+    expect(key.use).toEqual("sig")
+  })
+
+  it('should preserve key "use" value when set', async () => {
+    const initialKey = testKeys.getParsed('test-rsa-key.json')
+
+    expect(initialKey).not.toHaveProperty("use");
+
+    const keyWithUseProperty: JWK.Key = { ...initialKey, use: 'enc' }
+
+    const store = new JWKStore();
+    const key = await store.add(keyWithUseProperty);
+
+    expect(key).toHaveProperty("use");
+    expect(key.use).toEqual("enc")
+
+    const retrievedKey = store.get(key.kid)
+
+    expect(retrievedKey).toHaveProperty("use");
+    expect(key.use).toEqual("enc")
+  })
 });
