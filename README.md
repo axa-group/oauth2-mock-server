@@ -23,11 +23,13 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 Add it to your Node.js project as a development dependency:
 
 With yarn...
+
 ```shell
 yarn add -D oauth2-mock-server
 ```
 
 ...or with npm
+
 ```shell
 npm install --save-dev oauth2-mock-server
 ```
@@ -60,9 +62,9 @@ Any number of existing JSON-formatted or PEM-encoded keys can be added to the ke
 ```js
 // Add an existing JWK key to the keystore
 await server.issuer.keys.add({
-    kid: 'some-key',
-    kty: 'RSA',
-    // ...
+  kid: 'some-key',
+  kty: 'RSA',
+  // ...
 });
 
 // Add an existing PEM-encoded key to the keystore
@@ -82,9 +84,11 @@ let token = server.issuer.buildToken(true);
 
 // Call a remote API with the token
 request.get(
-    'https://server.example.com/api/endpoint',
-    { auth: { bearer: token } },
-    function callback(err, res, body) { /* ... */ }
+  'https://server.example.com/api/endpoint',
+  { auth: { bearer: token } },
+  function callback(err, res, body) {
+    /* ... */
+  }
 );
 ```
 
@@ -149,6 +153,18 @@ It also provides a convenient way, through event emitters, to programmatically c
   ```
 
 This is particularly useful when expecting the oidc service to behave in a specific way on one single test.
+
+- The authorization endpoint redirect uri and query parameters
+
+  ```js
+  //Modify the uri and query parameters before the authorization redirect
+  service.once(
+    'beforeAuthorizeRedirect',
+    (authorizeRedirectUri: MutableAuthorizeRedirectUri, req) => {
+      authorizeRedirectUri.url.searchParams.set('foo', 'bar');
+    }
+  );
+  ```
 
 ## Supported endpoints
 
