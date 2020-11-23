@@ -16,6 +16,10 @@ export interface Options {
   savePEM: boolean;
 }
 
+export interface MutableAuthorizeRedirectUri {
+  url: URL;
+}
+
 export interface MutableToken {
   header: Header;
   payload: Payload;
@@ -50,6 +54,7 @@ export enum PublicEvents {
   BeforeResponse = 'beforeResponse',
   BeforeUserinfo = 'beforeUserinfo',
   BeforeRevoke = 'beforeRevoke',
+  BeforeAuthorizeRedirect = 'beforeAuthorizeRedirect',
 }
 
 export enum InternalEvents {

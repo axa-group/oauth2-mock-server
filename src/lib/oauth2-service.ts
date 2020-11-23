@@ -31,6 +31,7 @@ import { OAuth2Issuer } from './oauth2-issuer';
 import { assertIsString, assertIsValidTokenRequest } from './helpers';
 import type {
   JwtTransform,
+  MutableAuthorizeRedirectUri,
   MutableResponse,
   MutableToken,
   ScopesOrTransform,
@@ -287,19 +288,34 @@ export class OAuth2Service extends EventEmitter {
     assertIsString(scope, 'Invalid scope type');
     assertIsString(state, 'Invalid state type');
 
-    let targetRedirection;
+    const url = new URL(redirectUri);
+
     if (responseType === 'code') {
       if (queryNonce !== undefined) {
         this.#nonce[code] = queryNonce;
       }
-      targetRedirection = `${redirectUri}?code=${encodeURIComponent(
-        code
-      )}&scope=${encodeURIComponent(scope)}&state=${encodeURIComponent(state)}`;
+      url.searchParams.set('code', code);
+      url.searchParams.set('scope', scope);
+      url.searchParams.set('state', state);
     } else {
-      targetRedirection = `${redirectUri}?error=unsupported_response_type&error_description=The+authorization+server+does+not+support+obtaining+an+access+token+using+this+response_type.&state=${encodeURIComponent(
-        state
-      )}`;
+      url.searchParams.set('error', 'unsupported_response_type');
+      url.searchParams.set(
+        'error_description',
+        'The authorization server does not support obtaining an access token using this response_type.'
+      );
+      url.searchParams.set('state', state);
     }
+
+    const authorizeRedirectUri: MutableAuthorizeRedirectUri = { url };
+
+    /**
+     * Before authorize redirect event.
+     *
+     * @event OAuth2Service#beforeAuthorizeRedirect
+     * @param {MutableAuthorizeRedirectUri} authorizeRedirectUri The redirect uri and query params to redirect to.
+     * @param {IncomingMessage} req The incoming HTTP request.
+     */
+    this.emit(PublicEvents.BeforeAuthorizeRedirect, authorizeRedirectUri, req);
 
     // Note: This is a textbook definition of an "open redirect" vuln
     // cf. https://cwe.mitre.org/data/definitions/601.html
@@ -310,7 +326,7 @@ export class OAuth2Service extends EventEmitter {
     // for the sake of security.
     //
     // This is *not* a real oAuth2 server. This is *not* to be run in production.
-    res.redirect(targetRedirection); // lgtm[js/server-side-unvalidated-url-redirection]
+    res.redirect(url.href); // lgtm[js/server-side-unvalidated-url-redirection]
   };
 
   private userInfoHandler: RequestHandler = (req, res) => {

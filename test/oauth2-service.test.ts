@@ -6,6 +6,7 @@ import type { Express } from 'express';
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import { OAuth2Service } from '../src/lib/oauth2-service';
 import * as testKeys from './keys';
+import { MutableAuthorizeRedirectUri } from '../src/lib/types';
 
 describe('OAuth 2 service', () => {
   let service: OAuth2Service;
@@ -352,6 +353,33 @@ describe('OAuth 2 service', () => {
     expect(res).toMatchObject({
       headers: {
         location: expect.stringMatching(/http:\/\/example\.com\/callback\?code=[^&]*&scope=dummy_scope&state=state123/)
+      }
+    })
+  });
+
+  it('should be able to manipulate url and query params when redirecting within authorize endpoint', async () => {
+    service.once('beforeAuthorizeRedirect', (authorizeRedirectUri: MutableAuthorizeRedirectUri, req) => {
+      expect(req).toBeInstanceOf(IncomingMessage);
+
+      expect(authorizeRedirectUri.url.toString()).toMatch(/http:\/\/example.com\/callback\?code=[^&]+&scope=dummy_scope&state=state123/);
+
+      authorizeRedirectUri.url.hostname = 'foo.com';
+      authorizeRedirectUri.url.pathname = '/cb';
+      authorizeRedirectUri.url.protocol = 'https';
+      authorizeRedirectUri.url.searchParams.set('code', 'testcode');
+      authorizeRedirectUri.url.searchParams.set('extra_param', 'value');
+      authorizeRedirectUri.url.searchParams.delete('scope');
+    });
+
+    const res = await request(service.requestHandler)
+      .get('/authorize')
+      .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf')
+      .redirects(0)
+      .expect(302);
+
+    expect(res).toMatchObject({
+      headers: {
+        location: expect.stringMatching(/https:\/\/foo\.com\/cb\?code=testcode&state=state123&extra_param=value/)
       }
     })
   });
