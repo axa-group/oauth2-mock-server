@@ -94,7 +94,7 @@ request.get(
 
 ### Customization hooks
 
-It also provides a convenient way, through event emitters, to programmatically customize:
+It also provides a convenient way, through event emitters, to programmatically customize the server processing. This is particularly useful when expecting the OIDC service to behave in a specific way on one single test:
 
 - The JWT access token
 
@@ -151,8 +151,6 @@ It also provides a convenient way, through event emitters, to programmatically c
     };
   });
   ```
-
-This is particularly useful when expecting the oidc service to behave in a specific way on one single test.
 
 - The authorization endpoint redirect uri and query parameters
 
