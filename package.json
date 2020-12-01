@@ -70,7 +70,7 @@
     "@types/node": "^10.17.44",
     "@types/supertest": "^2.0.10",
     "@types/uuid": "^8.3.0",
-    "@typescript-eslint/eslint-plugin": "^4.7.0",
+    "@typescript-eslint/eslint-plugin": "^4.9.0",
     "@typescript-eslint/parser": "^4.7.0",
     "eslint": "^7.13.0",
     "eslint-config-prettier": "^6.15.0",
