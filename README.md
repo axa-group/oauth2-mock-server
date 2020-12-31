@@ -99,7 +99,7 @@ It also provides a convenient way, through event emitters, to programmatically c
 - The JWT access token
 
   ```js
-  //Modify the expiration time on next token produced
+  // Modify the expiration time on next token produced
   service.once('beforeTokenSigning', (token, _req) => {
     const timestamp = Math.floor(Date.now() / 1000);
     token.payload.exp = timestamp + 400;
@@ -107,7 +107,7 @@ It also provides a convenient way, through event emitters, to programmatically c
   ```
 
   ```js
-  //Add the client ID to a token
+  // Add the client ID to a token
   const basicAuth = require('basic-auth');
   service.once('beforeTokenSigning', (token, req) => {
     const credentials = basicAuth(req);
@@ -119,7 +119,7 @@ It also provides a convenient way, through event emitters, to programmatically c
 - The token endpoint response body and status
 
   ```js
-  //Force the oidc service to provide an invalid_grant response on next call to the token endpoint
+  // Force the oidc service to provide an invalid_grant response on next call to the token endpoint
   service.once('beforeResponse', (tokenEndpointResponse, req) => {
     tokenEndpointResponse.body = {
       error: 'invalid_grant',
@@ -131,7 +131,7 @@ It also provides a convenient way, through event emitters, to programmatically c
 - The userinfo endpoint response body and status
 
   ```js
-  //Force the oidc service to provide an error on next call to userinfo endpoint
+  // Force the oidc service to provide an error on next call to userinfo endpoint
   service.once('beforeUserinfo', (userInfoResponse, req) => {
     userInfoResponse.body = {
       error: 'invalid_token',
@@ -144,7 +144,7 @@ It also provides a convenient way, through event emitters, to programmatically c
 - The revoke endpoint response body and status
 
   ```js
-  //Simulates a custom token revocation body
+  // Simulates a custom token revocation body
   service.once('beforeRevoke', (revokeResponse, req) => {
     revokeResponse.body = {
       result: 'revoked',
@@ -155,13 +155,10 @@ It also provides a convenient way, through event emitters, to programmatically c
 - The authorization endpoint redirect uri and query parameters
 
   ```js
-  //Modify the uri and query parameters before the authorization redirect
-  service.once(
-    'beforeAuthorizeRedirect',
-    (authorizeRedirectUri: MutableAuthorizeRedirectUri, req) => {
-      authorizeRedirectUri.url.searchParams.set('foo', 'bar');
-    }
-  );
+  // Modify the uri and query parameters before the authorization redirect
+  service.once('beforeAuthorizeRedirect', (authorizeRedirectUri, req) => {
+    authorizeRedirectUri.url.searchParams.set('foo', 'bar');
+  });
   ```
 
 ## Supported endpoints
