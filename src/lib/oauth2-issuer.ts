@@ -19,12 +19,15 @@
  * @module lib/oauth2-issuer
  */
 
-import jwt from 'jsonwebtoken';
 import { EventEmitter } from 'events';
-import { JWK } from 'node-jose';
+import { JWK } from 'jose/types';
 
 import { JWKStore } from './jwk-store';
-import { assertIsAlgorithm, assertIsString } from './helpers';
+import {
+  assertIsAlgorithm,
+  assertIsString,
+  assertKidIsDefined,
+} from './helpers';
 import type { Header, MutableToken, Payload, ScopesOrTransform } from './types';
 import { InternalEvents } from './types';
 
@@ -80,11 +83,13 @@ export class OAuth2Issuer extends EventEmitter {
   ): string {
     const key = this.keys.get(kid);
 
-    if (!key) {
+    if (key === null) {
       throw new Error('Cannot build token: Unknown key.');
     }
 
     const timestamp = Math.floor(Date.now() / 1000);
+
+    assertKidIsDefined(key.kid);
 
     const header: Header = {
       kid: key.kid,
@@ -129,7 +134,7 @@ export class OAuth2Issuer extends EventEmitter {
   }
 }
 
-function getKeyAlg(key: JWK.Key): jwt.Algorithm {
+function getKeyAlg(key: JWK): jwt.Algorithm {
   if (key.alg) {
     assertIsAlgorithm(key.alg);
     return key.alg;
@@ -149,7 +154,7 @@ function getKeyAlg(key: JWK.Key): jwt.Algorithm {
   }
 }
 
-function getSecret(key: JWK.Key): string {
+function getSecret(key: JWK): string {
   switch (key.kty) {
     case 'RSA':
     case 'EC':

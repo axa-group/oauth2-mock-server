@@ -16,9 +16,13 @@
 /* eslint-disable jsdoc/require-jsdoc */
 
 import { AssertionError } from 'assert';
-import type jwt from 'jsonwebtoken';
-import isPlainObject from 'lodash.isplainobject';
+import { createPrivateKey, KeyExportOptions, KeyObject } from 'crypto';
 import type { AddressInfo } from 'net';
+
+import fromKeyLike from 'jose/jwk/from_key_like';
+import parseJwk from 'jose/jwk/parse';
+import { JWK } from 'jose/types';
+import isPlainObject from 'lodash.isplainobject';
 
 import type { TokenRequest } from './types';
 
@@ -102,3 +106,38 @@ export function shift(arr: (string | undefined)[]): string {
 
   return val;
 }
+
+export function assertKidIsDefined(kid: unknown): asserts kid is string {
+  return assertIsString(kid, "Unexpected undefined 'kid'");
+}
+
+export const fromPEM = async (pem: string): Promise<JWK> => {
+  const key = createPrivateKey({ key: pem, format: 'pem' });
+  return await fromKeyLike(key);
+};
+
+export const toPEM = async (jwk: JWK): Promise<string> => {
+  const key = await parseJwk(jwk);
+
+  if (!(key instanceof KeyObject)) {
+    throw new Error('Unexpected key type');
+  }
+
+  let opts: KeyExportOptions<'pem'>;
+  switch (jwk.kty) {
+    case 'RSA':
+      opts = { format: 'pem', type: 'pkcs1' };
+      break;
+    case 'EC':
+      opts = { format: 'pem', type: 'pkcs8' };
+      break;
+    default:
+      throw new Error('Unsupported key type');
+  }
+
+  const out = key.export(opts);
+
+  assertIsString(out, 'Unexpected export type');
+
+  return out;
+};

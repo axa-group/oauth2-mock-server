@@ -1,6 +1,3 @@
-import jwt from 'jsonwebtoken';
-import type { JWK } from 'node-jose';
-
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import type { JwtTransform } from '../src/lib/types';
 import * as testKeys from './keys';
@@ -84,10 +81,10 @@ describe('OAuth 2 issuer', () => {
     const token = issuer.buildToken(true, 'test-rsa-key', scopes);
 
     const decoded = jwt.decode(token);
-    expect(decoded).not.toBeNull()
-    expect(decoded).toHaveProperty("scope")
+    expect(decoded).not.toBeNull();
+    expect(decoded).toHaveProperty("scope");
 
-    const parsed = decoded as { scope: unknown }
+    const parsed = decoded as { scope: unknown };
     expect(parsed.scope).toEqual('urn:scope-1 urn:scope-2');
   });
 

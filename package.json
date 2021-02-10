@@ -19,7 +19,7 @@
   },
   "license": "MIT",
   "engines": {
-    "node": "^10.13 || ^12.13 || ^14.15",
+    "node": "^12.13 || ^14.15",
     "yarn": "^1.15.2"
   },
   "repository": {
@@ -49,14 +49,12 @@
     "test": "yarn jest"
   },
   "dependencies": {
-    "@types/node-jose": "^1.1.5",
     "basic-auth": "^2.0.1",
     "body-parser": "^1.19.0",
     "cors": "^2.8.5",
     "express": "^4.17.1",
-    "jsonwebtoken": "^8.5.1",
+    "jose": "^3.6.1",
     "lodash.isplainobject": "^4.0.6",
-    "node-jose": "^2.0.0",
     "uuid": "^8.3.2"
   },
   "devDependencies": {
@@ -67,7 +65,7 @@
     "@types/jest": "^26.0.19",
     "@types/jsonwebtoken": "^8.5.0",
     "@types/lodash.isplainobject": "^4.0.6",
-    "@types/node": "^10.17.50",
+    "@types/node": "^12.19.16",
     "@types/supertest": "^2.0.10",
     "@types/uuid": "^8.3.0",
     "@typescript-eslint/eslint-plugin": "^4.11.1",

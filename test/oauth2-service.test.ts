@@ -1,5 +1,4 @@
 import request from 'supertest';
-import jwt from 'jsonwebtoken';
 import { IncomingMessage } from 'http';
 import type { Express } from 'express';
 
@@ -354,7 +353,7 @@ describe('OAuth 2 service', () => {
       headers: {
         location: expect.stringMatching(/http:\/\/example\.com\/callback\?code=[^&]*&scope=dummy_scope&state=state123/)
       }
-    })
+    });
   });
 
   it('should be able to manipulate url and query params when redirecting within authorize endpoint', async () => {
@@ -381,7 +380,7 @@ describe('OAuth 2 service', () => {
       headers: {
         location: expect.stringMatching(/https:\/\/foo\.com\/cb\?code=testcode&state=state123&extra_param=value/)
       }
-    })
+    });
   });
 
   it('should redirect to callback url with an error and keeping state when calling authorize endpoint with an invalid response type', async () => {
@@ -395,7 +394,7 @@ describe('OAuth 2 service', () => {
       headers: {
         location: 'http://example.com/callback?error=unsupported_response_type&error_description=The+authorization+server+does+not+support+obtaining+an+access+token+using+this+response_type.&state=state123'
       }
-    })
+    });
   });
 
   it('should not handle token requests unsupported grant types', async () => {

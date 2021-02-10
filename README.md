@@ -211,4 +211,4 @@ npx oauth2-mock-server --help
 
 ## Attributions
 
-- [`node-jose`](https://www.npmjs.com/package/node-jose), Copyright © Cisco Systems
+- [`jose`](https://www.npmjs.com/package/jose)

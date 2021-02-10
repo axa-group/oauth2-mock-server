@@ -11,4 +11,7 @@ module.exports = {
     ['jest-junit', { outputDirectory: 'TestResults', outputName: 'testresults.xml' }],
   ],
   coverageReporters: ['text', 'html', 'cobertura'],
+  moduleNameMapper: {
+    '^jose/(.*)$': '<rootDir>/node_modules/jose/dist/node/cjs/$1'
+  }
 };

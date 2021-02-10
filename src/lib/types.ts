@@ -1,4 +1,5 @@
-import type { JWK } from 'node-jose';
+import { JWK } from 'jose/types';
+export type { JWK } from 'jose/types';
 
 export interface TokenRequest {
   scope?: string;
@@ -11,7 +12,7 @@ export interface TokenRequest {
 export interface Options {
   host?: string;
   port: number;
-  keys: JWK.Key[];
+  keys: JWK[];
   saveJWK: boolean;
   savePEM: boolean;
 }
