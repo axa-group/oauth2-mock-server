@@ -1,162 +1,280 @@
-import type { JWK } from 'node-jose';
 import { JWKStore } from '../src/lib/jwk-store';
 import * as testKeys from './keys';
 
 describe('JWK Store', () => {
-  it('should be able to generate a new RSA key', async () => {
-    const store = new JWKStore();
-    const key = await store.generateRSA(512);
-
-    expect(key).toMatchObject({
-      length: 512,
-      kty: 'RSA',
-      use: 'sig',
-      kid: expect.stringMatching(/^[\w-]+$/),
+  describe('generate()', () => {
+    it.each([
+      ["RSASSA-PKCS1-v1_5", "RS256", "RSA"],
+      ["RSASSA-PKCS1-v1_5", "RS384", "RSA"],
+      ["RSASSA-PKCS1-v1_5", "RS512", "RSA"],
+      ["RSASSA-PSS", "PS256", "RSA"],
+      ["RSASSA-PSS", "PS384", "RSA"],
+      ["RSASSA-PSS", "PS512", "RSA"],
+      ["ECDSA", "ES256", "EC"],
+      ["ECDSA", "ES256K", "EC"],
+      ["ECDSA", "ES384", "EC"],
+      ["ECDSA", "ES512", "EC"],
+    ])('should be able to generate a new %s based key (alg = %s)', async (_kind: string, alg: string, expectedKty: string) => {
+      const store = new JWKStore();
+      const key = await store.generate(alg);
+      expect(key).toMatchObject({
+        alg: alg,
+        kty: expectedKty,
+        kid: expect.stringMatching(/^[\w-]+$/),
+      });
     });
-  });
 
-  it.each([
-    ['RSA', testKeys.getParsed('test-rsa-key.json'), 512],
-    ['EC', testKeys.getParsed('test-ec-key.json'), 256],
-    ['oct', testKeys.getParsed('test-oct-key.json'), 512],
-  ])('should be able to add a JWK \'%s\' key to the store', async (keyType, testKey, expectedLength) => {
-    const store = new JWKStore();
-    const key = await store.add(testKey);
-
-    expect(key).toMatchObject({
-      length: expectedLength,
-      kty: keyType,
-      use: 'sig',
-      kid: testKey.kid,
+    it.each([
+      "Ed25519",
+      "Ed448",
+    ])('should be able to generate a new EdDSA based key (crv = %s)', async (crv: string) => {
+      const store = new JWKStore();
+      const key = await store.generate('EdDSA', { crv });
+      expect(key).toMatchObject({
+        alg: 'EdDSA',
+        kty: 'OKP',
+        crv,
+        kid: expect.stringMatching(/^[\w-]+$/),
+      });
     });
-  });
 
-  it.each([
-    ['RSA', testKeys.get('test-rsa-key.pem'), 512],
-    ['EC', testKeys.get('test-ec-key.pem'), 256],
-  ])('should be able to add a PEM-encoded \'%s\' key to the store', async (keyType, testPEMKey, expectedLength) => {
-    const store = new JWKStore();
-    const key = await store.addPEM(testPEMKey);
+    it.each([
+      "RS123",
+      "dunno",
+    ])('throws on unsupported algs (alg = %s)', async (alg: string) => {
+      const store = new JWKStore();
 
-    expect(key).toMatchObject({
-      length: expectedLength,
-      kty: keyType,
-      kid: expect.stringMatching(/^[\w-]+$/),
-      use: 'sig',
+      await expect(() => store.generate(alg)).rejects.toThrow("Invalid or unsupported JWK \"alg\" (Algorithm) Parameter value");
     });
-  });
 
-  it('should be able to retrieve a key by its \'kid\'', async () => {
-    const store = new JWKStore();
-    const key1 = await store.generateRSA(512, 'key-one');
-    const key2a = await store.generateRSA(512, 'key-two');
-    const key2b = await store.generateRSA(512, 'key-two');
+    it.each([
+      "Ed007",
+      "dunno",
+    ])('throws on unsupported crv for EdDSA alg (crv = %s)', async (crv: string) => {
+      const store = new JWKStore();
 
-    expect(key1.kid).not.toEqual(key2a.kid);
-    expect(key2a.kid).toEqual(key2b.kid);
+      await expect(() => store.generate('EdDSA', { crv })).rejects.toThrow("Invalid or unsupported crv option provided, supported values are Ed25519 and Ed448");
+    });
 
-    const stored1 = store.get('key-one');
-    const stored2a = store.get('key-two');
-    const stored2b = store.get('key-two');
-    const stored2c = store.get('key-two');
-    const stored3 = store.get('non-existing-kid');
+    it.each([
+      ['RS256', ['e', 'n', 'd', 'p', 'q', 'dp', 'dq', 'qi']]
+    ])('should return the private key of a key (alg = %s)', async (alg: string, expectedProps: string[]) => {
+      const store = new JWKStore();
+      const jwk = await store.generate(alg);
 
-    expect(stored1).toBe(key1);
-    expect(stored2a).toBe(key2a);
-    expect(stored2b).toBe(key2b);
-    expect(stored2c).toBe(key2a);
-    expect(stored3).toBeNull();
-  });
-
-  it('should return null when trying to retrieve a key from an empty store', () => {
-    const store = new JWKStore();
-
-    const res1 = store.get();
-    const res2 = store.get('non-existing-kid');
-
-    expect(res1).toBeNull();
-    expect(res2).toBeNull();
-  });
-
-  it('should be able to produce a JSON representation of the public keys in the key store', async () => {
-    const store = new JWKStore();
-    await store.generateRSA(512, 'key-one');
-    await store.generateRSA(512, 'key-two');
-    await store.generateRSA(512, 'key-two');
-
-    const jwks = store.toJSON();
-    expect(jwks).toHaveProperty("keys");
-    expect(jwks.keys).toBeInstanceOf(Array)
-
-    const keys = jwks.keys as unknown[];
-    expect(keys).toHaveLength(3);
-
-    for (const key of keys) {
-      expect(key).toBeInstanceOf(Object);
-      expect(key).toHaveProperty("kid");
-      expect(typeof (key as Record<string, unknown>).kid).toBe("string")
-    }
-
-    const keysWithKid = keys as { kid: string }[]
-    expect(keysWithKid.map((key) => key.kid).sort()).toEqual(['key-one', 'key-two', 'key-two']);
-
-    keysWithKid.forEach((jwk) => {
-      expect(store.get(jwk.kid)).not.toBeNull();
-
-      ['e', 'n'].forEach((prop) => {
+      for (const prop of expectedProps) {
         expect(jwk).toHaveProperty(prop);
-      });
-
-      ['d', 'p', 'q', 'dp', 'dq', 'qi'].forEach((prop) => {
-        expect(jwk).not.toHaveProperty(prop);
-      });
+      }
     });
   });
 
-  it('should be able to retrieve the private key of a key', async () => {
-    const store = new JWKStore();
-    const key = await store.generateRSA(512);
+  describe("add()", () => {
+    it.each([
+      ['RSA', testKeys.getParsed('test-rs256-key.json')],
+      ['EC', testKeys.getParsed('test-es256-key.json')],
+      ['OKP', testKeys.getParsed('test-eddsa-key.json')],
+    ])('should be able to add a JWK key to the store (kty = %s)', async (keyType, testKey) => {
+      const store = new JWKStore();
+      const key = await store.add(testKey);
 
-    const jwk = key.toJSON(true);
+      expect(key).toMatchObject({
+        kty: keyType,
+        kid: testKey.kid,
+      });
+    });
 
-    ['e', 'n', 'd', 'p', 'q', 'dp', 'dq', 'qi'].forEach((prop) => {
-      expect(jwk).toHaveProperty(prop);
+    it.each([
+      ['RSA', testKeys.getParsed('test-rs256-key.json')],
+      ['EC', testKeys.getParsed('test-es256-key.json')],
+      ['OKP', testKeys.getParsed('test-eddsa-key.json')]
+    ])('throws when serialized key lacks the "alg" property (kty = %s)', async (_keyType, testKey) => {
+      const store = new JWKStore();
+
+      delete testKey.alg;
+
+      await expect(() => store.add(testKey)).rejects.toThrow('Unspecified JWK "alg" property');
+    });
+
+    it.each([
+      ['RSA', testKeys.getParsed('test-rs256-key.json')],
+      ['EC', testKeys.getParsed('test-es256-key.json')],
+      ['OKP', testKeys.getParsed('test-eddsa-key.json')]
+    ])('throws when serialized key contains an unsupported "alg" value (kty = %s)', async (_keyType, testKey) => {
+      const store = new JWKStore();
+
+      testKey.alg = "DUNNO256";
+
+      await expect(() => store.add(testKey)).rejects.toThrow('Unsupported JWK "alg" value ("DUNNO256")');
+    });
+
+    it('throws when serialized RSA key is public"', async () => {
+      const store = new JWKStore();
+
+      const testKey = testKeys.getParsed('test-rs256-key.json');
+
+      delete testKey.d;
+      delete testKey.p;
+      delete testKey.q;
+      delete testKey.dp;
+      delete testKey.dq;
+      delete testKey.qi;
+
+      await expect(() => store.add(testKey)).rejects.toThrow('Invalid JWK type. No "private" key related data has been found.');
+    });
+
+    it('throws when serialized EC key is public"', async () => {
+      const store = new JWKStore();
+
+      const testKey = testKeys.getParsed('test-es256-key.json');
+
+      delete testKey.d;
+
+      await expect(() => store.add(testKey)).rejects.toThrow('Invalid JWK type. No "private" key related data has been found.');
+    });
+
+
+    it('throws when serialized OKP key is public"', async () => {
+      const store = new JWKStore();
+
+      const testKey = testKeys.getParsed('test-eddsa-key.json');
+
+      delete testKey.d;
+
+      await expect(() => store.add(testKey)).rejects.toThrow('Invalid JWK type. No "private" key related data has been found.');
+    });
+
+    it('adding a key will overwrite an existing key in the store bearing the same "kid"', async () => {
+      const store = new JWKStore();
+
+      const one = testKeys.getParsed('test-rs256-key.json');
+      expect(one.kty).toEqual("RSA");
+      one.kid = "new_id";
+      await store.add(one);
+
+      const retrievedOne = store.get("new_id");
+      expect(retrievedOne).not.toBeNull();
+      expect(retrievedOne!.kty).toEqual(one.kty);
+
+      const two = testKeys.getParsed('test-es256-key.json');
+      expect(two.kty).toEqual("EC");
+      two.kid = "new_id";
+      await store.add(two);
+
+      const retrievedTwo = store.get("new_id");
+      expect(retrievedTwo).not.toBeNull();
+      expect(retrievedTwo!.kty).toEqual(two.kty);
     });
   });
 
-  it('should normalize key "use" value to "sig" when unset', async () => {
-    const initialKey = testKeys.getParsed('test-rsa-key.json')
+  describe("get()", () => {
+    it('should be able to retrieve a key by its \'kid\'', async () => {
+      const store = new JWKStore();
+      const key1 = await store.generate('RS256', { kid: 'key-one' });
+      const key2 = await store.generate('RS256', { kid: 'key-two' });
 
-    expect(initialKey).not.toHaveProperty("use");
+      expect(key1.kid).not.toEqual(key2.kid);
 
-    const store = new JWKStore();
-    const key = await store.add(initialKey);
+      const stored1 = store.get('key-one');
+      const stored2a = store.get('key-two');
+      const stored2b = store.get('key-two');
+      const stored3 = store.get('non-existing-kid');
 
-    expect(key).toHaveProperty("use");
-    expect(key.use).toEqual("sig")
+      expect(stored1).toBe(key1);
+      expect(stored2a).toBe(key2);
+      expect(stored2b).toBe(key2);
+      expect(stored3).toBeUndefined();
+    });
 
-    const retrievedKey = store.get(key.kid)
+    it('should be able to retrieve keys in a round-robin manner', async () => {
+      const store = new JWKStore();
+      await store.generate('RS256', { kid: 'key-one' });
+      await store.generate('RS256', { kid: 'key-two' });
+      await store.generate('RS256', { kid: 'key-three' });
 
-    expect(retrievedKey).toHaveProperty("use");
-    expect(key.use).toEqual("sig")
-  })
+      const key1 = store.get();
+      expect(key1).not.toBeNull();
 
-  it('should preserve key "use" value when set', async () => {
-    const initialKey = testKeys.getParsed('test-rsa-key.json')
+      const key2 = store.get();
+      expect(key2).not.toBeNull();
+      expect(key2!.kid).not.toEqual(key1!.kid);
 
-    expect(initialKey).not.toHaveProperty("use");
+      const key3 = store.get();
+      expect(key3).not.toBeNull();
+      expect(key3!.kid).not.toEqual(key1!.kid);
+      expect(key3!.kid).not.toEqual(key2!.kid);
 
-    const keyWithUseProperty: JWK.Key = { ...initialKey, use: 'enc' }
+      const key4 = store.get();
+      expect(key4).not.toBeNull();
+      expect(key4!.kid).toEqual(key1!.kid);
+    });
 
-    const store = new JWKStore();
-    const key = await store.add(keyWithUseProperty);
+    it('should return undefined when trying to retrieve a key from an empty store', () => {
+      const store = new JWKStore();
 
-    expect(key).toHaveProperty("use");
-    expect(key.use).toEqual("enc")
+      const res1 = store.get();
+      const res2 = store.get('non-existing-kid');
 
-    const retrievedKey = store.get(key.kid)
+      expect(res1).toBeUndefined();
+      expect(res2).toBeUndefined();
+    });
+  });
 
-    expect(retrievedKey).toHaveProperty("use");
-    expect(key.use).toEqual("enc")
-  })
+  describe("toJSON()", () => {
+    it.each([
+      undefined,
+      true,
+      false
+    ])('should be able to produce a JSON representation of the public keys in the key store (including private fields: %s)', async (shouldIncludePrivates?: boolean) => {
+      const store = new JWKStore();
+      await store.generate('RS256', { kid: 'key-one' });
+      await store.generate('RS256', { kid: 'key-two' });
+      await store.generate('RS256', { kid: 'key-three' });
+
+      const jwks = store.toJSON(shouldIncludePrivates);
+      expect(jwks).toHaveProperty("keys");
+      expect(jwks).toBeInstanceOf(Array);
+
+      expect(jwks).toHaveLength(3);
+
+      for (const key of jwks) {
+        expect(key).toBeInstanceOf(Object);
+        expect(key).toHaveProperty("kid");
+        expect(typeof (key).kid).toBe("string");
+      }
+
+      expect(jwks.map((key) => key.kid).sort()).toEqual(['key-one', 'key-three', 'key-two']);
+
+      jwks.forEach((jwk) => {
+        expect(store.get(jwk.kid)).not.toBeNull();
+
+        ['e', 'n'].forEach((prop) => {
+          expect(jwk).toHaveProperty(prop);
+        });
+
+        ['d', 'p', 'q', 'dp', 'dq', 'qi'].forEach((prop) => {
+          const isExposed = prop in jwk;
+          const shouldBeExposed = shouldIncludePrivates === true;
+          expect(isExposed).toEqual(shouldBeExposed);
+        });
+      });
+    });
+
+    it.each([
+      ['RSA', testKeys.getParsed('test-rs256-key.json'), ['d', 'p', 'q', 'dp', 'dq', 'qi']],
+      ['EC', testKeys.getParsed('test-es256-key.json'), ['d']],
+      ['OKP', testKeys.getParsed('test-eddsa-key.json'), ['d']]
+    ])('properly removes private fields from key when requesting it (kty = %s)', async (_keyType, testKey, fields) => {
+      const store = new JWKStore();
+
+      await store.add(testKey);
+      const keys = store.toJSON(false);
+      expect(keys).toHaveLength(1);
+
+      const key = keys[0];
+
+      fields.forEach(prop => {
+        expect(key).not.toHaveProperty(prop);
+      });
+    });
+  });
 });

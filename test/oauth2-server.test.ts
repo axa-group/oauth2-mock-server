@@ -16,7 +16,7 @@ describe('OAuth 2 Server', () => {
   it('should have an issuer URL that matches the server\'s endpoint', async () => {
     const server = new OAuth2Server();
 
-    expect(server.issuer.url).toBeNull();
+    expect(server.issuer.url).toBeUndefined();
 
     await server.start(undefined, 'localhost');
     expect(server.issuer.url).toEqual(`http://localhost:${server.address().port}`);

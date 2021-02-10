@@ -19,14 +19,14 @@
  * @module lib/oauth2-issuer
  */
 
-import jwt from 'jsonwebtoken';
 import { EventEmitter } from 'events';
-import { JWK } from 'node-jose';
+
+import { importJWK, SignJWT } from 'jose';
 
 import { JWKStore } from './jwk-store';
-import { assertIsAlgorithm, assertIsString } from './helpers';
-import type { Header, MutableToken, Payload, ScopesOrTransform } from './types';
-import { InternalEvents } from './types';
+import { assertIsString, defaultTokenTtl } from './helpers';
+import { Header, MutableToken, Payload, TokenBuildOptions } from './types';
+import { InternalEvents } from './types-internals';
 
 /**
  * Represents an OAuth 2 issuer.
@@ -37,7 +37,7 @@ export class OAuth2Issuer extends EventEmitter {
    *
    * @type {string}
    */
-  url: string | null;
+  url: string | undefined;
 
   #keys: JWKStore;
 
@@ -46,7 +46,7 @@ export class OAuth2Issuer extends EventEmitter {
    */
   constructor() {
     super();
-    this.url = null;
+    this.url = undefined;
 
     this.#keys = new JWKStore();
   }
@@ -61,33 +61,22 @@ export class OAuth2Issuer extends EventEmitter {
   }
 
   /**
-   * Builds a JWT with the provided 'kid'.
+   * Builds a JWT.
    *
-   * @param {boolean} signed A value that indicates whether or not to sign the JWT.
-   * @param {string} [kid] The 'kid' of the key that will be used to sign the JWT.
-   *     If omitted, the next key in the round-robin will be used.
-   * @param {ScopesOrTransform} [scopesOrTransform] A scope, array of scopes,
-   *     or JWT transformation callback.
-   * @param {number} [expiresIn] Time in seconds for the JWT to expire. Default: 3600 seconds.
-   * @returns {string} The produced JWT.
+   * @param {TokenBuildOptions} [opts] JWT token building overrides
+   * @returns {Promise<string>} The produced JWT.
    * @fires OAuth2Issuer#beforeSigning
    */
-  buildToken(
-    signed: boolean,
-    kid?: string,
-    scopesOrTransform?: ScopesOrTransform,
-    expiresIn = 3600
-  ): string {
-    const key = this.keys.get(kid);
+  async buildToken(opts?: TokenBuildOptions): Promise<string> {
+    const key = this.keys.get(opts?.kid);
 
-    if (!key) {
+    if (key === undefined) {
       throw new Error('Cannot build token: Unknown key.');
     }
 
     const timestamp = Math.floor(Date.now() / 1000);
 
     const header: Header = {
-      alg: arguments.length === 0 || signed ? getKeyAlg(key) : 'none',
       kid: key.kid,
     };
 
@@ -96,16 +85,20 @@ export class OAuth2Issuer extends EventEmitter {
     const payload: Payload = {
       iss: this.url,
       iat: timestamp,
-      exp: timestamp + expiresIn,
+      exp: timestamp + (opts?.expiresIn ?? defaultTokenTtl),
       nbf: timestamp - 10,
     };
 
-    if (typeof scopesOrTransform === 'string') {
-      payload.scope = scopesOrTransform;
-    } else if (Array.isArray(scopesOrTransform)) {
-      payload.scope = scopesOrTransform.join(' ');
-    } else if (typeof scopesOrTransform === 'function') {
-      scopesOrTransform(header, payload);
+    if (opts?.scopesOrTransform !== undefined) {
+      const scopesOrTransform = opts.scopesOrTransform;
+
+      if (typeof scopesOrTransform === 'string') {
+        payload.scope = scopesOrTransform;
+      } else if (Array.isArray(scopesOrTransform)) {
+        payload.scope = scopesOrTransform.join(' ');
+      } else if (typeof scopesOrTransform === 'function') {
+        scopesOrTransform(header, payload);
+      }
     }
 
     const token: MutableToken = {
@@ -121,40 +114,12 @@ export class OAuth2Issuer extends EventEmitter {
      */
     this.emit(InternalEvents.BeforeSigning, token);
 
-    const options: jwt.SignOptions = {
-      header: token.header,
-    };
+    const privateKey = await importJWK(key);
 
-    return jwt.sign(token.payload, getSecret(key), options);
-  }
-}
+    const jwt = await new SignJWT(token.payload)
+      .setProtectedHeader({ ...token.header, typ: 'JWT', alg: key.alg })
+      .sign(privateKey);
 
-function getKeyAlg(key: JWK.Key): jwt.Algorithm {
-  if (key.alg) {
-    assertIsAlgorithm(key.alg);
-    return key.alg;
-  }
-
-  switch (key.kty) {
-    case 'RSA':
-      return 'RS256';
-    case 'EC': {
-      const length = key.length & 0xfff0;
-      const alg = `ES${length}`;
-      assertIsAlgorithm(alg);
-      return alg;
-    }
-    default:
-      return 'HS256';
-  }
-}
-
-function getSecret(key: JWK.Key): string {
-  switch (key.kty) {
-    case 'RSA':
-    case 'EC':
-      return key.toPEM(true);
-    default:
-      return (key.toJSON(true) as { k: string }).k;
+    return jwt;
   }
 }

@@ -15,16 +15,15 @@
  * limitations under the License.
  */
 
-import { readFile, writeFileSync } from 'fs';
+import { writeFile } from 'fs';
 import { promisify } from 'util';
-import { JWK } from 'node-jose';
 import path from 'path';
 
 import { OAuth2Server } from './index';
-import { assertIsString, shift } from './lib/helpers';
-import type { Options } from './lib/types';
+import { assertIsString, readJsonFromFile, shift } from './lib/helpers';
+import type { JWK, Options } from './lib/types';
 
-const readFileAsync = promisify(readFile);
+const writeFileAsync = promisify(writeFile);
 
 /* eslint no-console: off */
 
@@ -32,7 +31,6 @@ const defaultOptions: Options = {
   port: 8080,
   keys: [],
   saveJWK: false,
-  savePEM: false,
 };
 
 module.exports = cli(process.argv.slice(2));
@@ -41,7 +39,7 @@ async function cli(args: string[]): Promise<OAuth2Server | null> {
   let options;
 
   try {
-    options = await parseCliArgs(args);
+    options = parseCliArgs(args);
   } catch (err) {
     console.error(err instanceof Error ? err.message : err);
     process.exitCode = 1;
@@ -53,10 +51,10 @@ async function cli(args: string[]): Promise<OAuth2Server | null> {
     return Promise.resolve(null);
   }
 
-  return startServer(options);
+  return await startServer(options);
 }
 
-async function parseCliArgs(args: string[]): Promise<Options | null> {
+function parseCliArgs(args: string[]): Options | null {
   const opts = { ...defaultOptions };
 
   while (args.length > 0) {
@@ -74,16 +72,10 @@ async function parseCliArgs(args: string[]): Promise<Options | null> {
         opts.port = parsePort(shift(args));
         break;
       case '--jwk':
-        opts.keys.push(await parseJWK(shift(args)));
-        break;
-      case '--pem':
-        opts.keys.push(await parsePEM(shift(args)));
+        opts.keys.push(readJsonFromFile(shift(args)));
         break;
       case '--save-jwk':
         opts.saveJWK = true;
-        break;
-      case '--save-pem':
-        opts.savePEM = true;
         break;
       default:
         throw new Error(`Unrecognized option '${arg}'.`);
@@ -109,14 +101,11 @@ Options:
                     an arbitrary unused port.
   --jwk <filename>  Adds a JSON-formatted key to the server's keystore.
                     Can be specified many times.
-  --pem <filename>  Adds a PEM-encoded key to the server's keystore.
-                    Can be specified many times.
   --save-jwk        Saves all the keys in the keystore as "{kid}.json".
-  --save-pem        Saves all the keys in the keystore as "{kid}.pem".
 
-If no keys are added via the --jwk or --pem options, a new random RSA key
+If no keys are added via the --jwk option, a new random RSA key
 will be generated. This key can then be saved to disk with the --save-jwk
-or --save-pem options for later reuse.`);
+for later reuse.`);
 }
 
 function parsePort(portStr: string) {
@@ -129,32 +118,12 @@ function parsePort(portStr: string) {
   return port;
 }
 
-async function parseJWK(filename: string): Promise<JWK.Key> {
-  const jwkStr = await readFileAsync(filename, 'utf8');
-  return await JWK.asKey(jwkStr);
-}
-
-async function parsePEM(filename: string): Promise<JWK.Key> {
-  const pem = await readFileAsync(filename, 'utf8');
-  return await JWK.asKey(pem, 'pem', {
-    kid: path.parse(filename).name,
-  });
-}
-
-function saveJWK(keys: JWK.Key[]) {
-  keys.forEach((key) => {
+async function saveJWK(keys: JWK[]) {
+  for (const key of keys) {
     const filename = `${key.kid}.json`;
-    writeFileSync(filename, JSON.stringify(key.toJSON(true), null, 2));
+    await writeFileAsync(filename, JSON.stringify(key, null, 2));
     console.log(`JSON web key written to file "${filename}".`);
-  });
-}
-
-function savePEM(keys: JWK.Key[]) {
-  keys.forEach((key) => {
-    const filename = `${key.kid}.pem`;
-    writeFileSync(filename, key.toPEM(true));
-    console.log(`PEM-encoded key written to file "${filename}".`);
-  });
+  }
 }
 
 async function startServer(opts: Options) {
@@ -169,18 +138,12 @@ async function startServer(opts: Options) {
   );
 
   if (opts.keys.length === 0) {
-    const jwk = await server.issuer.keys.generateRSA(1024);
-    opts.keys.push(jwk);
-
+    const jwk = await server.issuer.keys.generate('RS256');
     console.log(`Generated new RSA key with kid "${jwk.kid}"`);
   }
 
   if (opts.saveJWK) {
-    saveJWK(opts.keys);
-  }
-
-  if (opts.savePEM) {
-    savePEM(opts.keys);
+    await saveJWK(server.issuer.keys.toJSON(true));
   }
 
   await server.start(opts.port, opts.host);
@@ -194,6 +157,7 @@ async function startServer(opts: Options) {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   process.once('SIGINT', async () => {
+    console.log('OAuth 2 server is stopping...');
     await server.stop();
     console.log('OAuth 2 server has been stopped.');
   });
