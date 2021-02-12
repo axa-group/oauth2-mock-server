@@ -66,6 +66,12 @@ export class JWKStore {
    * @returns {Promise<JWK>} The promise for the generated key.
    */
   async generateRSA(size?: number, kid?: string, use?: string): Promise<JWK> {
+    /*
+    https://www.scottbrady91.com/JOSE/JWTs-Which-Signing-Algorithm-Should-I-Use
+    https://connect2id.com/products/nimbus-jose-jwt/algorithm-selection-guide
+    https://tools.ietf.org/html/rfc7518#section-3.5
+    */
+
     if (size !== undefined && size < 2048) {
       throw new Error('Key size must be greater than or equal to 2048.');
     }
