@@ -4,46 +4,73 @@ import { JWKStore } from '../src/lib/jwk-store';
 import * as testKeys from './keys';
 
 describe('JWK Store', () => {
-  it('should be able to generate a new RSA key', async () => {
-    const store = new JWKStore();
-    const key = await store.generate('RS256');
+  describe('generate()', () => {
+    it.each([
+      ["RSASSA-PKCS1-v1_5", "RS256", "RSA"],
+      ["RSASSA-PKCS1-v1_5", "RS384", "RSA"],
+      ["RSASSA-PKCS1-v1_5", "RS512", "RSA"],
+      ["RSASSA-PSS", "PS256", "RSA"],
+      ["RSASSA-PSS", "PS384", "RSA"],
+      ["RSASSA-PSS", "PS512", "RSA"],
+      ["ECDSA", "ES256", "EC"],
+      ["ECDSA", "ES384", "EC"],
+      ["ECDSA", "ES512", "EC"],
+    ])('should be able to generate a new %s based key (alg = %s)', async (_kind: string, alg: string, expectedKty: string) => {
+      const store = new JWKStore();
+      const key = await store.generate(alg);
+      expect(key).toMatchObject({
+        alg: alg,
+        kty: expectedKty,
+        kid: expect.stringMatching(/^[\w-]+$/),
+      });
+    });
 
-    expect(key).toMatchObject({
-      kty: 'RSA',
-      use: 'sig',
-      kid: expect.stringMatching(/^[\w-]+$/),
+    it.each([
+      "Ed25519",
+      "Ed448",
+    ])('should be able to generate a new EdDSA based key (crv = %s)', async (crv: string) => {
+      const store = new JWKStore();
+      const key = await store.generate('EdDSA', { crv });
+      expect(key).toMatchObject({
+        alg: 'EdDSA',
+        kty: 'OKP',
+        crv,
+        kid: expect.stringMatching(/^[\w-]+$/),
+      });
+    });
+
+    it.each([
+      "RS123",
+      "dunno",
+    ])('throws on unsupported algs (alg = %s)', async (alg: string) => {
+      const store = new JWKStore();
+
+      await expect(() => store.generate(alg)).rejects.toThrow("unsupported or invalid JWK \"alg\" (Algorithm) Parameter value");
+    });
+
+    it.each([
+      "Ed007",
+      "dunno",
+    ])('throws on unsupported crv for EdDSA alg (crv = %s)', async (crv: string) => {
+      const store = new JWKStore();
+
+      await expect(() => store.generate('EdDSA', { crv })).rejects.toThrow("invalid or unsupported crv option provided, supported values are Ed25519 and Ed448");
     });
   });
 
-  it('should be able to specify a new RSA key size', async () => {
-    const store = new JWKStore();
-    const key = await store.generate('RS256');
+  describe("add()", () => {
+    it.each([
+      ['RSA', testKeys.getParsed('test-rs256-key.json')],
+      ['EC', testKeys.getParsed('test-es256-key.json')],
+      ['OKP', testKeys.getParsed('test-eddsa-key.json')],
+    ])('should be able to add a JWK key to the store (kty = %s)', async (keyType, testKey) => {
+      const store = new JWKStore();
+      const key = await store.add(testKey);
 
-    expect(key).toMatchObject({
-      kty: 'RSA',
-      use: 'sig',
-      kid: expect.stringMatching(/^[\w-]+$/),
-    });
-  });
-
-  it('throws when a specified key size is less than 2048', async () => {
-    const store = new JWKStore();
-
-    await expect(() => store.generate('RS256')).rejects.toThrow();
-  });
-
-  it.each([
-    ['RSA', testKeys.getParsed('test-rsa-key.json')],
-    ['EC', testKeys.getParsed('test-ec-key.json')],
-    ['oct', testKeys.getParsed('test-oct-key.json')],
-  ])('should be able to add a JWK \'%s\' key to the store', async (keyType, testKey) => {
-    const store = new JWKStore();
-    const key = await store.add(testKey);
-
-    expect(key).toMatchObject({
-      kty: keyType,
-      use: 'sig',
-      kid: testKey.kid,
+      expect(key).toMatchObject({
+        kty: keyType,
+        kid: testKey.kid,
+      });
     });
   });
 

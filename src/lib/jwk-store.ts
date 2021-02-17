@@ -21,7 +21,9 @@
 
 import { randomBytes } from 'crypto';
 
-import generateKeyPair from 'jose/util/generate_key_pair';
+import generateKeyPair, {
+  GenerateKeyPairOptions,
+} from 'jose/util/generate_key_pair';
 import fromKeyLike from 'jose/jwk/from_key_like';
 import { JWK } from 'jose/types';
 // import { fromPEM } from './helpers';
@@ -68,22 +70,27 @@ export class JWKStore {
    * Generates a new random RSA key and adds it into this keystore.
    *
    * @param {string} alg The selected algorithm
+   * @param {object} [opts] The options
    * @param {string} [opts.kid] The key identifier to use
-   * @param {object} opts The options
+   * @param opts.crv
    * @returns {Promise<JWK>} The promise for the generated key.
    */
-  async generate(alg: string, opts?: { kid?: string }): Promise<JWK> {
+  async generate(
+    alg: string,
+    opts?: { kid?: string; crv?: string }
+  ): Promise<JWK> {
     /*
     https://www.scottbrady91.com/JOSE/JWTs-Which-Signing-Algorithm-Should-I-Use
     https://connect2id.com/products/nimbus-jose-jwt/algorithm-selection-guide
     https://tools.ietf.org/html/rfc7518#section-3.5
     */
-
     // TODO: whitelist alg
-    // TODO: Add crv option for Ecdsa alg
-    const pair = await generateKeyPair(alg);
+
+    const generateOpts: GenerateKeyPairOptions =
+      opts !== undefined && opts.crv !== undefined ? { crv: opts.crv } : {};
+
+    const pair = await generateKeyPair(alg, generateOpts);
     const jwk = await fromKeyLike(pair.privateKey);
-    // TODO: add .alg to jwk
 
     normalizeKey(jwk, alg, opts);
 

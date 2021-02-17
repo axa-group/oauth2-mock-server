@@ -1,0 +1,8 @@
+{
+  "kid": "test-eddsa-key",
+  "alg": "EdDSA",
+  "kty": "OKP",
+  "crv": "Ed25519",
+  "x": "6o-SmsCSd_1uS6N2JgFI5V6Ywyq5-rNDHg_Q16Gh8QI",
+  "d": "367g9b4UoWGkDPaO87i-OPyFccaYiS8akG2XEsAMRUY"
+}
