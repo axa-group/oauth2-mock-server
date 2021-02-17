@@ -60,28 +60,25 @@ export class JWKStore {
   /**
    * Generates a new random RSA key and adds it into this keystore.
    *
-   * @param {number} [size = 2048] The size in bits of the new key, 2048 at the minimum. Default: 2048.
-   * @param {string} [kid] The key ID. If omitted, a new random 'kid' will be generated.
-   * @param {string} [use = sig] The intended use of the key (e.g. 'sig', 'enc'.) Default: 'sig'.
+   * @param {string} alg The selected algorithm
+   * @param {string} [opts.kid] The key identifier to use
+   * @param {object} opts The options
    * @returns {Promise<JWK>} The promise for the generated key.
    */
-  async generateRSA(size?: number, kid?: string, use?: string): Promise<JWK> {
+  async generate(alg: string, opts: { kid?: string }): Promise<JWK> {
     /*
     https://www.scottbrady91.com/JOSE/JWTs-Which-Signing-Algorithm-Should-I-Use
     https://connect2id.com/products/nimbus-jose-jwt/algorithm-selection-guide
     https://tools.ietf.org/html/rfc7518#section-3.5
     */
 
-    if (size !== undefined && size < 2048) {
-      throw new Error('Key size must be greater than or equal to 2048.');
-    }
-
-    const pair = await generateKeyPair('RS256', {
-      modulusLength: size ?? 2048,
-    });
+    // TODO: whitelist alg
+    // TODO: Add crv option for Ecdsa alg
+    const pair = await generateKeyPair(alg);
     const jwk = await fromKeyLike(pair.privateKey);
+    // TODO: add .alg to jwk
 
-    normalizeKey(jwk, kid, use);
+    normalizeKey(jwk, opts.kid);
 
     this.#keyRotator.add(jwk);
     return jwk;
@@ -98,25 +95,12 @@ export class JWKStore {
 
     normalizeKey(jwkUse);
 
+    // TODO: assess can be properly deserialized
+    // - alg exist
+    // - toKeyLike() returns a private key
+
     this.#keyRotator.add(jwkUse);
     return Promise.resolve(jwkUse);
-  }
-
-  /**
-   * Adds a PEM-encoded RSA key to this keystore.
-   *
-   * @param {string} pem The PEM-encoded key to add.
-   * @param {string} [kid] The key ID. If omitted, a new random 'kid' will be generated.
-   * @param {string} [use] The intended use of the key (e.g. 'sig', 'enc'.) Default: 'sig'.
-   * @returns {Promise<JWK>} The promise for the added key.
-   */
-  async addPEM(pem: string, kid?: string, use?: string): Promise<JWK> {
-    const jwk = await fromPEM(pem);
-
-    normalizeKey(jwk, kid, use);
-
-    this.#keyRotator.add(jwk);
-    return jwk;
   }
 
   /**
@@ -126,7 +110,7 @@ export class JWKStore {
    * @param {string} [kid] The optional key identifier to match keys against.
    * @returns {JWK.Key | null} The retrieved key.
    */
-  get(kid?: string): JWK | null {
+  get(kid?: string): JWK | undefined {
     return this.#keyRotator.next(kid);
   }
 
@@ -156,11 +140,11 @@ class KeyRotator {
     this.#keys.push(key);
   }
 
-  next(kid?: string): JWK | null {
+  next(kid?: string): JWK | undefined {
     const i = this.findNext(kid);
 
     if (i === -1) {
-      return null;
+      return undefined;
     }
 
     return this.moveToTheEnd(i);
