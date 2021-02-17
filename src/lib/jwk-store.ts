@@ -24,23 +24,30 @@ import { randomBytes } from 'crypto';
 import generateKeyPair from 'jose/util/generate_key_pair';
 import fromKeyLike from 'jose/jwk/from_key_like';
 import { JWK } from 'jose/types';
-import { fromPEM } from './helpers';
+// import { fromPEM } from './helpers';
 
 const generateRandomKid = () => {
   return randomBytes(40).toString('hex');
 };
 
-const normalizeKey = (jwk: JWK, kid?: string, use = 'sig'): void => {
+const normalizeKey = (
+  jwk: JWK,
+  alg?: string,
+  opts?: { kid?: string }
+): void => {
   if (jwk.kid === undefined) {
-    if (kid !== undefined) {
-      jwk.kid = kid;
+    if (opts !== undefined && opts.kid !== undefined) {
+      jwk.kid = opts.kid;
     } else {
       jwk.kid = generateRandomKid();
     }
   }
 
-  if (jwk.use === undefined) {
-    jwk.use = use;
+  if (jwk.alg === undefined) {
+    if (alg === undefined) {
+      throw new Error('Unspecified alg');
+    }
+    jwk.alg = alg;
   }
 };
 
@@ -65,7 +72,7 @@ export class JWKStore {
    * @param {object} opts The options
    * @returns {Promise<JWK>} The promise for the generated key.
    */
-  async generate(alg: string, opts: { kid?: string }): Promise<JWK> {
+  async generate(alg: string, opts?: { kid?: string }): Promise<JWK> {
     /*
     https://www.scottbrady91.com/JOSE/JWTs-Which-Signing-Algorithm-Should-I-Use
     https://connect2id.com/products/nimbus-jose-jwt/algorithm-selection-guide
@@ -78,7 +85,7 @@ export class JWKStore {
     const jwk = await fromKeyLike(pair.privateKey);
     // TODO: add .alg to jwk
 
-    normalizeKey(jwk, opts.kid);
+    normalizeKey(jwk, alg, opts);
 
     this.#keyRotator.add(jwk);
     return jwk;

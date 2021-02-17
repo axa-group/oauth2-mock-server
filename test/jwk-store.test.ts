@@ -6,7 +6,7 @@ import * as testKeys from './keys';
 describe('JWK Store', () => {
   it('should be able to generate a new RSA key', async () => {
     const store = new JWKStore();
-    const key = await store.generateRSA();
+    const key = await store.generate('RS256');
 
     expect(key).toMatchObject({
       kty: 'RSA',
@@ -17,7 +17,7 @@ describe('JWK Store', () => {
 
   it('should be able to specify a new RSA key size', async () => {
     const store = new JWKStore();
-    const key = await store.generateRSA(3084);
+    const key = await store.generate('RS256');
 
     expect(key).toMatchObject({
       kty: 'RSA',
@@ -29,7 +29,7 @@ describe('JWK Store', () => {
   it('throws when a specified key size is less than 2048', async () => {
     const store = new JWKStore();
 
-    await expect(() => store.generateRSA(256)).rejects.toThrow();
+    await expect(() => store.generate('RS256')).rejects.toThrow();
   });
 
   it.each([
@@ -47,24 +47,10 @@ describe('JWK Store', () => {
     });
   });
 
-  it.each([
-    ['RSA', testKeys.get('test-rsa-key.pem')],
-    ['EC', testKeys.get('test-ec-key.pem')],
-  ])('should be able to add a PEM-encoded \'%s\' key to the store', async (keyType, testPEMKey) => {
-    const store = new JWKStore();
-    const key = await store.addPEM(testPEMKey);
-
-    expect(key).toMatchObject({
-      kty: keyType,
-      kid: expect.stringMatching(/^[\w-]+$/),
-      use: 'sig',
-    });
-  });
-
   it('should be able to retrieve a key by its \'kid\'', async () => {
     const store = new JWKStore();
-    const key1 = await store.generateRSA(2048, 'key-one');
-    const key2 = await store.generateRSA(2048, 'key-two');
+    const key1 = await store.generate('RS256', { kid: 'key-one' });
+    const key2 = await store.generate('RS256', { kid: 'key-two' });
 
     expect(key1.kid).not.toEqual(key2.kid);
 
@@ -95,9 +81,9 @@ describe('JWK Store', () => {
     false
   ])('should be able to produce a JSON representation of the public keys in the key store (including private fields: %s)', async (shouldIncludePrivates?: boolean) => {
     const store = new JWKStore();
-    await store.generateRSA(2048, 'key-one');
-    await store.generateRSA(2048, 'key-two');
-    await store.generateRSA(2048, 'key-three');
+    await store.generate('RS256', { kid: 'key-one' });
+    await store.generate('RS256', { kid: 'key-two' });
+    await store.generate('RS256', { kid: 'key-three' });
 
     const jwks = store.toJSON(shouldIncludePrivates);
     expect(jwks).toHaveProperty("keys");
@@ -134,9 +120,9 @@ describe('JWK Store', () => {
 
   it('should be able to retrieve keys in a round-robin manner', async () => {
     const store = new JWKStore();
-    await store.generateRSA(2048, 'key-one');
-    await store.generateRSA(2048, 'key-two');
-    await store.generateRSA(2048, 'key-three');
+    await store.generate('RS256', { kid: 'key-one' });
+    await store.generate('RS256', { kid: 'key-two' });
+    await store.generate('RS256', { kid: 'key-three' });
 
     const key1 = store.get();
     expect(key1).not.toBeNull();
@@ -157,7 +143,7 @@ describe('JWK Store', () => {
 
   it('should be able to retrieve the private key of a key', async () => {
     const store = new JWKStore();
-    const jwk = await store.generateRSA();
+    const jwk = await store.generate('RS256');
 
     ['e', 'n', 'd', 'p', 'q', 'dp', 'dq', 'qi'].forEach((prop) => {
       expect(jwk).toHaveProperty(prop);
