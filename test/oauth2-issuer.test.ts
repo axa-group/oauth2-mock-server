@@ -9,21 +9,24 @@ describe('OAuth 2 issuer', () => {
     issuer = new OAuth2Issuer();
     issuer.url = 'https://issuer.example.com';
 
-    await issuer.keys.add(testKeys.getParsed('test-rsa-key.json'));
-    await issuer.keys.add(testKeys.getParsed('test-rsa384-key.json'));
-    await issuer.keys.add(testKeys.getParsed('test-ec-key.json'));
-    await issuer.keys.add(testKeys.getParsed('test-oct-key.json'));
+    await issuer.keys.add(testKeys.getParsed('test-rs256-key.json'));
+    await issuer.keys.add(testKeys.getParsed('test-es256-key.json'));
+    await issuer.keys.add(testKeys.getParsed('test-eddsa-key.json'));
   });
 
   it('should not allow to build tokens for an unknown \'kid\'', () => {
-    expect(() => issuer.buildToken(true, 'unknown-kid')).toThrow('Cannot build token: Unknown key.');
+    expect(() => issuer.buildToken({ kid: 'unknown-kid' })).toThrow('Cannot build token: Unknown key.');
   });
 
-  it('should be able to build unsigned tokens', () => {
+  it.each([
+    'test-rs256-key',
+    'test-es256-key',
+    'test-eddsa-key',
+  ])('should be able to build tokens (%s)', async () => {
     const now = Math.floor(Date.now() / 1000);
     const expiresIn = 1000;
 
-    const token = issuer.buildToken(false, 'test-rsa-key', undefined, expiresIn);
+    const token = await issuer.buildToken({ kid: 'test-rsa-key', expiresIn });
 
     expect(token).toMatch(/^[\w-]+\.[\w-]+\.$/);
 
