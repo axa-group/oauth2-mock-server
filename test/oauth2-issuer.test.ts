@@ -1,3 +1,7 @@
+import { AssertionError } from 'assert';
+import parseJwk, { JWK, KeyLike } from 'jose/jwk/parse';
+import jwtVerify from 'jose/jwt/verify';
+
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import type { JwtTransform } from '../src/lib/types';
 import * as testKeys from './keys';
@@ -26,21 +30,23 @@ describe('OAuth 2 issuer', () => {
     const now = Math.floor(Date.now() / 1000);
     const expiresIn = 1000;
 
-    const token = await issuer.buildToken({ kid: 'test-rsa-key', expiresIn });
+    const token = await issuer.buildToken({ kid: 'test-rs256-key', expiresIn });
 
     expect(token).toMatch(/^[\w-]+\.[\w-]+\.$/);
 
-    const decoded = jwt.decode(token, { complete: true });
+    const key = issuer.keys.get('test-rs256-key');
+    const privateKey = await getPrivateKey(key);
+
+    const decoded = await jwtVerify(token, privateKey);
     expect(typeof decoded).not.toBe('string');
 
-    const decodedObj = decoded as Record<string, unknown>;
-    expect(decodedObj.header).toEqual({
+    expect(decoded.protectedHeader).toEqual({
       alg: 'none',
       typ: 'JWT',
       kid: 'test-rsa-key',
     });
 
-    const p = decodedObj.payload;
+    const p = decoded.payload;
 
     expect(p).toMatchObject({
       iss: issuer.url,
@@ -66,7 +72,7 @@ describe('OAuth 2 issuer', () => {
 
     expect(token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
 
-    expect(() => jwt.verify(token, getSecret(testKey!))).not.toThrow();
+    expect(() => jwt.verify(token, getPrivateKey(testKey))).not.toThrow();
   });
 
   it('should be able to build signed tokens with the algorithm hinted by the key', () => {
@@ -74,7 +80,7 @@ describe('OAuth 2 issuer', () => {
     expect(testKey).not.toBeNull();
     const token = issuer.buildToken(true, testKey!.kid);
 
-    expect(() => jwt.verify(token, getSecret(testKey!))).not.toThrow();
+    expect(() => jwt.verify(token, getPrivateKey(testKey))).not.toThrow();
   });
 
   it.each([
@@ -129,15 +135,11 @@ describe('OAuth 2 issuer', () => {
   });
 });
 
-function getSecret(key: JWK.Key): string {
-  switch (key.kty) {
-    case 'RSA':
-    case 'EC':
-      return key.toPEM(false);
-    default: {
-      const parsed = key.toJSON(true);
-      expect(parsed).toMatchObject({ k: expect.any(String) });
-      return (parsed as { k: string }).k;
-    }
+const getPrivateKey = async (key: JWK | undefined): Promise<KeyLike> => {
+  if (key === undefined) {
+    throw new AssertionError({ message: 'Key is undefined' });
   }
-}
+
+  const privateKey = await parseJwk(key);
+  return privateKey;
+};
