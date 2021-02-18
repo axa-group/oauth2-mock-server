@@ -181,7 +181,7 @@ async function startServer(opts: Options) {
   );
 
   if (opts.keys.length === 0) {
-    const jwk = await server.issuer.keys.generateRSA(1024);
+    const jwk = await server.issuer.keys.generate('RS256');
     opts.keys.push(jwk);
 
     assertKidIsDefined(jwk.kid);
