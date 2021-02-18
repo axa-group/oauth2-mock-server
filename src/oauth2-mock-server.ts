@@ -207,6 +207,7 @@ async function startServer(opts: Options) {
 
   // eslint-disable-next-line @typescript-eslint/no-misused-promises
   process.once('SIGINT', async () => {
+    console.log('OAuth 2 server is stopping...');
     await server.stop();
     console.log('OAuth 2 server has been stopped.');
   });
