@@ -35,30 +35,6 @@ export function assertIsString(
   }
 }
 
-export const supportedAlgs = [
-  'HS256',
-  'HS384',
-  'HS512',
-  'RS256',
-  'RS384',
-  'RS512',
-  'ES256',
-  'ES384',
-  'ES512',
-  'PS256',
-  'PS384',
-  'PS512',
-  'none',
-];
-
-export function assertIsAlgorithm(
-  input: string
-): asserts input is jwt.Algorithm {
-  if (!supportedAlgs.includes(input)) {
-    throw new AssertionError({ message: `Unssuported algorithm '${input}'` });
-  }
-}
-
 export function assertIsAddressInfo(
   input: string | null | AddressInfo
 ): asserts input is AddressInfo {

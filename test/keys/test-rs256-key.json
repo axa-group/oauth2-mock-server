@@ -1,5 +1,5 @@
 {
-  "kid": "test-rsa256-key",
+  "kid": "test-rs256-key",
   "alg": "RS256",
   "kty": "RSA",
   "e": "AQAB",

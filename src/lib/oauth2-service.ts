@@ -89,12 +89,11 @@ export class OAuth2Service extends EventEmitter {
    * @returns {string} The produced JWT.
    * @fires OAuth2Service#beforeTokenSigning
    */
-  buildToken(
-    signed: boolean,
+  async buildToken(
     scopesOrTransform: ScopesOrTransform | undefined,
     expiresIn: number,
     req: IncomingMessage
-  ): string {
+  ): Promise<string> {
     this.issuer.once(InternalEvents.BeforeSigning, (token: MutableToken) => {
       /**
        * Before token signing event.
@@ -106,12 +105,7 @@ export class OAuth2Service extends EventEmitter {
       this.emit(PublicEvents.BeforeTokenSigning, token, req);
     });
 
-    return this.issuer.buildToken(
-      signed,
-      undefined,
-      scopesOrTransform,
-      expiresIn
-    );
+    return this.issuer.buildToken({ scopesOrTransform, expiresIn });
   }
 
   /**
@@ -170,7 +164,7 @@ export class OAuth2Service extends EventEmitter {
     res.json(this.issuer.keys);
   };
 
-  private tokenHandler: RequestHandler = (req, res) => {
+  private tokenHandler: RequestHandler = async (req, res) => {
     const tokenTtl = 3600;
 
     res.set({
@@ -224,7 +218,7 @@ export class OAuth2Service extends EventEmitter {
         });
     }
 
-    const token = this.buildToken(true, xfn, tokenTtl, req);
+    const token = await this.buildToken(xfn, tokenTtl, req);
     const body: Record<string, unknown> = {
       access_token: token,
       token_type: 'Bearer',
@@ -248,7 +242,7 @@ export class OAuth2Service extends EventEmitter {
         }
       };
 
-      body.id_token = this.buildToken(true, xfn, tokenTtl, req);
+      body.id_token = await this.buildToken(xfn, tokenTtl, req);
       body.refresh_token = uuidv4();
     }
 

@@ -105,16 +105,22 @@ export class JWKStore {
    * @returns {Promise<JWK>} The promise for the added key.
    */
   add(jwk: JWK): Promise<JWK> {
-    const jwkUse: JWK = { ...jwk };
+    return new Promise((resolve, reject) => {
+      try {
+        const jwkUse: JWK = { ...jwk };
 
-    normalizeKey(jwkUse);
+        normalizeKey(jwkUse);
 
-    // TODO: assess can be properly deserialized
-    // - alg exist
-    // - toKeyLike() returns a private key
+        // TODO: assess can be properly deserialized
+        // - alg exist
+        // - toKeyLike() returns a private key
 
-    this.#keyRotator.add(jwkUse);
-    return Promise.resolve(jwkUse);
+        this.#keyRotator.add(jwkUse);
+        return resolve(jwkUse);
+      } catch (e) {
+        return reject(e);
+      }
+    });
   }
 
   /**
@@ -125,6 +131,7 @@ export class JWKStore {
    * @returns {JWK.Key | null} The retrieved key.
    */
   get(kid?: string): JWK | undefined {
+    // TODO: make this async
     return this.#keyRotator.next(kid);
   }
 
@@ -137,6 +144,7 @@ export class JWKStore {
    * @returns {Object} The JSON representation of this keystore.
    */
   toJSON(includePrivateFields = false): Record<string, unknown> {
+    // TODO: make this async
     return this.#keyRotator.toJSON(includePrivateFields);
   }
 }

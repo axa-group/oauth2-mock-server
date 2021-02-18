@@ -99,7 +99,6 @@ export class OAuth2Server extends HttpServer {
   async start(port?: number, host?: string): Promise<Server> {
     const server = await super.start(port, host);
 
-    /* istanbul ignore else */
     if (!this.issuer.url) {
       this.issuer.url = buildIssuerUrl(host, this.address().port);
     }
