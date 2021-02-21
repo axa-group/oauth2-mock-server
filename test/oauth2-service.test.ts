@@ -513,7 +513,7 @@ describe('OAuth 2 service', () => {
       })
       .expect(200);
 
-    expect(res.body).toEqual(null);
+    expect(res.text).toEqual('');
   });
 
   it('should allow customizing the revoke response through a beforeRevoke event', async () => {
