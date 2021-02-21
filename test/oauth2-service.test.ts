@@ -4,8 +4,10 @@ import type { Express } from 'express';
 
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import { OAuth2Service } from '../src/lib/oauth2-service';
-import * as testKeys from './keys';
 import { MutableAuthorizeRedirectUri } from '../src/lib/types';
+
+import * as testKeys from './keys';
+import { verifyTokenWithKey } from './lib/test_helpers';
 
 describe('OAuth 2 service', () => {
   let service: OAuth2Service;
@@ -74,11 +76,11 @@ describe('OAuth 2 service', () => {
       scope: 'urn:first-scope urn:second-scope',
     });
 
-    const key = service.issuer.keys.get('test-rsa-key');
+    const key = service.issuer.keys.get('test-rs256-key');
     expect(key).not.toBeNull();
 
     const resBody = res.body as { access_token: string; scope: string };
-    const decoded = jwt.verify(resBody.access_token, key!.toPEM(false));
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
     expect(decoded).toMatchObject({
       iss: service.issuer.url,

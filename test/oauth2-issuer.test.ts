@@ -1,11 +1,8 @@
-import { AssertionError } from 'assert';
-import parseJwk from 'jose/jwk/parse';
-import jwtVerify from 'jose/jwt/verify';
-import { JWTVerifyResult } from 'jose/types';
-
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import type { JwtTransform } from '../src/lib/types';
+
 import * as testKeys from './keys';
+import { verifyTokenWithKey } from './lib/test_helpers';
 
 describe('OAuth 2 issuer', () => {
   let issuer: OAuth2Issuer;
@@ -35,7 +32,7 @@ describe('OAuth 2 issuer', () => {
 
     expect(token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
 
-    const decoded = await verifyTokenWithKey(token, kid);
+    const decoded = await verifyTokenWithKey(issuer, token, kid);
 
     expect(decoded.protectedHeader).toEqual({
       alg: expectedAlg,
@@ -64,7 +61,7 @@ describe('OAuth 2 issuer', () => {
   ])('should be able to build tokens with a scope', async (scopes) => {
     const token = await issuer.buildToken({ kid: 'test-rs256-key', scopesOrTransform: scopes });
 
-    const decoded = await verifyTokenWithKey(token, 'test-rs256-key');
+    const decoded = await verifyTokenWithKey(issuer, token, 'test-rs256-key');
 
     expect(decoded.payload).toHaveProperty("scope");
 
@@ -79,7 +76,7 @@ describe('OAuth 2 issuer', () => {
 
     const token = await issuer.buildToken({ kid: 'test-rs256-key', scopesOrTransform: transform });
 
-    const decoded = await verifyTokenWithKey(token, 'test-rs256-key');
+    const decoded = await verifyTokenWithKey(issuer, token, 'test-rs256-key');
 
     expect(decoded).toMatchObject({
       protectedHeader: { x5t: 'a-new-value' },
@@ -96,7 +93,7 @@ describe('OAuth 2 issuer', () => {
     });
 
     const token = await issuer.buildToken({ kid: 'test-rs256-key' });
-    const decoded = await verifyTokenWithKey(token, 'test-rs256-key');
+    const decoded = await verifyTokenWithKey(issuer, token, 'test-rs256-key');
 
     expect(decoded).toMatchObject({
       protectedHeader: { x5t: 'a-new-value' },
@@ -105,17 +102,4 @@ describe('OAuth 2 issuer', () => {
       },
     });
   });
-
-  const verifyTokenWithKey = async (token: string, kid: string): Promise<JWTVerifyResult> => {
-    const key = issuer.keys.get(kid);
-
-    if (key === undefined) {
-      throw new AssertionError({ message: 'Key is undefined' });
-    }
-
-    const privateKey = await parseJwk(key);
-
-    const verified = await jwtVerify(token, privateKey);
-    return verified;
-  };
 });
