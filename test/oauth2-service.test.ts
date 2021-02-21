@@ -15,7 +15,7 @@ describe('OAuth 2 service', () => {
   beforeAll(async () => {
     const issuer = new OAuth2Issuer();
     issuer.url = 'https://issuer.example.com';
-    await issuer.keys.add(testKeys.getParsed('test-rsa-key.json'));
+    await issuer.keys.add(testKeys.getParsed('test-rs256-key.json'));
 
     service = new OAuth2Service(issuer);
   });
@@ -53,7 +53,7 @@ describe('OAuth 2 service', () => {
       keys: [
         {
           kty: 'RSA',
-          kid: 'test-rsa-key',
+          kid: 'test-rs256-key',
           n: expect.any(String),
           e: expect.any(String),
         },
@@ -82,7 +82,7 @@ describe('OAuth 2 service', () => {
     const resBody = res.body as { access_token: string; scope: string };
     const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
-    expect(decoded).toMatchObject({
+    expect(decoded.payload).toMatchObject({
       iss: service.issuer.url,
       scope: resBody.scope,
     });
@@ -109,12 +109,12 @@ describe('OAuth 2 service', () => {
 
     const resBody = res.body as { access_token: string; scope: string };
 
-    const key = service.issuer.keys.get('test-rsa-key');
+    const key = service.issuer.keys.get('test-rs256-key');
     expect(key).not.toBeNull();
 
-    const decoded = jwt.verify(resBody.access_token, key!.toPEM(false));
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
-    expect(decoded).toMatchObject({
+    expect(decoded.payload).toMatchObject({
       iss: service.issuer.url,
       scope: resBody.scope,
       sub: 'the-resource-owner@example.com',
@@ -143,13 +143,13 @@ describe('OAuth 2 service', () => {
       refresh_token: expect.any(String),
     });
 
-    const key = service.issuer.keys.get('test-rsa-key');
+    const key = service.issuer.keys.get('test-rs256-key');
     expect(key).not.toBeNull();
 
     const resBody = res.body as { access_token: string };
-    const decoded = jwt.verify(resBody.access_token, key!.toPEM(false));
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
-    expect(decoded).toMatchObject({
+    expect(decoded.payload).toMatchObject({
       iss: service.issuer.url,
       scope: 'dummy',
       sub: 'johndoe',
@@ -178,7 +178,7 @@ describe('OAuth 2 service', () => {
       refresh_token: expect.any(String),
     });
 
-    const key = service.issuer.keys.get('test-rsa-key');
+    const key = service.issuer.keys.get('test-rs256-key');
     expect(key).not.toBeNull();
 
     const resBody = res.body as {
@@ -186,17 +186,18 @@ describe('OAuth 2 service', () => {
       scope: string;
       id_token: string;
     };
-    const decoded = jwt.verify(resBody.access_token, key!.toPEM(false));
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
-    expect(decoded).toMatchObject({
+    expect(decoded.payload).toMatchObject({
       iss: service.issuer.url,
       scope: 'dummy',
       sub: 'johndoe',
       amr: ['pwd'],
     });
 
-    const decodedIdToken = jwt.verify(resBody.id_token, key!.toPEM(false));
-    expect(decodedIdToken).toMatchObject({
+    const decodedIdToken = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
+
+    expect(decodedIdToken.payload).toMatchObject({
       aud: 'client_id_sample',
     });
   });
@@ -221,13 +222,13 @@ describe('OAuth 2 service', () => {
       refresh_token: expect.any(String),
     });
 
-    const key = service.issuer.keys.get('test-rsa-key');
+    const key = service.issuer.keys.get('test-rs256-key');
     expect(key).not.toBeNull();
 
     const resBody = res.body as { access_token: string };
-    const decoded = jwt.verify(resBody.access_token, key!.toPEM(false));
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
-    expect(decoded).toMatchObject({
+    expect(decoded.payload).toMatchObject({
       iss: service.issuer.url,
       scope: 'dummy',
       sub: 'johndoe',
@@ -251,16 +252,16 @@ describe('OAuth 2 service', () => {
       })
       .expect(200);
 
-    const key = service.issuer.keys.get('test-rsa-key');
+    const key = service.issuer.keys.get('test-rs256-key');
     expect(key).not.toBeNull();
 
     expect(res.body).toMatchObject({
       id_token: expect.any(String),
     });
     const resBody = res.body as { id_token: string };
-    const decoded = jwt.verify(resBody.id_token, key!.toPEM(false));
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
 
-    expect(decoded).toMatchObject({
+    expect(decoded.payload).toMatchObject({
       sub: 'johndoe',
       aud: 'abcecedf',
       nonce: '21ba8e4a-26af-4538-b98a-bccf031f6754',
@@ -287,16 +288,16 @@ describe('OAuth 2 service', () => {
       })
       .expect(200);
 
-    const key = service.issuer.keys.get('test-rsa-key');
+    const key = service.issuer.keys.get('test-rs256-key');
     expect(key).not.toBeNull();
 
     expect(res.body).toMatchObject({
       id_token: expect.any(String),
     });
     const resBody = res.body as { id_token: string };
-    const decoded = jwt.verify(resBody.id_token, key!.toPEM(false));
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
 
-    expect(decoded).toMatchObject({
+    expect(decoded.payload).toMatchObject({
       sub: 'johndoe',
       aud: 'abcecedf',
       nonce: '21ba8e4a-26af-4538-b98a-bccf031f6754',
@@ -329,16 +330,16 @@ describe('OAuth 2 service', () => {
       })
       .expect(200);
 
-    const key = service.issuer.keys.get('test-rsa-key');
+    const key = service.issuer.keys.get('test-rs256-key');
     expect(key).not.toBeNull();
 
     expect(res.body).toMatchObject({
       id_token: expect.any(String),
     });
     const resBody = res.body as { id_token: string };
-    const decoded = jwt.verify(resBody.id_token, key!.toPEM(false));
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
 
-    expect(decoded).toMatchObject({
+    expect(decoded.payload).toMatchObject({
       sub: 'johndoe',
       aud: 'abcecedf',
     });
@@ -455,7 +456,7 @@ describe('OAuth 2 service', () => {
       })
       .expect(200);
 
-    const key = service.issuer.keys.get('test-rsa-key');
+    const key = service.issuer.keys.get('test-rs256-key');
     expect(key).not.toBeNull();
 
     expect(res.body).toMatchObject({
@@ -463,9 +464,9 @@ describe('OAuth 2 service', () => {
     });
     const resBody = res.body as { access_token: string };
 
-    const decoded = jwt.verify(resBody.access_token, key!.toPEM(false));
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
-    expect(decoded).toMatchObject({
+    expect(decoded.payload).toMatchObject({
       iss: service.issuer.url,
       scope: 'a-test-scope',
       custom_header: 'custom-token-value',
