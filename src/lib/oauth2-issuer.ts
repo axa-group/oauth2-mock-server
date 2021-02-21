@@ -37,7 +37,7 @@ export class OAuth2Issuer extends EventEmitter {
    *
    * @type {string}
    */
-  url: string | null;
+  url: string | undefined;
 
   #keys: JWKStore;
 
@@ -46,7 +46,7 @@ export class OAuth2Issuer extends EventEmitter {
    */
   constructor() {
     super();
-    this.url = null;
+    this.url = undefined;
 
     this.#keys = new JWKStore();
   }

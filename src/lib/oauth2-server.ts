@@ -113,7 +113,7 @@ export class OAuth2Server extends HttpServer {
    */
   async stop(): Promise<void> {
     await super.stop();
-    this._issuer.url = null;
+    this._issuer.url = undefined;
   }
 }
 

@@ -14,7 +14,6 @@ export interface Options {
   port: number;
   keys: JWK[];
   saveJWK: boolean;
-  savePEM: boolean;
 }
 
 export interface MutableAuthorizeRedirectUri {
@@ -39,9 +38,12 @@ export interface Payload {
   [key: string]: unknown;
 }
 
-export interface MutableResponse {
-  body: Record<string, unknown> | null;
+export interface StatusCodeMutableResponse {
   statusCode: number;
+}
+
+export interface MutableResponse extends StatusCodeMutableResponse {
+  body: Record<string, unknown> | '';
 }
 
 export type ScopesOrTransform = string | string[] | JwtTransform;

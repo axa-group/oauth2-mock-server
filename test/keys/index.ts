@@ -10,7 +10,7 @@ export function get(filename: string): string {
 }
 
 export function getParsed(filename: string): JWK {
-  const key = get(filename)
+  const key = get(filename);
 
   return JSON.parse(key) as JWK;
 }

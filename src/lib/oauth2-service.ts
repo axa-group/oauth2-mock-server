@@ -35,6 +35,7 @@ import type {
   MutableResponse,
   MutableToken,
   ScopesOrTransform,
+  StatusCodeMutableResponse,
 } from './types';
 import { InternalEvents, PublicEvents } from './types';
 
@@ -344,8 +345,7 @@ export class OAuth2Service extends EventEmitter {
   };
 
   private revokeHandler: RequestHandler = (req, res) => {
-    const revokeResponse: MutableResponse = {
-      body: null,
+    const revokeResponse: StatusCodeMutableResponse = {
       statusCode: 200,
     };
 
@@ -353,11 +353,11 @@ export class OAuth2Service extends EventEmitter {
      * Before revoke event.
      *
      * @event OAuth2Service#beforeRevoke
-     * @param {MutableResponse} response The response body and status code.
+     * @param {StatusCodeMutableResponse} response The response status code.
      * @param {IncomingMessage} req The incoming HTTP request.
      */
     this.emit(PublicEvents.BeforeRevoke, revokeResponse, req);
 
-    return res.status(revokeResponse.statusCode).json(revokeResponse.body);
+    return res.status(revokeResponse.statusCode).send('');
   };
 }

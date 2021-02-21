@@ -21,13 +21,7 @@ import path from 'path';
 import { JWK } from 'jose/types';
 
 import { OAuth2Server } from './index';
-import {
-  assertIsString,
-  assertKidIsDefined,
-  fromPEM,
-  shift,
-  toPEM,
-} from './lib/helpers';
+import { assertIsString, assertKidIsDefined, shift } from './lib/helpers';
 import type { Options } from './lib/types';
 
 const readFileAsync = promisify(readFile);
@@ -39,7 +33,6 @@ const defaultOptions: Options = {
   port: 8080,
   keys: [],
   saveJWK: false,
-  savePEM: false,
 };
 
 module.exports = cli(process.argv.slice(2));
@@ -83,14 +76,8 @@ async function parseCliArgs(args: string[]): Promise<Options | null> {
       case '--jwk':
         opts.keys.push(await parseJWK(shift(args)));
         break;
-      case '--pem':
-        opts.keys.push(await parsePEM(shift(args)));
-        break;
       case '--save-jwk':
         opts.saveJWK = true;
-        break;
-      case '--save-pem':
-        opts.savePEM = true;
         break;
       default:
         throw new Error(`Unrecognized option '${arg}'.`);
@@ -141,30 +128,12 @@ async function parseJWK(filename: string): Promise<JWK> {
   return JSON.parse(jwkStr) as JWK;
 }
 
-async function parsePEM(filename: string): Promise<JWK> {
-  const pem = await readFileAsync(filename, 'utf8');
-
-  const jwk = await fromPEM(pem);
-  jwk.kid = path.parse(filename).name;
-
-  return jwk;
-}
-
 async function saveJWK(keys: JWK[]) {
   for (const key of keys) {
     assertKidIsDefined(key.kid);
     const filename = `${key.kid}.json`;
     await writeFileAsync(filename, JSON.stringify(key, null, 2));
     console.log(`JSON web key written to file "${filename}".`);
-  }
-}
-
-async function savePEM(keys: JWK[]) {
-  for (const key of keys) {
-    assertKidIsDefined(key.kid);
-    const filename = `${key.kid}.pem`;
-    await writeFileAsync(filename, toPEM(key));
-    console.log(`PEM-encoded key written to file "${filename}".`);
   }
 }
 
@@ -190,10 +159,6 @@ async function startServer(opts: Options) {
 
   if (opts.saveJWK) {
     await saveJWK(opts.keys);
-  }
-
-  if (opts.savePEM) {
-    await savePEM(opts.keys);
   }
 
   await server.start(opts.port, opts.host);
