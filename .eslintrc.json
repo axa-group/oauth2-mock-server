@@ -28,6 +28,14 @@
       {
         "publicOnly": true
       }
+    ],
+    "import/no-unresolved": [
+      "error",
+      {
+        "ignore": [
+          "^jose/"
+        ]
+      }
     ]
   }
 }
