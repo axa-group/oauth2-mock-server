@@ -67,12 +67,12 @@ export class JWKStore {
   }
 
   /**
-   * Generates a new random RSA key and adds it into this keystore.
+   * Generates a new random key and adds it into this keystore.
    *
-   * @param {string} alg The selected algorithm
-   * @param {object} [opts] The options
-   * @param {string} [opts.kid] The key identifier to use
-   * @param opts.crv
+   * @param {string} alg The selected algorithm.
+   * @param {object} [opts] The options.
+   * @param {string} [opts.kid] The key identifier to use.
+   * @param {string} [opts.crv] The OKP "crv" to be used for "EdDSA" algorithm.
    * @returns {Promise<JWK>} The promise for the generated key.
    */
   async generate(

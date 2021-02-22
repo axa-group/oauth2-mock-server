@@ -1,3 +1,4 @@
+import { assertKidIsDefined } from '../src/lib/helpers';
 import { exec } from './lib/child-script';
 
 const cliPath = require.resolve('../src/oauth2-mock-server');
@@ -88,6 +89,7 @@ describe('CLI', () => {
 
     expect(key).toBeDefined();
     expect(key).toHaveProperty('kid');
+    assertKidIsDefined(key!.kid);
 
     expect(wfn).toHaveBeenCalledWith(
       `${key!.kid}.json`,
