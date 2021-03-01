@@ -22,7 +22,6 @@
 import { IncomingMessage } from 'http';
 import express, { RequestHandler, Express } from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 import basicAuth from 'basic-auth';
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
@@ -126,7 +125,7 @@ export class OAuth2Service extends EventEmitter {
     app.get(JWKS_URI_PATH, this.jwksHandler);
     app.post(
       TOKEN_ENDPOINT_PATH,
-      bodyParser.urlencoded({ extended: false }),
+      express.urlencoded({ extended: false }),
       this.tokenHandler
     );
     app.get(AUTHORIZE_PATH, this.authorizeHandler);
