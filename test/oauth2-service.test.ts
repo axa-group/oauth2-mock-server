@@ -40,6 +40,7 @@ describe('OAuth 2 service', () => {
       response_modes_supported: ['query'],
       id_token_signing_alg_values_supported: ['RS256'],
       revocation_endpoint: `${url!}/revoke`,
+      subject_types_supported: ['public'],
     });
   });
 
