@@ -26,6 +26,7 @@ export interface MutableToken {
 }
 
 export interface Header {
+  alg: string;
   kid: string;
   [key: string]: unknown;
 }
