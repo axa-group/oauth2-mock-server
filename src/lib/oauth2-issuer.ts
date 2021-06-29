@@ -87,6 +87,7 @@ export class OAuth2Issuer extends EventEmitter {
     const timestamp = Math.floor(Date.now() / 1000);
 
     const header: Header = {
+      alg: arguments.length === 0 || signed ? getKeyAlg(key) : 'none',
       kid: key.kid,
     };
 
@@ -121,7 +122,6 @@ export class OAuth2Issuer extends EventEmitter {
     this.emit(InternalEvents.BeforeSigning, token);
 
     const options: jwt.SignOptions = {
-      algorithm: arguments.length === 0 || signed ? getKeyAlg(key) : 'none',
       header: token.header,
     };
 

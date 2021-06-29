@@ -33,7 +33,7 @@ describe('OAuth 2 issuer', () => {
     const decoded = jwt.decode(token, { complete: true });
     expect(typeof decoded).not.toBe('string');
 
-    const decodedObj = decoded as Record<string, unknown>;
+    const decodedObj = decoded as unknown as Record<string, unknown>;
     expect(decodedObj.header).toEqual({
       alg: 'none',
       typ: 'JWT',
