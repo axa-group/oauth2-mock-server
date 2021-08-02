@@ -161,6 +161,7 @@ export class OAuth2Service extends EventEmitter {
       response_modes_supported: ['query'],
       id_token_signing_alg_values_supported: ['RS256'],
       revocation_endpoint: `${this.issuer.url}${REVOKE_PATH}`,
+      subject_types_supported: ['public'],
     };
 
     return res.json(openidConfig);
