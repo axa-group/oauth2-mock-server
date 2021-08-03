@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [4.0.0](https://github.com/axa-group/oauth2-mock-server/compare/v3.2.0...v4.0.0) — 2021-08-TODO
+
+### Added
+
+- Support `EdDSA` algorithm
+
+### Removed
+
+- Drop support for Node.js 10
+- No longer accepts PEM encoded keys
+- No longer supports generating unsigned JWTs
+
+### Changed
+
+- **Breaking:** Reworked exposed API. Please refer to the [migration guide](./MIGRATION.md) for more information.
+- Add support for Node.js 16
+
 ## [3.2.0](https://github.com/axa-group/oauth2-mock-server/compare/v3.1.0...v3.2.0) — 2021-08-03
 
 ### Added
