@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [3.2.0](https://github.com/axa-group/oauth2-mock-server/compare/v3.1.0...v3.2.0) — 2021-08-03
+
+### Added
+
+- Add `subject_types_supported` OpenID Provider Metadata field (thanks [jjbooth74](https://github.com/jjbooth74)!)
+
 ## [3.1.0](https://github.com/axa-group/oauth2-mock-server/compare/v3.0.3...v3.1.0) — 2020-11-30
 
 ### Added
