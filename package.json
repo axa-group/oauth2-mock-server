@@ -1,6 +1,6 @@
 {
   "name": "oauth2-mock-server",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "OAuth 2 mock server",
   "keywords": [
     "oauth",
@@ -19,8 +19,7 @@
   },
   "license": "MIT",
   "engines": {
-    "node": "^10.13 || ^12.13 || ^14.15",
-    "yarn": "^1.15.2"
+    "node": ">=10.13"
   },
   "repository": {
     "type": "git",
