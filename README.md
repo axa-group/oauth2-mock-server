@@ -161,6 +161,15 @@ It also provides a convenient way, through event emitters, to programmatically c
   });
   ```
 
+- The end session endpoint post logout redirect uri
+
+  ```js
+  // Modify the uri and query parameters before the post_logout_redirect_uri redirect
+  service.once('beforePostLogoutRedirect', (postLogoutRedirectUri, req) => {
+    postLogoutRedirectUri.url.searchParams.set('foo', 'bar');
+  });
+  ```
+
 ## Supported endpoints
 
 ### GET `/.well-known/openid-configuration`
@@ -193,6 +202,10 @@ It provides extra userinfo claims.
 ### POST `/revoke`
 
 It simulates a token revocation. This endpoint should always return 200 as stated by [RFC 7009](https://tools.ietf.org/html/rfc7009#section-2.2).
+
+### GET `/endsession`
+
+It simulates the end session endpoint. It will automatically redirect to the post_logout_redirect_uri sent as parameter.
 
 ## Command-Line Interface
 
