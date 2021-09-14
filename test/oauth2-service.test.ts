@@ -6,7 +6,7 @@ import type { Express } from 'express';
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import { OAuth2Service } from '../src/lib/oauth2-service';
 import * as testKeys from './keys';
-import { MutableAuthorizeRedirectUri } from '../src/lib/types';
+import { MutableRedirectUri } from '../src/lib/types';
 
 describe('OAuth 2 service', () => {
   let service: OAuth2Service;
@@ -359,7 +359,7 @@ describe('OAuth 2 service', () => {
   });
 
   it('should be able to manipulate url and query params when redirecting within authorize endpoint', async () => {
-    service.once('beforeAuthorizeRedirect', (authorizeRedirectUri: MutableAuthorizeRedirectUri, req) => {
+    service.once('beforeAuthorizeRedirect', (authorizeRedirectUri: MutableRedirectUri, req) => {
       expect(req).toBeInstanceOf(IncomingMessage);
 
       expect(authorizeRedirectUri.url.toString()).toMatch(/http:\/\/example.com\/callback\?code=[^&]+&scope=dummy_scope&state=state123/);
@@ -552,6 +552,38 @@ describe('OAuth 2 service', () => {
     expect(res).toMatchObject({
       headers: { 'access-control-allow-origin': '*' },
     });
+  });
+
+  it('should redirect to post_logout_redirect_uri when calling end_session_endpoint', async () => {
+    const postLogoutRedirectUri = 'http://example.com/signin?param=test';
+
+    const res = await request(service.requestHandler)
+      .get('/endsession')
+      .query(`post_logout_redirect_uri=${postLogoutRedirectUri}`)
+      .redirects(0)
+      .expect(302);
+
+    expect(res.headers.location).toBe(postLogoutRedirectUri)
+  });
+
+  it('should be able to manipulate url and query params when redirecting within post_logout_redirect_uri', async () => {
+    const postLogoutRedirectUri = 'http://example.com/signin?param=test';
+
+    service.once('beforePostLogoutRedirect', (postLogoutRedirectURL: MutableRedirectUri, req) => {
+      expect(req).toBeInstanceOf(IncomingMessage);
+
+      expect(postLogoutRedirectURL.url.toString()).toBe(postLogoutRedirectUri);
+
+      postLogoutRedirectURL.url.hostname = 'post-logout.com';
+    });
+
+    const res = await request(service.requestHandler)
+      .get('/endsession')
+      .query(`post_logout_redirect_uri=${postLogoutRedirectUri}`)
+      .redirects(0)
+      .expect(302);
+
+    expect(res.headers.location).toBe('http://post-logout.com/signin?param=test')
   });
 });
 

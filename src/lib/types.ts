@@ -16,7 +16,7 @@ export interface Options {
   savePEM: boolean;
 }
 
-export interface MutableAuthorizeRedirectUri {
+export interface MutableRedirectUri {
   url: URL;
 }
 
@@ -56,6 +56,7 @@ export enum PublicEvents {
   BeforeUserinfo = 'beforeUserinfo',
   BeforeRevoke = 'beforeRevoke',
   BeforeAuthorizeRedirect = 'beforeAuthorizeRedirect',
+  BeforePostLogoutRedirect = 'beforePostLogoutRedirect',
 }
 
 export enum InternalEvents {

@@ -31,7 +31,7 @@ import { OAuth2Issuer } from './oauth2-issuer';
 import { assertIsString, assertIsValidTokenRequest } from './helpers';
 import type {
   JwtTransform,
-  MutableAuthorizeRedirectUri,
+  MutableRedirectUri,
   MutableResponse,
   MutableToken,
   ScopesOrTransform,
@@ -44,6 +44,7 @@ const JWKS_URI_PATH = '/jwks';
 const AUTHORIZE_PATH = '/authorize';
 const USERINFO_PATH = '/userinfo';
 const REVOKE_PATH = '/revoke';
+const END_SESSION_ENDPOINT_PATH = '/endsession';
 
 /**
  * Provides a request handler for an OAuth 2 server.
@@ -137,6 +138,7 @@ export class OAuth2Service extends EventEmitter {
     app.get(AUTHORIZE_PATH, this.authorizeHandler);
     app.get(USERINFO_PATH, this.userInfoHandler);
     app.post(REVOKE_PATH, this.revokeHandler);
+    app.get(END_SESSION_ENDPOINT_PATH, this.endSessionHandler);
 
     return app;
   };
@@ -162,6 +164,7 @@ export class OAuth2Service extends EventEmitter {
       id_token_signing_alg_values_supported: ['RS256'],
       revocation_endpoint: `${this.issuer.url}${REVOKE_PATH}`,
       subject_types_supported: ['public'],
+      end_session_endpoint: `${this.issuer.url}${END_SESSION_ENDPOINT_PATH}`,
     };
 
     return res.json(openidConfig);
@@ -307,13 +310,13 @@ export class OAuth2Service extends EventEmitter {
       url.searchParams.set('state', state);
     }
 
-    const authorizeRedirectUri: MutableAuthorizeRedirectUri = { url };
+    const authorizeRedirectUri: MutableRedirectUri = { url };
 
     /**
      * Before authorize redirect event.
      *
      * @event OAuth2Service#beforeAuthorizeRedirect
-     * @param {MutableAuthorizeRedirectUri} authorizeRedirectUri The redirect uri and query params to redirect to.
+     * @param {MutableRedirectUri} authorizeRedirectUri The redirect uri and query params to redirect to.
      * @param {IncomingMessage} req The incoming HTTP request.
      */
     this.emit(PublicEvents.BeforeAuthorizeRedirect, authorizeRedirectUri, req);
@@ -366,5 +369,31 @@ export class OAuth2Service extends EventEmitter {
     this.emit(PublicEvents.BeforeRevoke, revokeResponse, req);
 
     return res.status(revokeResponse.statusCode).json(revokeResponse.body);
+  };
+
+  private endSessionHandler: RequestHandler = (req, res) => {
+    assertIsString(
+      req.query.post_logout_redirect_uri,
+      'Invalid post_logout_redirect_uri type'
+    );
+
+    const postLogoutRedirectUri: MutableRedirectUri = {
+      url: new URL(req.query.post_logout_redirect_uri),
+    };
+
+    /**
+     * Before post logout redirect event.
+     *
+     * @event OAuth2Service#beforePostLogoutRedirect
+     * @param {MutableRedirectUri} postLogoutRedirectUri
+     * @param {IncomingMessage} req The incoming HTTP request.
+     */
+    this.emit(
+      PublicEvents.BeforePostLogoutRedirect,
+      postLogoutRedirectUri,
+      req
+    );
+
+    res.redirect(postLogoutRedirectUri.url.href);
   };
 }
