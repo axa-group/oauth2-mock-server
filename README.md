@@ -63,7 +63,7 @@ Any number of existing JSON-formatted keys can be added to the keystore.
 // Add an existing JWK key to the keystore
 await server.issuer.keys.add({
   kid: 'some-key',
-  alg: "RS256",
+  alg: 'RS256',
   kty: 'RSA',
   // ...
 });
@@ -89,12 +89,12 @@ request.get(
 
 ### Supported JWK formats
 
-| Algorithm          | kty | alg                         |
-| ------------------ | --- | --------------------------- |
-| RSASSA-PKCS1-v1_5  | RSA | RS256, RS384, RS512         |
-| RSASSA-PSS         | RSA | PS256, PS384, PS512         |
-| ECDSA              | EC  | ES256, ES256K, ES384, ES512 |
-| Edwards-curve DSA  | OKP | EdDSA                       |
+| Algorithm         | kty | alg                         |
+| ----------------- | --- | --------------------------- |
+| RSASSA-PKCS1-v1_5 | RSA | RS256, RS384, RS512         |
+| RSASSA-PSS        | RSA | PS256, PS384, PS512         |
+| ECDSA             | EC  | ES256, ES256K, ES384, ES512 |
+| Edwards-curve DSA | OKP | EdDSA                       |
 
 ### Customization hooks
 
