@@ -1,9 +1,8 @@
-import jwt from 'jsonwebtoken';
-import type { JWK } from 'node-jose';
-
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import type { JwtTransform } from '../src/lib/types';
+
 import * as testKeys from './keys';
+import { verifyTokenWithKey } from './lib/test_helpers';
 
 describe('OAuth 2 issuer', () => {
   let issuer: OAuth2Issuer;
@@ -12,35 +11,36 @@ describe('OAuth 2 issuer', () => {
     issuer = new OAuth2Issuer();
     issuer.url = 'https://issuer.example.com';
 
-    await issuer.keys.add(testKeys.getParsed('test-rsa-key.json'));
-    await issuer.keys.add(testKeys.getParsed('test-rsa384-key.json'));
-    await issuer.keys.add(testKeys.getParsed('test-ec-key.json'));
-    await issuer.keys.add(testKeys.getParsed('test-oct-key.json'));
+    await issuer.keys.add(testKeys.getParsed('test-rs256-key.json'));
+    await issuer.keys.add(testKeys.getParsed('test-es256-key.json'));
+    await issuer.keys.add(testKeys.getParsed('test-eddsa-key.json'));
   });
 
-  it('should not allow to build tokens for an unknown \'kid\'', () => {
-    expect(() => issuer.buildToken(true, 'unknown-kid')).toThrow('Cannot build token: Unknown key.');
+  it('should not allow to build tokens for an unknown \'kid\'', async () => {
+    await expect(() => issuer.buildToken({ kid: 'unknown-kid' })).rejects.toThrow('Cannot build token: Unknown key.');
   });
 
-  it('should be able to build unsigned tokens', () => {
+  it.each([
+    ['test-rs256-key', "RS256"],
+    ['test-es256-key', "ES256"],
+    ['test-eddsa-key', "EdDSA"],
+  ])('should be able to build tokens (%s)', async (kid: string, expectedAlg: string) => {
     const now = Math.floor(Date.now() / 1000);
     const expiresIn = 1000;
 
-    const token = issuer.buildToken(false, 'test-rsa-key', undefined, expiresIn);
+    const token = await issuer.buildToken({ kid, expiresIn });
 
-    expect(token).toMatch(/^[\w-]+\.[\w-]+\.$/);
+    expect(token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
 
-    const decoded = jwt.decode(token, { complete: true });
-    expect(typeof decoded).not.toBe('string');
+    const decoded = await verifyTokenWithKey(issuer, token, kid);
 
-    const decodedObj = decoded as unknown as Record<string, unknown>;
-    expect(decodedObj.header).toEqual({
-      alg: 'none',
+    expect(decoded.protectedHeader).toEqual({
+      alg: expectedAlg,
       typ: 'JWT',
-      kid: 'test-rsa-key',
+      kid
     });
 
-    const p = decodedObj.payload;
+    const p = decoded.payload;
 
     expect(p).toMatchObject({
       iss: issuer.url,
@@ -55,89 +55,56 @@ describe('OAuth 2 issuer', () => {
     expect(parsedP.nbf).toBeLessThan(now);
   });
 
-  it.each([
-    ['RSA', 'test-rsa-key'],
-    ['EC', 'test-ec-key'],
-    ['oct', 'test-oct-key'],
-  ])('should be able to build %s-signed tokens', (_keyType, kid) => {
-    const testKey = issuer.keys.get(kid);
-    expect(testKey).not.toBeNull();
-    const token = issuer.buildToken(true, kid);
-
-    expect(token).toMatch(/^[\w-]+\.[\w-]+\.[\w-]+$/);
-
-    expect(() => jwt.verify(token, getSecret(testKey!))).not.toThrow();
-  });
-
-  it('should be able to build signed tokens with the algorithm hinted by the key', () => {
-    const testKey = issuer.keys.get('test-rsa384-key');
-    expect(testKey).not.toBeNull();
-    const token = issuer.buildToken(true, testKey!.kid);
-
-    expect(() => jwt.verify(token, getSecret(testKey!))).not.toThrow();
-  });
+  const scopeInjector: JwtTransform = (_header, payload) => {
+    payload.scope = "urn:scope-1 urn:scope-2";
+  };
 
   it.each([
     ['urn:scope-1 urn:scope-2'],
     [['urn:scope-1', 'urn:scope-2']],
-  ])('should be able to build tokens with a scope', (scopes) => {
-    const token = issuer.buildToken(true, 'test-rsa-key', scopes);
+    [scopeInjector],
+  ])('should be able to build tokens with a scope', async (scopes) => {
+    const token = await issuer.buildToken({ kid: 'test-rs256-key', scopesOrTransform: scopes });
 
-    const decoded = jwt.decode(token);
-    expect(decoded).not.toBeNull()
-    expect(decoded).toHaveProperty("scope")
+    const decoded = await verifyTokenWithKey(issuer, token, 'test-rs256-key');
 
-    const parsed = decoded as { scope: unknown }
-    expect(parsed.scope).toEqual('urn:scope-1 urn:scope-2');
+    expect(decoded.payload).toHaveProperty("scope");
+
+    expect(decoded.payload.scope).toEqual('urn:scope-1 urn:scope-2');
   });
 
-  it('should be able to build tokens and modify the header or the payload before signing', () => {
+  it('should be able to build tokens and modify the header or the payload before signing', async () => {
     const transform: JwtTransform = (header, payload) => {
       header.x5t = 'a-new-value';
       payload.sub = 'the-subject';
     };
 
-    const token = issuer.buildToken(true, 'test-rsa-key', transform);
+    const token = await issuer.buildToken({ kid: 'test-rs256-key', scopesOrTransform: transform });
 
-    const decoded = jwt.decode(token, { complete: true });
-    expect(decoded).not.toBeNull();
+    const decoded = await verifyTokenWithKey(issuer, token, 'test-rs256-key');
 
     expect(decoded).toMatchObject({
-      header: { x5t: 'a-new-value' },
+      protectedHeader: { x5t: 'a-new-value' },
       payload: {
         sub: 'the-subject'
       },
     });
   });
 
-  it('should be able to modify the header and the payload through a beforeSigning event', () => {
+  it('should be able to modify the header and the payload through a beforeSigning event', async () => {
     issuer.once('beforeSigning', (token) => {
       token.header.x5t = 'a-new-value';
       token.payload.sub = 'the-subject';
     });
 
-    const token = issuer.buildToken(true, 'test-rsa-key');
-    const decoded = jwt.decode(token, { complete: true });
-    expect(decoded).not.toBeNull();
+    const token = await issuer.buildToken({ kid: 'test-rs256-key' });
+    const decoded = await verifyTokenWithKey(issuer, token, 'test-rs256-key');
 
     expect(decoded).toMatchObject({
-      header: { x5t: 'a-new-value' },
+      protectedHeader: { x5t: 'a-new-value' },
       payload: {
         sub: 'the-subject'
       },
     });
   });
 });
-
-function getSecret(key: JWK.Key): string {
-  switch (key.kty) {
-    case 'RSA':
-    case 'EC':
-      return key.toPEM(false);
-    default: {
-      const parsed = key.toJSON(true);
-      expect(parsed).toMatchObject({ k: expect.any(String) });
-      return (parsed as { k: string }).k;
-    }
-  }
-}

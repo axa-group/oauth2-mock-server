@@ -60,76 +60,45 @@ describe('CLI', () => {
   });
 
   it('should allow importing JSON-formatted keys', async () => {
-    const res = await executeCli('--jwk', 'test/keys/test-rsa-key.json', '--jwk', 'test/keys/test-ec-key.json', '--jwk', 'test/keys/test-oct-key.json', '-p', '0');
+    const res = await executeCli('--jwk', 'test/keys/test-rs256-key.json', '--jwk', 'test/keys/test-es256-key.json', '--jwk', 'test/keys/test-eddsa-key.json', '-p', '0');
 
-    expect(res.stdout).toMatch(/^Added key with kid "test-rsa-key"$/m);
-    expect(res.stdout).toMatch(/^Added key with kid "test-ec-key"$/m);
-    expect(res.stdout).toMatch(/^Added key with kid "test-oct-key"$/m);
-
-    expect(res.result).not.toBeNull();
-    const { keys } = res.result!.issuer;
-
-    expect(keys.get('test-rsa-key')).not.toBeNull();
-    expect(keys.get('test-ec-key')).not.toBeNull();
-    expect(keys.get('test-oct-key')).not.toBeNull();
-  });
-
-  it('should allow importing PEM-encoded keys', async () => {
-    const res = await executeCli('--pem', 'test/keys/test-rsa-key.pem', '--pem', 'test/keys/test-ec-key.pem', '-p', '0');
-
-    expect(res.stdout).toMatch(/^Added key with kid "test-rsa-key"$/m);
-    expect(res.stdout).toMatch(/^Added key with kid "test-ec-key"$/m);
+    expect(res.stdout).toMatch(/^Added key with kid "test-rs256-key"$/m);
+    expect(res.stdout).toMatch(/^Added key with kid "test-es256-key"$/m);
+    expect(res.stdout).toMatch(/^Added key with kid "test-eddsa-key"$/m);
 
     expect(res.result).not.toBeNull();
     const { keys } = res.result!.issuer;
 
-    expect(keys.get('test-rsa-key')).not.toBeNull();
-    expect(keys.get('test-ec-key')).not.toBeNull();
+    expect(keys.get('test-rs256-key')).toBeDefined();
+    expect(keys.get('test-es256-key')).toBeDefined();
+    expect(keys.get('test-eddsa-key')).toBeDefined();
   });
 
   it('should allow exporting JSON-formatted keys', async () => {
     const fs = require('fs');
-    const wfn = jest.spyOn(fs, 'writeFileSync').mockImplementation();
+    const wfn = jest.spyOn(fs, 'writeFile').mockImplementation((_f, _d, callback) => {
+      const cb = callback as () => void;
+      cb();
+    });
 
     const res = await executeCli('--save-jwk', '-p', '0');
 
     expect(res.result).not.toBeNull();
     const key = res.result!.issuer.keys.get();
 
-    expect(key).not.toBeNull();
+    expect(key).toBeDefined();
     expect(key).toHaveProperty('kid');
 
     expect(wfn).toHaveBeenCalledWith(
       `${key!.kid}.json`,
-      expect.stringMatching(/^{(.|\n)+}$/),
+      expect.stringMatching(/^{[^}]+}$/),
+      expect.any(Function),
     );
 
     wfn.mockRestore();
 
     expect(res.stdout).toMatch(/^Generated new RSA key with kid "[\w-]+"$/m);
     expect(res.stdout).toMatch(/^JSON web key written to file "[\w-]+\.json"\.$/m);
-  });
-
-  it('should allow exporting PEM-encoded keys', async () => {
-    const fs = require('fs');
-    const wfn = jest.spyOn(fs, 'writeFileSync').mockImplementation();
-
-    const res = await executeCli('--save-pem', '-p', '0');
-
-    expect(res.result).not.toBeNull();
-    const key = res.result!.issuer.keys.get();
-    expect(key).not.toBeNull();
-    expect(key).toHaveProperty('kid');
-
-    expect(wfn).toHaveBeenCalledWith(
-      `${key!.kid}.pem`,
-      expect.stringMatching(/^-----BEGIN RSA PRIVATE KEY-----\r\n(.|\r\n)+\r\n-----END RSA PRIVATE KEY-----\r\n$/),
-    );
-
-    wfn.mockRestore();
-
-    expect(res.stdout).toMatch(/^Generated new RSA key with kid "[\w-]+"$/m);
-    expect(res.stdout).toMatch(/^PEM-encoded key written to file "[\w-]+\.pem"\.$/m);
   });
 });
 

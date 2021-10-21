@@ -1,8 +1,0 @@
-{
-  "kty": "EC",
-  "kid": "test-ec-key",
-  "crv": "P-256",
-  "x": "kIqOwQOzeCGDINL2ejVDWQ-xAUlPs_SvlW5ZAJWMjms",
-  "y": "C372QkIJ18HyFOyME-rB7i7XihQyYzYnBrJojH6_c5w",
-  "d": "7V8NR_iubrm58ZioFrh6OyymY7QdAf9-tRK-PfKP-uo"
-}

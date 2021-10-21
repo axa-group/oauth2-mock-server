@@ -2,7 +2,7 @@
   "root": true,
   "parser": "@typescript-eslint/parser",
   "parserOptions": {
-    "ecmaVersion": 2018,
+    "ecmaVersion": 2019,
     "sourceType": "module",
     "project": "./tsconfig.json"
   },
@@ -19,10 +19,21 @@
     "plugin:prettier/recommended"
   ],
   "rules": {
+    "curly": "warn",
+    "eqeqeq": "warn",
+    "semi": "warn",
     "jsdoc/require-jsdoc": [
       "warn",
       {
         "publicOnly": true
+      }
+    ],
+    "import/no-unresolved": [
+      "error",
+      {
+        "ignore": [
+          "^jose/"
+        ]
       }
     ]
   }

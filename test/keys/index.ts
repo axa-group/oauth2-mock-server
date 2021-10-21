@@ -1,16 +1,7 @@
-import fs from 'fs';
-import type { JWK } from 'node-jose';
 import path from 'path';
+import { readJsonFromFile } from '../../src/lib/helpers';
 
-export function get(filename: string): string {
-  const filePath = path.join(__dirname, filename);
-  const key = fs.readFileSync(filePath, 'utf8');
-
-  return key;
-}
-
-export function getParsed(filename: string): JWK.Key {
-  const key = get(filename)
-
-  return JSON.parse(key) as JWK.Key;
+export function getParsed(filename: string): Record<string, unknown> {
+  const filepath = path.join(__dirname, filename);
+  return readJsonFromFile(filepath);
 }

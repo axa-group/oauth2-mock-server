@@ -1,0 +1,9 @@
+{
+  "kid": "test-es256-key",
+  "alg": "ES256",
+  "kty": "EC",
+  "crv": "P-256",
+  "x": "ro6MqVk5gDhXKcNTDRT-j4NNtVz9tAIS_arfM88-YBU",
+  "y": "onyCf_UvqOcQH7gp98BFwAO_V2JIinvVAXOdzRQc4kU",
+  "d": "3U897imImdNxelERx5v3fen2Zc_mdxrpGsJ_LfMQyq8"
+}

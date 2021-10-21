@@ -13,7 +13,7 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 ## Development prerequisites
 
-- [Node.js 10.0+](https://nodejs.org/)
+- [Node.js 12.0+](https://nodejs.org/)
 - [Yarn 1.15.2+](https://classic.yarnpkg.com/lang/en/)
 
 ## How to use
@@ -44,7 +44,7 @@ const { OAuth2Server } = require('oauth2-mock-server');
 let server = new OAuth2Server();
 
 // Generate a new RSA key and add it to the keystore
-await server.issuer.keys.generateRSA();
+await server.issuer.keys.generate('RS256');
 
 // Start the server
 await server.start(8080, 'localhost');
@@ -57,21 +57,16 @@ console.log('Issuer URL:', server.issuer.url); // -> http://localhost:8080
 await server.stop();
 ```
 
-Any number of existing JSON-formatted or PEM-encoded keys can be added to the keystore:
+Any number of existing JSON-formatted keys can be added to the keystore.
 
 ```js
 // Add an existing JWK key to the keystore
 await server.issuer.keys.add({
   kid: 'some-key',
+  alg: "RS256",
   kty: 'RSA',
   // ...
 });
-
-// Add an existing PEM-encoded key to the keystore
-const fs = require('fs');
-
-let pemKey = fs.readFileSync('some-key.pem');
-await server.issuer.keys.addPEM(pemKey, 'some-key');
 ```
 
 JSON Web Tokens (JWT) can be built programmatically:
@@ -80,7 +75,7 @@ JSON Web Tokens (JWT) can be built programmatically:
 const request = require('request');
 
 // Build a new token
-let token = server.issuer.buildToken(true);
+let token = await server.issuer.buildToken();
 
 // Call a remote API with the token
 request.get(
@@ -91,6 +86,15 @@ request.get(
   }
 );
 ```
+
+### Supported JWK formats
+
+| Algorithm          | kty | alg                         |
+| ------------------ | --- | --------------------------- |
+| RSASSA-PKCS1-v1_5  | RSA | RS256, RS384, RS512         |
+| RSASSA-PSS         | RSA | PS256, PS384, PS512         |
+| ECDSA              | EC  | ES256, ES256K, ES384, ES512 |
+| Edwards-curve DSA  | OKP | EdDSA                       |
 
 ### Customization hooks
 
@@ -211,4 +215,4 @@ npx oauth2-mock-server --help
 
 ## Attributions
 
-- [`node-jose`](https://www.npmjs.com/package/node-jose), Copyright © Cisco Systems
+- [`jose`](https://www.npmjs.com/package/jose)
