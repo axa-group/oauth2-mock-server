@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 
-- Drop support for Node.js 10
+- **Breaking:** Drop support for Node.js 10
 - No longer accepts PEM encoded keys
 - No longer supports generating unsigned JWTs
 
