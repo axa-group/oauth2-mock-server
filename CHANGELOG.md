@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## [4.0.0](https://github.com/axa-group/oauth2-mock-server/compare/v3.2.0...v4.0.0) — 2021-08-TODO
+## [4.0.0](https://github.com/axa-group/oauth2-mock-server/compare/v3.2.0...v4.0.0) — 2021-10-25
 
 ### Added
 
@@ -13,7 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ### Removed
 
-- Drop support for Node.js 10
+- **Breaking:** Drop support for Node.js 10
 - No longer accepts PEM encoded keys
 - No longer supports generating unsigned JWTs
 
