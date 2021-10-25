@@ -15,7 +15,7 @@ export interface Options {
   saveJWK: boolean;
 }
 
-export interface MutableAuthorizeRedirectUri {
+export interface MutableRedirectUri {
   url: URL;
 }
 
@@ -57,6 +57,7 @@ export enum Events {
   BeforeUserinfo = 'beforeUserinfo',
   BeforeRevoke = 'beforeRevoke',
   BeforeAuthorizeRedirect = 'beforeAuthorizeRedirect',
+  BeforePostLogoutRedirect = 'beforePostLogoutRedirect',
 }
 
 export interface TokenBuildOptions {

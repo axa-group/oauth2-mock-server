@@ -2,8 +2,7 @@
 
 ## From 3.2.0 to 4.0.0
 
-Complete diff available in pull request [#80](https://github.com/axa-group/oauth2-mock-server/pull/80)
-and more specifically in commit TODO.
+Complete diff available in pull requests [#80](https://github.com/axa-group/oauth2-mock-server/pull/80) and [#118](https://github.com/axa-group/oauth2-mock-server/pull/118).
 
 ### High level impact
 
@@ -65,4 +64,13 @@ the pull request mentioned above.
 
   ```ts
   import { OAuth2Server, Payload } from 'oauth2-mock-server';
+  ```
+
+- Type `MutableAuthorizeRedirectUri` has been renamed into `MutableRedirectUri`
+
+  ```diff
+  -service.once('beforeAuthorizeRedirect', (authorizeRedirectUri: MutableAuthorizeRedirectUri, req) => {
+  +service.once('beforeAuthorizeRedirect', (authorizeRedirectUri: MutableRedirectUri, req) => {
+     ...
+   });
   ```
