@@ -30,6 +30,7 @@ import { assertIsAddressInfo } from './helpers';
  */
 export class HttpServer {
   #server: Server;
+  sslEnabled = false;
 
   /**
    * Creates a new instance of HttpServer.

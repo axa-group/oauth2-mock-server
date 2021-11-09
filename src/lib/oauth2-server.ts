@@ -57,6 +57,8 @@ export class OAuth2Server extends HttpServer {
 
     super(serv.requestHandler, options);
 
+    this.sslEnabled = options !== undefined;
+
     this._issuer = iss;
     this._service = serv;
   }
@@ -113,7 +115,11 @@ export class OAuth2Server extends HttpServer {
     const server = await super.start(port, host);
 
     if (!this.issuer.url) {
-      this.issuer.url = buildIssuerUrl(host, this.address().port);
+      this.issuer.url = buildIssuerUrl(
+        host,
+        this.address().port,
+        this.sslEnabled
+      );
     }
 
     return server;
@@ -130,8 +136,12 @@ export class OAuth2Server extends HttpServer {
   }
 }
 
-function buildIssuerUrl(host: string | undefined, port: number) {
-  const url = new URL(`http://localhost:${port}`);
+function buildIssuerUrl(
+  host: string | undefined,
+  port: number,
+  sslEnabled = false
+) {
+  const url = new URL(`${sslEnabled ? 'https' : 'http'}://localhost:${port}`);
 
   if (host && !coversLocalhost(host)) {
     url.hostname = host.includes(':') ? `[${host}]` : host;
