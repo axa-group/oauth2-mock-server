@@ -19,6 +19,8 @@
  * @module lib/oauth2-server
  */
 
+import * as fs from 'fs';
+import { ServerOptions } from 'https';
 import { URL } from 'url';
 import { isIP, AddressInfo } from 'net';
 import { Server } from 'http';
@@ -37,12 +39,23 @@ export class OAuth2Server extends HttpServer {
 
   /**
    * Creates a new instance of OAuth2Server.
+   *
+   * @param {string | undefined} key Optional key file path for ssl
+   * @param {string | undefined} cert Optional cert file path for ssl
    */
-  constructor() {
+  constructor(key?: string, cert?: string) {
     const iss = new OAuth2Issuer();
     const serv = new OAuth2Service(iss);
 
-    super(serv.requestHandler);
+    let options: ServerOptions | undefined = undefined;
+    if (key && cert) {
+      options = {
+        key: fs.readFileSync(key),
+        cert: fs.readFileSync(cert),
+      };
+    }
+
+    super(serv.requestHandler, options);
 
     this._issuer = iss;
     this._service = serv;

@@ -1,3 +1,4 @@
+import fs from "fs";
 import { RequestListener } from 'http';
 import request from 'supertest';
 import { HttpServer } from '../src/lib/http-server';
@@ -27,6 +28,24 @@ describe('HTTP Server', () => {
 
     await server.stop();
     expect(server.listening).toBe(false);
+  });
+
+  it("should support https if cert + key options are supplied", async () => {
+    const server = new HttpServer(dummyHandler, {
+      key: fs.readFileSync("test/keys/localhost-key.pem"),
+      cert: fs.readFileSync("test/keys/localhost-cert.pem"),
+    });
+
+    await expect(server.start()).resolves.not.toThrow();
+
+    expect(server.listening).toBe(true);
+
+    const host = `https://127.0.0.1:${server.address().port}`;
+    const res = await request(host).get('/').trustLocalhost(true).expect(200);
+
+    expect(res.body).toEqual({
+      value: 'Dummy response',
+    });
   });
 
   it('should have an address only when the server is started', async () => {

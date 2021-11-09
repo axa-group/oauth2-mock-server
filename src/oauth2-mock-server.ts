@@ -71,6 +71,12 @@ function parseCliArgs(args: string[]): Options | null {
       case '-p':
         opts.port = parsePort(shift(args));
         break;
+      case '-c':
+        opts.cert = shift(args);
+        break;
+      case '-k':
+        opts.key = shift(args);
+        break;
       case '--jwk':
         opts.keys.push(readJsonFromFile(shift(args)));
         break;
@@ -99,6 +105,10 @@ Options:
                     If omitted, 8080 will be used.
                     If 0 is provided, the operating system will assign
                     an arbitrary unused port.
+  -c <cert>         Optional file path to an SSL cert, both cert and key need
+                    to be supplied to enable SSL.
+  -k <key>          Optional file path to an SSL key, both key and cert need
+                    to be supplied to enable SSL.
   --jwk <filename>  Adds a JSON-formatted key to the server's keystore.
                     Can be specified many times.
   --save-jwk        Saves all the keys in the keystore as "{kid}.json".
@@ -127,7 +137,7 @@ async function saveJWK(keys: JWK[]) {
 }
 
 async function startServer(opts: Options) {
-  const server = new OAuth2Server();
+  const server = new OAuth2Server(opts.key, opts.cert);
 
   await Promise.all(
     opts.keys.map(async (key) => {

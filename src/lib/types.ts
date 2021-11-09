@@ -11,6 +11,8 @@ export interface TokenRequest {
 export interface Options {
   host?: string;
   port: number;
+  cert?: string;
+  key?: string;
   keys: Record<string, unknown>[];
   saveJWK: boolean;
 }
