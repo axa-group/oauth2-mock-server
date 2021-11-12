@@ -105,9 +105,9 @@ Options:
                     If omitted, 8080 will be used.
                     If 0 is provided, the operating system will assign
                     an arbitrary unused port.
-  -c <cert>         Optional file path to an SSL cert, both cert and key need
+  -c <cert>         Optional file path to an SSL cert. Both cert and key need
                     to be supplied to enable SSL.
-  -k <key>          Optional file path to an SSL key, both key and cert need
+  -k <key>          Optional file path to an SSL key. Both key and cert need
                     to be supplied to enable SSL.
   --jwk <filename>  Adds a JSON-formatted key to the server's keystore.
                     Can be specified many times.

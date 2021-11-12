@@ -1,4 +1,4 @@
-import fs from "fs";
+import { readFileSync } from 'fs';
 import { RequestListener } from 'http';
 import request from 'supertest';
 import { HttpServer } from '../src/lib/http-server';
@@ -30,10 +30,10 @@ describe('HTTP Server', () => {
     expect(server.listening).toBe(false);
   });
 
-  it("should support https if cert + key options are supplied", async () => {
+  it('should support https if cert + key options are supplied', async () => {
     const server = new HttpServer(dummyHandler, {
-      key: fs.readFileSync("test/keys/localhost-key.pem"),
-      cert: fs.readFileSync("test/keys/localhost-cert.pem"),
+      key: readFileSync('test/keys/localhost-key.pem'),
+      cert: readFileSync('test/keys/localhost-cert.pem'),
     });
 
     await expect(server.start()).resolves.not.toThrow();
