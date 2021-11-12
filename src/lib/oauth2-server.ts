@@ -44,6 +44,10 @@ export class OAuth2Server extends HttpServer {
    * @param {string | undefined} cert Optional cert file path for ssl
    */
   constructor(key?: string, cert?: string) {
+    if ((key && !cert) || (!key && cert)) {
+      throw 'Both key and cert need to be supplied to start the server with https';
+    }
+
     const iss = new OAuth2Issuer();
     const serv = new OAuth2Service(iss);
 
@@ -57,7 +61,7 @@ export class OAuth2Server extends HttpServer {
 
     super(serv.requestHandler, options);
 
-    this.sslEnabled = options !== undefined;
+    this._isSecured = options !== undefined;
 
     this._issuer = iss;
     this._service = serv;
@@ -118,7 +122,7 @@ export class OAuth2Server extends HttpServer {
       this.issuer.url = buildIssuerUrl(
         host,
         this.address().port,
-        this.sslEnabled
+        this._isSecured
       );
     }
 
@@ -139,9 +143,9 @@ export class OAuth2Server extends HttpServer {
 function buildIssuerUrl(
   host: string | undefined,
   port: number,
-  sslEnabled = false
+  isSecured = false
 ) {
-  const url = new URL(`${sslEnabled ? 'https' : 'http'}://localhost:${port}`);
+  const url = new URL(`${isSecured ? 'https' : 'http'}://localhost:${port}`);
 
   if (host && !coversLocalhost(host)) {
     url.hostname = host.includes(':') ? `[${host}]` : host;

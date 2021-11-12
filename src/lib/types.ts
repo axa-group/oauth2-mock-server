@@ -1,3 +1,4 @@
+import { ServerOptions } from 'https';
 import { JWKWithKid } from './types-internals';
 
 export interface TokenRequest {
@@ -16,6 +17,9 @@ export interface Options {
   keys: Record<string, unknown>[];
   saveJWK: boolean;
 }
+
+export type HttpServerOptions = Pick<ServerOptions, 'key'> &
+  Pick<ServerOptions, 'cert'>;
 
 export interface MutableRedirectUri {
   url: URL;

@@ -46,6 +46,9 @@ describe('HTTP Server', () => {
     expect(res.body).toEqual({
       value: 'Dummy response',
     });
+
+    await server.stop();
+    expect(server.listening).toBe(false);
   });
 
   it('should have an address only when the server is started', async () => {

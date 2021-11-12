@@ -174,6 +174,16 @@ It also provides a convenient way, through event emitters, to programmatically c
   });
   ```
 
+### HTTPS support
+It also provides basic HTTPS support, an optional cert and key can be supplied to start the server with SSL/TLS using the in-built NodeJS [HTTPS](https://nodejs.org/api/https.html) module.
+
+We recommend using a package to create a locally trusted certificate, like [mkcert](https://github.com/FiloSottile/mkcert).
+  ```
+  new OAuth2Server('test-assets/mock-auth/key.pem', 'test-assets/mock-auth/cert.pem')
+  ```
+NOTE: Enabling HTTPS will also update the issuer URL to reflect the current protocol.
+
+
 ## Supported endpoints
 
 ### GET `/.well-known/openid-configuration`
