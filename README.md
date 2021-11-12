@@ -183,7 +183,6 @@ We recommend using a package to create a locally trusted certificate, like [mkce
   ```
 NOTE: Enabling HTTPS will also update the issuer URL to reflect the current protocol.
 
-
 ## Supported endpoints
 
 ### GET `/.well-known/openid-configuration`
