@@ -19,16 +19,15 @@
  * @module lib/oauth2-server
  */
 
-import * as fs from 'fs';
-import { ServerOptions } from 'https';
-import { URL } from 'url';
-import { isIP, AddressInfo } from 'net';
+import { readFileSync } from 'fs';
+import { AddressInfo } from 'net';
 import { Server } from 'http';
 
 import { HttpServer } from './http-server';
 import { OAuth2Issuer } from './oauth2-issuer';
 import { OAuth2Service } from './oauth2-service';
 import { assertIsAddressInfo } from './helpers';
+import { HttpServerOptions } from './types';
 
 /**
  * Represents an OAuth2 HTTP server.
@@ -51,17 +50,15 @@ export class OAuth2Server extends HttpServer {
     const iss = new OAuth2Issuer();
     const serv = new OAuth2Service(iss);
 
-    let options: ServerOptions | undefined = undefined;
+    let options: HttpServerOptions | undefined = undefined;
     if (key && cert) {
       options = {
-        key: fs.readFileSync(key),
-        cert: fs.readFileSync(cert),
+        key: readFileSync(key),
+        cert: readFileSync(cert),
       };
     }
 
     super(serv.requestHandler, options);
-
-    this._isSecured = options !== undefined;
 
     this._issuer = iss;
     this._service = serv;
@@ -119,11 +116,7 @@ export class OAuth2Server extends HttpServer {
     const server = await super.start(port, host);
 
     if (!this.issuer.url) {
-      this.issuer.url = buildIssuerUrl(
-        host,
-        this.address().port,
-        this._isSecured
-      );
+      this.issuer.url = super.buildIssuerUrl(host, this.address().port);
     }
 
     return server;
@@ -137,30 +130,5 @@ export class OAuth2Server extends HttpServer {
   async stop(): Promise<void> {
     await super.stop();
     this._issuer.url = undefined;
-  }
-}
-
-function buildIssuerUrl(
-  host: string | undefined,
-  port: number,
-  isSecured = false
-) {
-  const url = new URL(`${isSecured ? 'https' : 'http'}://localhost:${port}`);
-
-  if (host && !coversLocalhost(host)) {
-    url.hostname = host.includes(':') ? `[${host}]` : host;
-  }
-
-  return url.origin;
-}
-
-function coversLocalhost(address: string) {
-  switch (isIP(address)) {
-    case 4:
-      return address === '0.0.0.0' || address.startsWith('127.');
-    case 6:
-      return address === '::' || address === '::1';
-    default:
-      return false;
   }
 }
