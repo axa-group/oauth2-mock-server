@@ -21,7 +21,7 @@
 
 import { Server, RequestListener, createServer } from 'http';
 import { createServer as createHttpsServer } from 'https';
-import type { AddressInfo } from 'net';
+import { AddressInfo, isIP } from 'net';
 
 import { assertIsAddressInfo } from './helpers';
 import { HttpServerOptions } from './types';
@@ -31,7 +31,7 @@ import { HttpServerOptions } from './types';
  */
 export class HttpServer {
   #server: Server;
-  protected _isSecured = false;
+  #isSecured: boolean;
 
   /**
    * Creates a new instance of HttpServer.
@@ -40,8 +40,11 @@ export class HttpServer {
    * @param {HttpServerOptions} options Optional HttpServerOptions to start the server with https.
    */
   constructor(requestListener: RequestListener, options?: HttpServerOptions) {
+    this.#isSecured = false;
+
     if (options?.key && options?.cert) {
       this.#server = createHttpsServer(options, requestListener);
+      this.#isSecured = true;
     } else {
       this.#server = createServer(requestListener);
     }
@@ -114,4 +117,27 @@ export class HttpServer {
       });
     });
   }
+
+  protected buildIssuerUrl(host: string | undefined, port: number): string {
+    const url = new URL(
+      `${this.#isSecured ? 'https' : 'http'}://localhost:${port}`
+    );
+
+    if (host && !coversLocalhost(host)) {
+      url.hostname = host.includes(':') ? `[${host}]` : host;
+    }
+
+    return url.origin;
+  }
 }
+
+const coversLocalhost = (address: string) => {
+  switch (isIP(address)) {
+    case 4:
+      return address === '0.0.0.0' || address.startsWith('127.');
+    case 6:
+      return address === '::' || address === '::1';
+    default:
+      return false;
+  }
+};
