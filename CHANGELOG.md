@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- Add `/endsession` endpoint (thanks [AndTem](https://github.com/AndTem)!)
+- Add `/endsession` endpoint (by [AndTem](https://github.com/AndTem))
 - Support `EdDSA` algorithm
 
 ### Removed
@@ -26,13 +26,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ### Added
 
-- Add `subject_types_supported` OpenID Provider Metadata field (thanks [jjbooth74](https://github.com/jjbooth74)!)
+- Add `subject_types_supported` OpenID Provider Metadata field (by [jjbooth74](https://github.com/jjbooth74))
 
 ## [3.1.0](https://github.com/axa-group/oauth2-mock-server/compare/v3.0.3...v3.1.0) — 2020-11-30
 
 ### Added
 
-- Add authorize redirect event (thanks [markwallsgrove](https://github.com/markwallsgrove)!)
+- Add authorize redirect event (by [markwallsgrove](https://github.com/markwallsgrove))
 
 ## [3.0.3](https://github.com/axa-group/oauth2-mock-server/compare/v3.0.2...v3.0.3) — 2020-11-12
 
