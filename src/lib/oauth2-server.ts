@@ -19,6 +19,8 @@
  * @module lib/oauth2-server
  */
 
+import * as fs from 'fs';
+import { ServerOptions } from 'https';
 import { URL } from 'url';
 import { isIP, AddressInfo } from 'net';
 import { Server } from 'http';
@@ -37,12 +39,29 @@ export class OAuth2Server extends HttpServer {
 
   /**
    * Creates a new instance of OAuth2Server.
+   *
+   * @param {string | undefined} key Optional key file path for ssl
+   * @param {string | undefined} cert Optional cert file path for ssl
    */
-  constructor() {
+  constructor(key?: string, cert?: string) {
+    if ((key && !cert) || (!key && cert)) {
+      throw 'Both key and cert need to be supplied to start the server with https';
+    }
+
     const iss = new OAuth2Issuer();
     const serv = new OAuth2Service(iss);
 
-    super(serv.requestHandler);
+    let options: ServerOptions | undefined = undefined;
+    if (key && cert) {
+      options = {
+        key: fs.readFileSync(key),
+        cert: fs.readFileSync(cert),
+      };
+    }
+
+    super(serv.requestHandler, options);
+
+    this._isSecured = options !== undefined;
 
     this._issuer = iss;
     this._service = serv;
@@ -100,7 +119,11 @@ export class OAuth2Server extends HttpServer {
     const server = await super.start(port, host);
 
     if (!this.issuer.url) {
-      this.issuer.url = buildIssuerUrl(host, this.address().port);
+      this.issuer.url = buildIssuerUrl(
+        host,
+        this.address().port,
+        this._isSecured
+      );
     }
 
     return server;
@@ -117,8 +140,12 @@ export class OAuth2Server extends HttpServer {
   }
 }
 
-function buildIssuerUrl(host: string | undefined, port: number) {
-  const url = new URL(`http://localhost:${port}`);
+function buildIssuerUrl(
+  host: string | undefined,
+  port: number,
+  isSecured = false
+) {
+  const url = new URL(`${isSecured ? 'https' : 'http'}://localhost:${port}`);
 
   if (host && !coversLocalhost(host)) {
     url.hostname = host.includes(':') ? `[${host}]` : host;

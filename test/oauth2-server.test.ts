@@ -29,4 +29,14 @@ describe('OAuth 2 Server', () => {
 
     expect(server.service).toBeDefined();
   });
+
+  it("should throw if only one of cert/key is supplied", () => {
+    expect(() => {
+      new OAuth2Server("test/keys/localhost-key.pem");
+    }).toThrow();
+
+    expect(() => {
+      new OAuth2Server(undefined, "test/keys/localhost-cert.pem");
+    }).toThrow();
+  });
 });

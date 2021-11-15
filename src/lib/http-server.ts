@@ -20,23 +20,31 @@
  */
 
 import { Server, RequestListener, createServer } from 'http';
+import { createServer as createHttpsServer } from 'https';
 import type { AddressInfo } from 'net';
 
 import { assertIsAddressInfo } from './helpers';
+import { HttpServerOptions } from './types';
 
 /**
  * Provides a restartable wrapper for http.CreateServer().
  */
 export class HttpServer {
   #server: Server;
+  protected _isSecured = false;
 
   /**
    * Creates a new instance of HttpServer.
    *
    * @param {RequestListener} requestListener The function that will handle the server's requests.
+   * @param {HttpServerOptions} options Optional HttpServerOptions to start the server with https.
    */
-  constructor(requestListener: RequestListener) {
-    this.#server = createServer(requestListener);
+  constructor(requestListener: RequestListener, options?: HttpServerOptions) {
+    if (options?.key && options?.cert) {
+      this.#server = createHttpsServer(options, requestListener);
+    } else {
+      this.#server = createServer(requestListener);
+    }
   }
 
   /**
