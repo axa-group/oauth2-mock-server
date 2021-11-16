@@ -172,105 +172,109 @@ export class OAuth2Service extends EventEmitter {
     res.json({ keys: this.issuer.keys.toJSON() });
   };
 
-  private tokenHandler: RequestHandler = async (req, res) => {
-    const tokenTtl = defaultTokenTtl;
+  private tokenHandler: RequestHandler = async (req, res, next) => {
+    try {
+      const tokenTtl = defaultTokenTtl;
 
-    res.set({
-      'Cache-Control': 'no-store',
-      Pragma: 'no-cache',
-    });
+      res.set({
+        'Cache-Control': 'no-store',
+        Pragma: 'no-cache',
+      });
 
-    let xfn: ScopesOrTransform | undefined;
+      let xfn: ScopesOrTransform | undefined;
 
-    assertIsValidTokenRequest(req.body);
-    const reqBody = req.body;
+      assertIsValidTokenRequest(req.body);
+      const reqBody = req.body;
 
-    let { scope } = reqBody;
+      let { scope } = reqBody;
 
-    switch (req.body.grant_type) {
-      case 'client_credentials':
-        xfn = scope;
-        break;
-      case 'password':
-        xfn = (_header, payload) => {
-          Object.assign(payload, {
-            sub: reqBody.username,
-            amr: ['pwd'],
-            scope,
+      switch (req.body.grant_type) {
+        case 'client_credentials':
+          xfn = scope;
+          break;
+        case 'password':
+          xfn = (_header, payload) => {
+            Object.assign(payload, {
+              sub: reqBody.username,
+              amr: ['pwd'],
+              scope,
+            });
+          };
+          break;
+        case 'authorization_code':
+          scope = 'dummy';
+          xfn = (_header, payload) => {
+            Object.assign(payload, {
+              sub: 'johndoe',
+              amr: ['pwd'],
+              scope,
+            });
+          };
+          break;
+        case 'refresh_token':
+          scope = 'dummy';
+          xfn = (_header, payload) => {
+            Object.assign(payload, {
+              sub: 'johndoe',
+              amr: ['pwd'],
+              scope,
+            });
+          };
+          break;
+        default:
+          return res.status(400).json({
+            error: 'invalid_grant',
           });
-        };
-        break;
-      case 'authorization_code':
-        scope = 'dummy';
-        xfn = (_header, payload) => {
+      }
+
+      const token = await this.buildToken(req, tokenTtl, xfn);
+      const body: Record<string, unknown> = {
+        access_token: token,
+        token_type: 'Bearer',
+        expires_in: tokenTtl,
+        scope,
+      };
+      if (req.body.grant_type !== 'client_credentials') {
+        const credentials = basicAuth(req);
+        const clientId = credentials ? credentials.name : req.body.client_id;
+
+        const xfn: JwtTransform = (_header, payload) => {
           Object.assign(payload, {
             sub: 'johndoe',
-            amr: ['pwd'],
-            scope,
+            aud: clientId,
           });
+          if (reqBody.code !== undefined && this.#nonce[reqBody.code]) {
+            Object.assign(payload, {
+              nonce: this.#nonce[reqBody.code],
+            });
+            delete this.#nonce[reqBody.code];
+          }
         };
-        break;
-      case 'refresh_token':
-        scope = 'dummy';
-        xfn = (_header, payload) => {
-          Object.assign(payload, {
-            sub: 'johndoe',
-            amr: ['pwd'],
-            scope,
-          });
-        };
-        break;
-      default:
-        return res.status(400).json({
-          error: 'invalid_grant',
-        });
-    }
 
-    const token = await this.buildToken(req, tokenTtl, xfn);
-    const body: Record<string, unknown> = {
-      access_token: token,
-      token_type: 'Bearer',
-      expires_in: tokenTtl,
-      scope,
-    };
-    if (req.body.grant_type !== 'client_credentials') {
-      const credentials = basicAuth(req);
-      const clientId = credentials ? credentials.name : req.body.client_id;
+        body.id_token = await this.buildToken(req, tokenTtl, xfn);
+        body.refresh_token = uuidv4();
+      }
 
-      const xfn: JwtTransform = (_header, payload) => {
-        Object.assign(payload, {
-          sub: 'johndoe',
-          aud: clientId,
-        });
-        if (reqBody.code !== undefined && this.#nonce[reqBody.code]) {
-          Object.assign(payload, {
-            nonce: this.#nonce[reqBody.code],
-          });
-          delete this.#nonce[reqBody.code];
-        }
+      const tokenEndpointResponse: MutableResponse = {
+        body,
+        statusCode: 200,
       };
 
-      body.id_token = await this.buildToken(req, tokenTtl, xfn);
-      body.refresh_token = uuidv4();
+      /**
+       * Before token response event.
+       *
+       * @event OAuth2Service#beforeResponse
+       * @param {MutableResponse} response The response body and status code.
+       * @param {IncomingMessage} req The incoming HTTP request.
+       */
+      this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
+
+      return res
+        .status(tokenEndpointResponse.statusCode)
+        .json(tokenEndpointResponse.body);
+    } catch (e) {
+      return next(e);
     }
-
-    const tokenEndpointResponse: MutableResponse = {
-      body,
-      statusCode: 200,
-    };
-
-    /**
-     * Before token response event.
-     *
-     * @event OAuth2Service#beforeResponse
-     * @param {MutableResponse} response The response body and status code.
-     * @param {IncomingMessage} req The incoming HTTP request.
-     */
-    this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
-
-    return res
-      .status(tokenEndpointResponse.statusCode)
-      .json(tokenEndpointResponse.body);
   };
 
   private authorizeHandler: RequestHandler = (req, res) => {
