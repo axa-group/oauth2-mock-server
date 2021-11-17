@@ -39,4 +39,19 @@ describe('OAuth 2 Server', () => {
       new OAuth2Server(undefined, "test/keys/localhost-cert.pem");
     }).toThrow();
   });
+
+  it('should not raise an UnhandledPromiseRejectionWarning when wrongly invoking the /token endpoint', async () => {
+    const server = new OAuth2Server();
+
+    await expect(server.start()).resolves.not.toThrow();
+
+    const host = `http://127.0.0.1:${server.address().port}`;
+    const res = await request(host)
+      .post('/token')
+      .set('Content-Type', 'multipart/form-data;');
+
+    expect(res.text).toContain("[ERR_ASSERTION]: Invalid &#39;grant_type&#39; type");
+
+    await expect(server.stop()).resolves.not.toThrow();
+  });
 });
