@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [4.1.1](https://github.com/axa-group/oauth2-mock-server/compare/v4.1.0...v4.1.1) — 2021-11-18
+
+### Fixed
+
+- Fix regression: Prevent unhandled rejected promises when incorrectly invoking the /token endpoint
+
 ## [4.1.0](https://github.com/axa-group/oauth2-mock-server/compare/v4.0.0...v4.1.0) — 2021-11-15
 
 ### Added
