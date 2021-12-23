@@ -27,7 +27,7 @@ import { HttpServer } from './http-server';
 import { OAuth2Issuer } from './oauth2-issuer';
 import { OAuth2Service } from './oauth2-service';
 import { assertIsAddressInfo } from './helpers';
-import { HttpServerOptions } from './types';
+import { HttpServerOptions, OAuth2Options } from './types';
 
 /**
  * Represents an OAuth2 HTTP server.
@@ -41,14 +41,15 @@ export class OAuth2Server extends HttpServer {
    *
    * @param {string | undefined} key Optional key file path for ssl
    * @param {string | undefined} cert Optional cert file path for ssl
+   * @param {OAuth2Options | undefined} oauth2Options Optional additional settings
    */
-  constructor(key?: string, cert?: string) {
+  constructor(key?: string, cert?: string, oauth2Options?: OAuth2Options) {
     if ((key && !cert) || (!key && cert)) {
       throw 'Both key and cert need to be supplied to start the server with https';
     }
 
     const iss = new OAuth2Issuer();
-    const serv = new OAuth2Service(iss);
+    const serv = new OAuth2Service(iss, oauth2Options?.endpoints);
 
     let options: HttpServerOptions | undefined = undefined;
     if (key && cert) {
