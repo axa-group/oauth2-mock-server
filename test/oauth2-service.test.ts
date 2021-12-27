@@ -348,6 +348,26 @@ describe('OAuth 2 service', () => {
     });
   });
 
+  it('should expose a token endpoint that accepts a JSON request body', async () => {
+    const res = await request(service.requestHandler)
+      .post('/token')
+      .type('json')
+      .send({
+        grant_type: 'password',
+        username: 'the-resource-owner@example.com',
+        scope: 'urn:first-scope urn:second-scope',
+      })
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      access_token: expect.any(String),
+      token_type: 'Bearer',
+      expires_in: 3600,
+      scope: 'urn:first-scope urn:second-scope',
+      refresh_token: expect.any(String),
+    });
+  });
+
   it('should redirect to callback url keeping state when calling authorize endpoint with code response type', async () => {
     const res = await request(service.requestHandler)
       .get('/authorize')

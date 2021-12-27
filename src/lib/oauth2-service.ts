@@ -42,6 +42,7 @@ import type {
 } from './types';
 import { Events } from './types';
 import { InternalEvents } from './types-internals';
+import { json } from 'body-parser';
 
 const OPENID_CONFIGURATION_PATH = '/.well-known/openid-configuration';
 const TOKEN_ENDPOINT_PATH = '/token';
@@ -125,6 +126,7 @@ export class OAuth2Service extends EventEmitter {
   private buildRequestHandler = () => {
     const app = express();
     app.disable('x-powered-by');
+    app.use(json());
     app.use(cors());
     app.get(OPENID_CONFIGURATION_PATH, this.openidConfigurationHandler);
     app.get(JWKS_URI_PATH, this.jwksHandler);
