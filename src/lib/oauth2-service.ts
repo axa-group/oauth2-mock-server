@@ -20,11 +20,13 @@
  */
 
 import { IncomingMessage } from 'http';
+import { URL } from 'url';
 import express, { RequestHandler, Express } from 'express';
 import cors from 'cors';
 import basicAuth from 'basic-auth';
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
+import { json } from 'body-parser';
 
 import { OAuth2Issuer } from './oauth2-issuer';
 import {
@@ -44,7 +46,6 @@ import type {
 } from './types';
 import { Events } from './types';
 import { InternalEvents } from './types-internals';
-import { json } from 'body-parser';
 
 const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
   wellKnownDocument: '/.well-known/openid-configuration',

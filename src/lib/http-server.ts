@@ -22,6 +22,7 @@
 import { Server, RequestListener, createServer } from 'http';
 import { createServer as createHttpsServer } from 'https';
 import { AddressInfo, isIP } from 'net';
+import { URL } from 'url';
 
 import { assertIsAddressInfo } from './helpers';
 import { HttpServerOptions } from './types';
