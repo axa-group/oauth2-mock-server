@@ -38,24 +38,14 @@ import type {
   MutableResponse,
   MutableToken,
   OAuth2Endpoints,
+  OAuth2EndpointsInput,
   ScopesOrTransform,
   StatusCodeMutableResponse,
 } from './types';
 import { Events } from './types';
 import { InternalEvents } from './types-internals';
 
-// same as 'OAuth2Endpoints' but all paths required
-interface OAuth2AllEndpoints {
-  wellKnownDocument: string;
-  token: string;
-  jwks: string;
-  authorize: string;
-  userinfo: string;
-  revoke: string;
-  endSession: string;
-}
-
-const DEFAULT_ENDPOINTS: OAuth2AllEndpoints = Object.freeze({
+const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
   wellKnownDocument: '/.well-known/openid-configuration',
   token: '/token',
   jwks: '/jwks',
@@ -74,15 +64,15 @@ export class OAuth2Service extends EventEmitter {
    *
    * @param {OAuth2Issuer} oauth2Issuer The OAuth2Issuer instance
    *     that will be offered through the service.
-   * @param {OAuth2Endpoints | undefined} paths Endpoint path name overrides.
+   * @param {OAuth2EndpointsInput | undefined} paths Endpoint path name overrides.
    */
 
   #issuer: OAuth2Issuer;
   #requestHandler: Express;
   #nonce: Record<string, string>;
-  #endpoints: OAuth2AllEndpoints;
+  #endpoints: OAuth2Endpoints;
 
-  constructor(oauth2Issuer: OAuth2Issuer, endpoints?: OAuth2Endpoints) {
+  constructor(oauth2Issuer: OAuth2Issuer, endpoints?: OAuth2EndpointsInput) {
     super();
     this.#issuer = oauth2Issuer;
 
