@@ -87,3 +87,19 @@ export interface TokenBuildOptions {
 export interface JWK extends JWKWithKid {
   alg: string;
 }
+
+export interface OAuth2Endpoints {
+  wellKnownDocument: string;
+  token: string;
+  jwks: string;
+  authorize: string;
+  userinfo: string;
+  revoke: string;
+  endSession: string;
+}
+
+export type OAuth2EndpointsInput = Partial<OAuth2Endpoints>;
+
+export interface OAuth2Options {
+  endpoints?: OAuth2EndpointsInput;
+}

@@ -37,6 +37,8 @@ import type {
   MutableRedirectUri,
   MutableResponse,
   MutableToken,
+  OAuth2Endpoints,
+  OAuth2EndpointsInput,
   ScopesOrTransform,
   StatusCodeMutableResponse,
 } from './types';
@@ -44,13 +46,15 @@ import { Events } from './types';
 import { InternalEvents } from './types-internals';
 import { json } from 'body-parser';
 
-const OPENID_CONFIGURATION_PATH = '/.well-known/openid-configuration';
-const TOKEN_ENDPOINT_PATH = '/token';
-const JWKS_URI_PATH = '/jwks';
-const AUTHORIZE_PATH = '/authorize';
-const USERINFO_PATH = '/userinfo';
-const REVOKE_PATH = '/revoke';
-const END_SESSION_ENDPOINT_PATH = '/endsession';
+const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
+  wellKnownDocument: '/.well-known/openid-configuration',
+  token: '/token',
+  jwks: '/jwks',
+  authorize: '/authorize',
+  userinfo: '/userinfo',
+  revoke: '/revoke',
+  endSession: '/endsession',
+});
 
 /**
  * Provides a request handler for an OAuth 2 server.
@@ -61,16 +65,19 @@ export class OAuth2Service extends EventEmitter {
    *
    * @param {OAuth2Issuer} oauth2Issuer The OAuth2Issuer instance
    *     that will be offered through the service.
+   * @param {OAuth2EndpointsInput | undefined} paths Endpoint path name overrides.
    */
 
   #issuer: OAuth2Issuer;
   #requestHandler: Express;
   #nonce: Record<string, string>;
+  #endpoints: OAuth2Endpoints;
 
-  constructor(oauth2Issuer: OAuth2Issuer) {
+  constructor(oauth2Issuer: OAuth2Issuer, endpoints?: OAuth2EndpointsInput) {
     super();
     this.#issuer = oauth2Issuer;
 
+    this.#endpoints = { ...DEFAULT_ENDPOINTS, ...endpoints };
     this.#requestHandler = this.buildRequestHandler();
 
     this.#nonce = {};
@@ -128,17 +135,17 @@ export class OAuth2Service extends EventEmitter {
     app.disable('x-powered-by');
     app.use(json());
     app.use(cors());
-    app.get(OPENID_CONFIGURATION_PATH, this.openidConfigurationHandler);
-    app.get(JWKS_URI_PATH, this.jwksHandler);
+    app.get(this.#endpoints.wellKnownDocument, this.openidConfigurationHandler);
+    app.get(this.#endpoints.jwks, this.jwksHandler);
     app.post(
-      TOKEN_ENDPOINT_PATH,
+      this.#endpoints.token,
       express.urlencoded({ extended: false }),
       this.tokenHandler
     );
-    app.get(AUTHORIZE_PATH, this.authorizeHandler);
-    app.get(USERINFO_PATH, this.userInfoHandler);
-    app.post(REVOKE_PATH, this.revokeHandler);
-    app.get(END_SESSION_ENDPOINT_PATH, this.endSessionHandler);
+    app.get(this.#endpoints.authorize, this.authorizeHandler);
+    app.get(this.#endpoints.userinfo, this.userInfoHandler);
+    app.post(this.#endpoints.revoke, this.revokeHandler);
+    app.get(this.#endpoints.endSession, this.endSessionHandler);
 
     return app;
   };
@@ -148,11 +155,11 @@ export class OAuth2Service extends EventEmitter {
 
     const openidConfig = {
       issuer: this.issuer.url,
-      token_endpoint: `${this.issuer.url}${TOKEN_ENDPOINT_PATH}`,
-      authorization_endpoint: `${this.issuer.url}${AUTHORIZE_PATH}`,
-      userinfo_endpoint: `${this.issuer.url}${USERINFO_PATH}`,
+      token_endpoint: `${this.issuer.url}${this.#endpoints.token}`,
+      authorization_endpoint: `${this.issuer.url}${this.#endpoints.authorize}`,
+      userinfo_endpoint: `${this.issuer.url}${this.#endpoints.userinfo}`,
       token_endpoint_auth_methods_supported: ['none'],
-      jwks_uri: `${this.issuer.url}${JWKS_URI_PATH}`,
+      jwks_uri: `${this.issuer.url}${this.#endpoints.jwks}`,
       response_types_supported: ['code'],
       grant_types_supported: [
         'client_credentials',
@@ -162,9 +169,9 @@ export class OAuth2Service extends EventEmitter {
       token_endpoint_auth_signing_alg_values_supported: ['RS256'],
       response_modes_supported: ['query'],
       id_token_signing_alg_values_supported: ['RS256'],
-      revocation_endpoint: `${this.issuer.url}${REVOKE_PATH}`,
+      revocation_endpoint: `${this.issuer.url}${this.#endpoints.revoke}`,
       subject_types_supported: ['public'],
-      end_session_endpoint: `${this.issuer.url}${END_SESSION_ENDPOINT_PATH}`,
+      end_session_endpoint: `${this.issuer.url}${this.#endpoints.endSession}`,
     };
 
     return res.json(openidConfig);
