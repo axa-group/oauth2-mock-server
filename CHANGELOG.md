@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [4.2.0](https://github.com/axa-group/oauth2-mock-server/compare/v4.1.1...v4.2.0) — 2022-01-28
+
+### Added
+
+- Add support for custom endpoint pathnames (by [roskh](https://github.com/roskh))
+- Teach `/token` endpoint to support JSON content type (by [roskh](https://github.com/roskh))
+
 ## [4.1.1](https://github.com/axa-group/oauth2-mock-server/compare/v4.1.0...v4.1.1) — 2021-11-18
 
 ### Fixed
