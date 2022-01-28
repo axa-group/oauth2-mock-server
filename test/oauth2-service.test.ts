@@ -28,7 +28,8 @@ describe('OAuth 2 service', () => {
       token: '/custom-token',
       authorize: '/custom-authorize',
       userinfo: '/custom-userinfo',
-      // 'revoke', 'endSession' purposefully omitted to test defaults
+      // 'revoke', 'endSession' purposefully omitted to test defaults,
+      introspect: '/custom-introspect',
     });
 
     // OpenID well known document
@@ -42,7 +43,8 @@ describe('OAuth 2 service', () => {
       authorization_endpoint: `${url!}/custom-authorize`,
       userinfo_endpoint: `${url!}/custom-userinfo`,
       revocation_endpoint: `${url!}/revoke`,
-      end_session_endpoint: `${url!}/endsession`
+      end_session_endpoint: `${url!}/endsession`,
+      introspection_endpoint: `${url!}/custom-introspect`,
     });
 
     // GET
@@ -65,7 +67,8 @@ describe('OAuth 2 service', () => {
     for (const [path, expectedStatus] of [
       ['/custom-token', 500], // 500 implies it was routed successfully
       ['/token', 404],
-      ['/revoke', 200]
+      ['/revoke', 200],
+      ['/custom-introspect', 200],
     ]) {
       await request(customService.requestHandler)
         .post(path as string)
@@ -95,6 +98,7 @@ describe('OAuth 2 service', () => {
       id_token_signing_alg_values_supported: ['RS256'],
       revocation_endpoint: `${url!}/revoke`,
       subject_types_supported: ['public'],
+      introspection_endpoint: `${url!}/introspect`,
     });
   });
 
@@ -662,6 +666,38 @@ describe('OAuth 2 service', () => {
       .expect(302);
 
     expect(res.headers.location).toBe('http://post-logout.com/signin?param=test');
+  });
+
+  it('should expose a token introspection endpoint that returns information about a token', async () => {
+    const res = await request(service.requestHandler)
+      .post('/introspect')
+      .type('form')
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      active: true,
+    });
+  });
+
+  it('should allow customizing the introspect response through a beforeIntrospect event', async () => {
+    service.once('beforeIntrospect', (introspectResponse, req) => {
+      expect(req).toBeInstanceOf(IncomingMessage);
+      introspectResponse.body = {
+        active: true,
+        scope: 'dummy',
+        username: 'johndoe',
+      };
+      introspectResponse.statusCode = 200;
+    });
+    const res = await request(service.requestHandler)
+      .post('/introspect')
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      active: true,
+      scope: 'dummy',
+      username: 'johndoe',
+    });
   });
 });
 
