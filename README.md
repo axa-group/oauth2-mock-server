@@ -174,6 +174,21 @@ It also provides a convenient way, through event emitters, to programmatically c
   });
   ```
 
+- The introspect endpoint response body
+
+  ```js
+  // Simulate a custom token introspection response body
+  service.once('beforeIntrospect', (introspectResponse, req) => {
+    introspectResponse.body = {
+        active: true,
+        scope: "read write email",
+        client_id: "<client_id>",
+        username: "dummy",
+        exp: 1643712575
+      };
+  });
+  ```
+
 ### HTTPS support
 
 It also provides basic HTTPS support, an optional cert and key can be supplied to start the server with SSL/TLS using the in-built NodeJS [HTTPS](https://nodejs.org/api/https.html) module.
@@ -225,6 +240,10 @@ It simulates a token revocation. This endpoint should always return 200 as state
 ### GET `/endsession`
 
 It simulates the end session endpoint. It will automatically redirect to the post_logout_redirect_uri sent as parameter.
+
+### POST `/introspect`
+
+It simulates the [token introspection endpoint](https://www.oauth.com/oauth2-servers/token-introspection-endpoint/).
 
 ## Command-Line Interface
 

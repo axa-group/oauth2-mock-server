@@ -64,6 +64,7 @@ export enum Events {
   BeforeRevoke = 'beforeRevoke',
   BeforeAuthorizeRedirect = 'beforeAuthorizeRedirect',
   BeforePostLogoutRedirect = 'beforePostLogoutRedirect',
+  BeforeIntrospect = 'beforeIntrospect',
 }
 
 export interface TokenBuildOptions {
@@ -96,6 +97,7 @@ export interface OAuth2Endpoints {
   userinfo: string;
   revoke: string;
   endSession: string;
+  introspect: string;
 }
 
 export type OAuth2EndpointsInput = Partial<OAuth2Endpoints>;

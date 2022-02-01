@@ -55,6 +55,7 @@ const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
   userinfo: '/userinfo',
   revoke: '/revoke',
   endSession: '/endsession',
+  introspect: '/introspect',
 });
 
 /**
@@ -147,6 +148,7 @@ export class OAuth2Service extends EventEmitter {
     app.get(this.#endpoints.userinfo, this.userInfoHandler);
     app.post(this.#endpoints.revoke, this.revokeHandler);
     app.get(this.#endpoints.endSession, this.endSessionHandler);
+    app.post(this.#endpoints.introspect, this.introspectHandler);
 
     return app;
   };
@@ -173,6 +175,7 @@ export class OAuth2Service extends EventEmitter {
       revocation_endpoint: `${this.issuer.url}${this.#endpoints.revoke}`,
       subject_types_supported: ['public'],
       end_session_endpoint: `${this.issuer.url}${this.#endpoints.endSession}`,
+      introspection_endpoint: `${this.issuer.url}${this.#endpoints.introspect}`,
     };
 
     return res.json(openidConfig);
@@ -402,5 +405,25 @@ export class OAuth2Service extends EventEmitter {
     this.emit(Events.BeforePostLogoutRedirect, postLogoutRedirectUri, req);
 
     res.redirect(postLogoutRedirectUri.url.href);
+  };
+
+  private introspectHandler: RequestHandler = (req, res) => {
+    const introspectResponse: MutableResponse = {
+      body: {
+        active: true,
+      },
+      statusCode: 200,
+    };
+
+    /**
+     * Before introspect event.
+     *
+     * @event OAuth2Service#beforeIntrospect
+     * @param {MutableResponse} response The response body and status code.
+     * @param {IncomingMessage} req The incoming HTTP request.
+     */
+    this.emit(Events.BeforeIntrospect, introspectResponse, req);
+
+    res.status(introspectResponse.statusCode).json(introspectResponse.body);
   };
 }
