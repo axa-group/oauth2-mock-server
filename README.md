@@ -104,7 +104,7 @@ It also provides a convenient way, through event emitters, to programmatically c
 
   ```js
   // Modify the expiration time on next token produced
-  service.once('beforeTokenSigning', (token, _req) => {
+  service.once('beforeTokenSigning', (token, req) => {
     const timestamp = Math.floor(Date.now() / 1000);
     token.payload.exp = timestamp + 400;
   });
@@ -117,6 +117,14 @@ It also provides a convenient way, through event emitters, to programmatically c
     const credentials = basicAuth(req);
     const clientId = credentials ? credentials.name : req.body.client_id;
     token.payload.client_id = clientId;
+  });
+  ```
+
+  ```js
+  // Modify the user
+  service.once('beforeTokenSigning', (token, req) => {
+    const timestamp = Math.floor(Date.now() / 1000);
+    req.body.username = 'the-resource-owner@example.com';
   });
   ```
 
