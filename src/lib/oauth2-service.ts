@@ -218,7 +218,7 @@ export class OAuth2Service extends EventEmitter {
           scope = 'dummy';
           xfn = (_header, payload) => {
             Object.assign(payload, {
-              sub: 'johndoe',
+              sub: reqBody.username || 'johndoe',
               amr: ['pwd'],
               scope,
             });
@@ -228,7 +228,7 @@ export class OAuth2Service extends EventEmitter {
           scope = 'dummy';
           xfn = (_header, payload) => {
             Object.assign(payload, {
-              sub: 'johndoe',
+              sub: reqBody.username || 'johndoe',
               amr: ['pwd'],
               scope,
             });
@@ -253,7 +253,7 @@ export class OAuth2Service extends EventEmitter {
 
         const xfn: JwtTransform = (_header, payload) => {
           Object.assign(payload, {
-            sub: 'johndoe',
+            sub: reqBody.username || 'johndoe',
             aud: clientId,
           });
           if (reqBody.code !== undefined && this.#nonce[reqBody.code]) {
