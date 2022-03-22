@@ -208,7 +208,7 @@ export class OAuth2Service extends EventEmitter {
         case 'password':
           xfn = (_header, payload) => {
             Object.assign(payload, {
-              sub: reqBody.username,
+              sub: reqBody.username || 'johndoe',
               amr: ['pwd'],
               scope,
             });
