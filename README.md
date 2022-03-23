@@ -123,7 +123,6 @@ It also provides a convenient way, through event emitters, to programmatically c
   ```js
   // Modify the user
   service.once('beforeTokenSigning', (token, req) => {
-    const timestamp = Math.floor(Date.now() / 1000);
     req.body.username = 'the-resource-owner@example.com';
   });
   ```
