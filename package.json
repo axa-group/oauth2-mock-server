@@ -83,5 +83,10 @@
     "ts-jest": "^27.1.4",
     "ts-node": "^10.7.0",
     "typescript": "^4.6.3"
+  },
+  "resolutions": {
+    "@types/node": "^12.20.47",
+    "@types/superagent": "4.1.14",
+    "superagent": "7.1.1"
   }
 }
