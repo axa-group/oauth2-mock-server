@@ -13,7 +13,7 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 ## Development prerequisites
 
-- [Node.js 12.0+](https://nodejs.org/)
+- [Node.js 14+](https://nodejs.org/)
 - [Yarn 1.15.2+](https://classic.yarnpkg.com/lang/en/)
 
 ## How to use
@@ -180,12 +180,12 @@ It also provides a convenient way, through event emitters, to programmatically c
   // Simulate a custom token introspection response body
   service.once('beforeIntrospect', (introspectResponse, req) => {
     introspectResponse.body = {
-        active: true,
-        scope: "read write email",
-        client_id: "<client_id>",
-        username: "dummy",
-        exp: 1643712575
-      };
+      active: true,
+      scope: 'read write email',
+      client_id: '<client_id>',
+      username: 'dummy',
+      exp: 1643712575,
+    };
   });
   ```
 
