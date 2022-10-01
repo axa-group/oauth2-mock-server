@@ -5,11 +5,11 @@
 
 > _OAuth 2 mock server. Intended to be used for development or testing purposes._
 
-When developing an application that exposes or consumes APIs that are secured with an OAuth 2 authorization scheme, a mechanism for issuing access tokens is needed. Frequently, a developer needs to create custom code that fakes the creation of tokens for testing purposes, and these tokens cannot be properly verified, since there is no actual entity issuing those tokens.
+When developing an application that exposes or consumes APIs that are secured with an [OAuth 2](https://oauth.net/2/) authorization scheme, a mechanism for issuing access tokens is needed. Frequently, a developer needs to create custom code that fakes the creation of tokens for testing purposes, and these tokens cannot be properly verified, since there is no actual entity issuing those tokens.
 
 The purpose of this package is to provide an easily configurable OAuth 2 server, that can be set up and teared down at will, and can be programmatically run while performing automated tests.
 
-> **Warning:** This tool is _not_ intended to be used as an actual OAuth 2 server. It lacks many features that would be required in a proper implementation.
+> **Warning:** This tool is _not_ intended to be used as an actual production grade OAuth 2 server. It lacks many features that would be required in a proper implementation.
 
 ## Development prerequisites
 
@@ -104,7 +104,7 @@ It also provides a convenient way, through event emitters, to programmatically c
 
   ```js
   // Modify the expiration time on next token produced
-  service.once('beforeTokenSigning', (token, _req) => {
+  service.once('beforeTokenSigning', (token, req) => {
     const timestamp = Math.floor(Date.now() / 1000);
     token.payload.exp = timestamp + 400;
   });
