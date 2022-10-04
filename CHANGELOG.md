@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [5.0.1](https://github.com/axa-group/oauth2-mock-server/compare/v5.0.0...v5.0.1) — 2022-10-04
+
+### Security
+
+- Update dependencies to fix:
+  - [CVE-2022-36083](https://github.com/panva/jose/security/advisories/GHSA-jv3g-j58f-9mq9)
+
 ## [5.0.0](https://github.com/axa-group/oauth2-mock-server/compare/v4.3.2...v5.0.0) — 2022-06-27
 
 ### Changed
