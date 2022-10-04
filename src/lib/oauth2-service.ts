@@ -345,7 +345,7 @@ export class OAuth2Service extends EventEmitter {
     // for the sake of security.
     //
     // This is *not* a real oAuth2 server. This is *not* to be run in production.
-    res.redirect(url.href); // lgtm[js/server-side-unvalidated-url-redirection]
+    res.redirect(url.href);
   };
 
   private userInfoHandler: RequestHandler = (req, res) => {
