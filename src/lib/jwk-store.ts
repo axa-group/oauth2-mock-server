@@ -30,6 +30,7 @@ import {
 
 import { JWK } from './types';
 import { JWKWithKid } from './types-internals';
+import { AssertionError } from 'assert';
 
 const generateRandomKid = () => {
   return randomBytes(40).toString('hex');
@@ -93,14 +94,14 @@ function normalizeKeyKid(
   jwk: Record<string, unknown>,
   opts?: { kid?: string }
 ): asserts jwk is JWKWithKid {
-  if (jwk.kid !== undefined) {
+  if (jwk['kid'] !== undefined) {
     return;
   }
 
   if (opts !== undefined && opts.kid !== undefined) {
-    jwk.kid = opts.kid;
+    jwk['kid'] = opts.kid;
   } else {
-    jwk.kid = generateRandomKid();
+    jwk['kid'] = generateRandomKid();
   }
 }
 
@@ -235,6 +236,11 @@ class KeyRotator {
       }
 
       const cleaner = privateToPublicTransformerMap[key.alg];
+
+      if (cleaner === undefined) {
+        throw new Error(`Unsupported algo '{key.alg}'`);
+      }
+
       keys.push(cleaner(key));
     }
 
@@ -255,6 +261,12 @@ class KeyRotator {
 
   private moveToTheEnd(i: number): JWK {
     const [key] = this.#keys.splice(i, 1);
+
+    if (key === undefined) {
+      throw new AssertionError({
+        message: 'Unexpected error. key is supposed to exist',
+      });
+    }
 
     this.#keys.push(key);
 

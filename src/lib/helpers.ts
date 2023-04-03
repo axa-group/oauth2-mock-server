@@ -66,13 +66,13 @@ export function assertIsValidTokenRequest(
   assertIsPlainObject(body, 'Invalid token request body');
 
   if ('scope' in body) {
-    assertIsString(body.scope, "Invalid 'scope' type");
+    assertIsString(body['scope'], "Invalid 'scope' type");
   }
 
-  assertIsString(body.grant_type, "Invalid 'grant_type' type");
+  assertIsString(body['grant_type'], "Invalid 'grant_type' type");
 
   if ('code' in body) {
-    assertIsString(body.code, "Invalid 'code' type");
+    assertIsString(body['code'], "Invalid 'code' type");
   }
 }
 

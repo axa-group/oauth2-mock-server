@@ -81,7 +81,7 @@ describe('JWK Store', () => {
 
       expect(key).toMatchObject({
         kty: keyType,
-        kid: testKey.kid,
+        kid: testKey['kid'],
       });
     });
 
@@ -92,7 +92,7 @@ describe('JWK Store', () => {
     ])('throws when serialized key lacks the "alg" property (kty = %s)', async (_keyType, testKey) => {
       const store = new JWKStore();
 
-      delete testKey.alg;
+      delete testKey['alg'];
 
       await expect(() => store.add(testKey)).rejects.toThrow('Unspecified JWK "alg" property');
     });
@@ -104,7 +104,7 @@ describe('JWK Store', () => {
     ])('throws when serialized key contains an unsupported "alg" value (kty = %s)', async (_keyType, testKey) => {
       const store = new JWKStore();
 
-      testKey.alg = "DUNNO256";
+      testKey['alg'] = "DUNNO256";
 
       await expect(() => store.add(testKey)).rejects.toThrow('Unsupported JWK "alg" value ("DUNNO256")');
     });
@@ -114,12 +114,12 @@ describe('JWK Store', () => {
 
       const testKey = testKeys.getParsed('test-rs256-key.json');
 
-      delete testKey.d;
-      delete testKey.p;
-      delete testKey.q;
-      delete testKey.dp;
-      delete testKey.dq;
-      delete testKey.qi;
+      delete testKey['d'];
+      delete testKey['p'];
+      delete testKey['q'];
+      delete testKey['dp'];
+      delete testKey['dq'];
+      delete testKey['qi'];
 
       await expect(() => store.add(testKey)).rejects.toThrow('Invalid JWK type. No "private" key related data has been found.');
     });
@@ -129,7 +129,7 @@ describe('JWK Store', () => {
 
       const testKey = testKeys.getParsed('test-es256-key.json');
 
-      delete testKey.d;
+      delete testKey['d'];
 
       await expect(() => store.add(testKey)).rejects.toThrow('Invalid JWK type. No "private" key related data has been found.');
     });
@@ -140,7 +140,7 @@ describe('JWK Store', () => {
 
       const testKey = testKeys.getParsed('test-eddsa-key.json');
 
-      delete testKey.d;
+      delete testKey['d'];
 
       await expect(() => store.add(testKey)).rejects.toThrow('Invalid JWK type. No "private" key related data has been found.');
     });
@@ -149,22 +149,22 @@ describe('JWK Store', () => {
       const store = new JWKStore();
 
       const one = testKeys.getParsed('test-rs256-key.json');
-      expect(one.kty).toBe("RSA");
-      one.kid = "new_id";
+      expect(one['kty']).toBe("RSA");
+      one['kid'] = "new_id";
       await store.add(one);
 
       const retrievedOne = store.get("new_id");
       expect(retrievedOne).not.toBeNull();
-      expect(retrievedOne!.kty).toEqual(one.kty);
+      expect(retrievedOne!.kty).toEqual(one['kty']);
 
       const two = testKeys.getParsed('test-es256-key.json');
-      expect(two.kty).toBe("EC");
-      two.kid = "new_id";
+      expect(two['kty']).toBe("EC");
+      two['kid'] = "new_id";
       await store.add(two);
 
       const retrievedTwo = store.get("new_id");
       expect(retrievedTwo).not.toBeNull();
-      expect(retrievedTwo!.kty).toEqual(two.kty);
+      expect(retrievedTwo!.kty).toEqual(two['kty']);
     });
   });
 

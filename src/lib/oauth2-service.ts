@@ -264,8 +264,8 @@ export class OAuth2Service extends EventEmitter {
           }
         };
 
-        body.id_token = await this.buildToken(req, tokenTtl, xfn);
-        body.refresh_token = uuidv4();
+        body['id_token'] = await this.buildToken(req, tokenTtl, xfn);
+        body['refresh_token'] = uuidv4();
       }
 
       const tokenEndpointResponse: MutableResponse = {
@@ -386,12 +386,12 @@ export class OAuth2Service extends EventEmitter {
 
   private endSessionHandler: RequestHandler = (req, res) => {
     assertIsString(
-      req.query.post_logout_redirect_uri,
+      req.query['post_logout_redirect_uri'],
       'Invalid post_logout_redirect_uri type'
     );
 
     const postLogoutRedirectUri: MutableRedirectUri = {
-      url: new URL(req.query.post_logout_redirect_uri),
+      url: new URL(req.query['post_logout_redirect_uri']),
     };
 
     /**

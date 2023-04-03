@@ -93,9 +93,9 @@ export class OAuth2Issuer extends EventEmitter {
       const scopesOrTransform = opts.scopesOrTransform;
 
       if (typeof scopesOrTransform === 'string') {
-        payload.scope = scopesOrTransform;
+        payload['scope'] = scopesOrTransform;
       } else if (Array.isArray(scopesOrTransform)) {
-        payload.scope = scopesOrTransform.join(' ');
+        payload['scope'] = scopesOrTransform.join(' ');
       } else if (typeof scopesOrTransform === 'function') {
         scopesOrTransform(header, payload);
       }

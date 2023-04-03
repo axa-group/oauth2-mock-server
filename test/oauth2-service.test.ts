@@ -47,8 +47,7 @@ describe('OAuth 2 service', () => {
       introspection_endpoint: `${url!}/custom-introspect`,
     });
 
-    // GET
-    for (const [path, expectedStatus, query] of [
+    const getTestCases: [string, number, string?][] = [
       ['/custom-jwks', 200],
       ['/jwks', 404],
       ['/custom-userinfo', 200],
@@ -56,22 +55,27 @@ describe('OAuth 2 service', () => {
       ['/authorize', 404],
       ['/custom-authorize', 302, 'redirect_uri=http://example.com&scope=dummy_scope&state=1'],
       ['/endsession', 302, 'post_logout_redirect_uri=http://example.com']
-    ]) {
+    ];
+
+    // GET
+    for (const [path, expectedStatus, query] of getTestCases) {
       await request(customService.requestHandler)
-        .get(path as string)
-        .query((query as string) ?? '')
+        .get(path )
+        .query(query ?? '')
         .expect(expectedStatus);
     }
 
-    // POST
-    for (const [path, expectedStatus] of [
+    const postTestCases: [string, number][] = [
       ['/custom-token', 500], // 500 implies it was routed successfully
       ['/token', 404],
       ['/revoke', 200],
       ['/custom-introspect', 200],
-    ]) {
+    ];
+
+    // POST
+    for (const [path, expectedStatus] of postTestCases) {
       await request(customService.requestHandler)
-        .post(path as string)
+        .post(path)
         .expect(expectedStatus);
     }
   });

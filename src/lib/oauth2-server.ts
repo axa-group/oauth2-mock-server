@@ -88,7 +88,7 @@ export class OAuth2Server extends HttpServer {
    *
    * @type {boolean}
    */
-  get listening(): boolean {
+  override get listening(): boolean {
     return super.listening;
   }
 
@@ -98,7 +98,7 @@ export class OAuth2Server extends HttpServer {
    *
    * @returns {AddressInfo} The server bound address information.
    */
-  address(): AddressInfo {
+  override address(): AddressInfo {
     const address = super.address();
 
     assertIsAddressInfo(address);
@@ -113,7 +113,7 @@ export class OAuth2Server extends HttpServer {
    * @param {string} [host] Host name.
    * @returns {Promise<void>} A promise that resolves when the server has been started.
    */
-  async start(port?: number, host?: string): Promise<Server> {
+  override async start(port?: number, host?: string): Promise<Server> {
     const server = await super.start(port, host);
 
     if (!this.issuer.url) {
@@ -128,7 +128,7 @@ export class OAuth2Server extends HttpServer {
    *
    * @returns {Promise} Resolves when the server has been stopped.
    */
-  async stop(): Promise<void> {
+  override async stop(): Promise<void> {
     await super.stop();
     this._issuer.url = undefined;
   }
