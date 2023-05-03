@@ -1,3 +1,5 @@
+import { describe, it, expect, beforeAll } from 'vitest';
+
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import type { JwtTransform } from '../src/lib/types';
 
@@ -70,7 +72,7 @@ describe('OAuth 2 issuer', () => {
 
     expect(decoded.payload).toHaveProperty("scope");
 
-    expect(decoded.payload.scope).toEqual('urn:scope-1 urn:scope-2');
+    expect(decoded.payload.scope).toBe('urn:scope-1 urn:scope-2');
   });
 
   it('should be able to build tokens and modify the header or the payload before signing', async () => {

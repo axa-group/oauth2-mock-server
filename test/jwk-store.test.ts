@@ -1,3 +1,5 @@
+import { describe, it, expect } from 'vitest';
+
 import { JWKStore } from '../src/lib/jwk-store';
 import * as testKeys from './keys';
 
@@ -147,7 +149,7 @@ describe('JWK Store', () => {
       const store = new JWKStore();
 
       const one = testKeys.getParsed('test-rs256-key.json');
-      expect(one.kty).toEqual("RSA");
+      expect(one.kty).toBe("RSA");
       one.kid = "new_id";
       await store.add(one);
 
@@ -156,7 +158,7 @@ describe('JWK Store', () => {
       expect(retrievedOne!.kty).toEqual(one.kty);
 
       const two = testKeys.getParsed('test-es256-key.json');
-      expect(two.kty).toEqual("EC");
+      expect(two.kty).toBe("EC");
       two.kid = "new_id";
       await store.add(two);
 

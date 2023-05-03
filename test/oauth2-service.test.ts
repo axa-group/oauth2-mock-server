@@ -1,3 +1,4 @@
+import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { IncomingMessage, type RequestListener } from 'http';
 
@@ -607,7 +608,7 @@ describe('OAuth 2 service', () => {
       })
       .expect(200);
 
-    expect(res.text).toEqual('');
+    expect(res.text).toBe('');
   });
 
   it('should allow customizing the revoke response through a beforeRevoke event', async () => {

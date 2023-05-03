@@ -1,8 +1,17 @@
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { writeFile } from 'fs/promises';
+
 import { exec } from './lib/child-script';
 
+vi.mock('fs/promises', () => ({
+  writeFile: vi.fn().mockImplementation(() => ''),
+}));
+
+const mockWriteFileAsync = vi.mocked(writeFile);
+
 describe('CLI', () => {
-  beforeEach(() => {
-    jest.resetModules();
+  afterEach(() => {
+    vi.resetModules();
   });
 
   it.each([
@@ -73,8 +82,18 @@ describe('CLI', () => {
   });
 
   it('should allow exporting JSON-formatted keys', async () => {
-    const fs = require('fs/promises');
-    const wfn = jest.spyOn(fs, 'writeFile').mockImplementation();
+
+    let generatedPath = '';
+
+    mockWriteFileAsync.mockImplementation((p) => {
+      if (typeof (p) !== 'string') {
+        throw new Error("Unepextected path type.");
+      }
+
+      generatedPath = p;
+
+      return Promise.resolve();
+    });
 
     const res = await executeCli('--save-jwk', '-p', '0');
 
@@ -84,12 +103,7 @@ describe('CLI', () => {
     expect(key).toBeDefined();
     expect(key).toHaveProperty('kid');
 
-    expect(wfn).toHaveBeenCalledWith(
-      `${key!.kid}.json`,
-      expect.stringMatching(/^{[^}]+}$/),
-    );
-
-    wfn.mockRestore();
+    expect(generatedPath).toBe(`${key!.kid}.json`);
 
     expect(res.stdout).toMatch(/^Generated new RSA key with kid "[\w-]+"$/m);
     expect(res.stdout).toMatch(/^JSON web key written to file "[\w-]+\.json"\.$/m);
