@@ -165,10 +165,17 @@ async function startServer(opts: Options) {
   assertIsString(server.issuer.url, 'Empty host');
   console.log(`OAuth 2 issuer is ${server.issuer.url}`);
 
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  process.once('SIGINT', async () => {
+  process.once('SIGINT', () => {
     console.log('OAuth 2 server is stopping...');
-    await server.stop();
+
+    const handler = async () => {
+      await server.stop();
+    };
+
+    handler().catch((e) => {
+      throw e;
+    });
+
     console.log('OAuth 2 server has been stopped.');
   });
 
