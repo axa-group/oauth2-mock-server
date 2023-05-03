@@ -33,8 +33,6 @@ const defaultOptions: Options = {
   saveJWK: false,
 };
 
-module.exports = cli(process.argv.slice(2));
-
 async function cli(args: string[]): Promise<OAuth2Server | null> {
   let options;
 
@@ -180,3 +178,5 @@ async function startServer(opts: Options) {
 
   return server;
 }
+
+export default cli(process.argv.slice(2));

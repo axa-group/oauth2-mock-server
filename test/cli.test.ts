@@ -1,7 +1,5 @@
 import { exec } from './lib/child-script';
 
-const cliPath = require.resolve('../src/oauth2-mock-server');
-
 describe('CLI', () => {
   beforeEach(() => {
     jest.resetModules();
@@ -103,7 +101,7 @@ describe('CLI', () => {
 });
 
 async function executeCli(...args: string[]) {
-  const res = await exec(cliPath, args);
+  const res = await exec(args);
 
   if (res.result) {
     await res.result.stop();
