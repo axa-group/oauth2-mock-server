@@ -73,11 +73,8 @@ describe('CLI', () => {
   });
 
   it('should allow exporting JSON-formatted keys', async () => {
-    const fs = require('fs');
-    const wfn = jest.spyOn(fs, 'writeFile').mockImplementation((_f, _d, callback) => {
-      const cb = callback as () => void;
-      cb();
-    });
+    const fs = require('fs/promises');
+    const wfn = jest.spyOn(fs, 'writeFile').mockImplementation();
 
     const res = await executeCli('--save-jwk', '-p', '0');
 
@@ -90,7 +87,6 @@ describe('CLI', () => {
     expect(wfn).toHaveBeenCalledWith(
       `${key!.kid}.json`,
       expect.stringMatching(/^{[^}]+}$/),
-      expect.any(Function),
     );
 
     wfn.mockRestore();

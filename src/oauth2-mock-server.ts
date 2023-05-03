@@ -15,15 +15,12 @@
  * limitations under the License.
  */
 
-import { writeFile } from 'fs';
-import { promisify } from 'util';
+import { writeFile } from 'fs/promises';
 import path from 'path';
 
 import { OAuth2Server } from './index';
 import { assertIsString, readJsonFromFile, shift } from './lib/helpers';
 import type { JWK, Options } from './lib/types';
-
-const writeFileAsync = promisify(writeFile);
 
 /* eslint no-console: off */
 
@@ -128,7 +125,7 @@ function parsePort(portStr: string) {
 async function saveJWK(keys: JWK[]) {
   for (const key of keys) {
     const filename = `${key.kid}.json`;
-    await writeFileAsync(filename, JSON.stringify(key, null, 2));
+    await writeFile(filename, JSON.stringify(key, null, 2));
     console.log(`JSON web key written to file "${filename}".`);
   }
 }
