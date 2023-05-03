@@ -1,5 +1,5 @@
-node_modules/
-TestResults/
-.vscode
-.cache/
-dist/
+/node_modules/
+/TestResults/
+/.vscode/
+/.cache/
+/dist/
