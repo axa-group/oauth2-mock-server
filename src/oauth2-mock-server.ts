@@ -47,7 +47,6 @@ async function cli(args: string[]): Promise<OAuth2Server | null> {
   }
 
   if (!options) {
-    process.exitCode = 0;
     return Promise.resolve(null);
   }
 

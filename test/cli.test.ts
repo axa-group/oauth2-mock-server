@@ -14,7 +14,7 @@ describe('CLI', () => {
     const res = await executeCli(arg);
 
     expect(res.result).toBeNull();
-    expect(res.exitCode).toBe(0);
+    expect(res.exitCode).toBeUndefined();
     expect(res.stdout).toMatch(/^Usage: oauth2-mock-server \[options\]/);
   });
 
