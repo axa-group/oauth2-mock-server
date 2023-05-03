@@ -43,11 +43,12 @@ async function cli(args: string[]): Promise<OAuth2Server | null> {
   } catch (err) {
     console.error(err instanceof Error ? err.message : err);
     process.exitCode = 1;
-    return Promise.reject(err);
+    throw err;
   }
 
-  if (!options) {
-    return Promise.resolve(null);
+  if (options === null) {
+    showHelp();
+    return null;
   }
 
   return await startServer(options);
@@ -62,7 +63,6 @@ function parseCliArgs(args: string[]): Options | null {
     switch (arg) {
       case '-h':
       case '--help':
-        showHelp();
         return null;
       case '-a':
         opts.host = shift(args);
