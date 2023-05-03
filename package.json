@@ -39,8 +39,7 @@
     "dist/**/*.*"
   ],
   "scripts": {
-    "build:clean": "rimraf ./dist",
-    "prebuild": "yarn build:clean",
+    "prebuild": "rimraf ./dist ./.cache",
     "build": "tsc -p ./tsconfig.build.json",
     "cleanup:testresults": "rimraf TestResults",
     "prelint": "tsc --noEmit",
