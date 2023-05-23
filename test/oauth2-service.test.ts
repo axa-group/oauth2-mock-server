@@ -1,6 +1,5 @@
 import request from 'supertest';
-import { IncomingMessage } from 'http';
-import type { Express } from 'express';
+import { IncomingMessage, type RequestListener } from 'http';
 
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import { OAuth2Service } from '../src/lib/oauth2-service';
@@ -655,7 +654,7 @@ describe('OAuth 2 service', () => {
 
     const res = await request(service.requestHandler)
       .get('/endsession')
-      .query(`post_logout_redirect_uri=${postLogoutRedirectUri}`)
+      .query(`post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`)
       .redirects(0)
       .expect(302);
 
@@ -675,7 +674,7 @@ describe('OAuth 2 service', () => {
 
     const res = await request(service.requestHandler)
       .get('/endsession')
-      .query(`post_logout_redirect_uri=${postLogoutRedirectUri}`)
+      .query(`post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`)
       .redirects(0)
       .expect(302);
 
@@ -724,7 +723,7 @@ function getCode(response: request.Response) {
   return url.searchParams.get('code');
 }
 
-function tokenRequest(app: Express) {
+function tokenRequest(app: RequestListener) {
   return request(app)
     .post('/token')
     .type('form')

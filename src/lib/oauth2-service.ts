@@ -19,14 +19,13 @@
  * @module lib/oauth2-service
  */
 
-import { IncomingMessage } from 'http';
+import { IncomingMessage, type RequestListener } from 'http';
 import { URL } from 'url';
-import express, { RequestHandler, Express } from 'express';
+import express, { type RequestHandler } from 'express';
 import cors from 'cors';
 import basicAuth from 'basic-auth';
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
-import { json } from 'body-parser';
 
 import { OAuth2Issuer } from './oauth2-issuer';
 import {
@@ -72,7 +71,7 @@ export class OAuth2Service extends EventEmitter {
    */
 
   #issuer: OAuth2Issuer;
-  #requestHandler: Express;
+  #requestHandler: RequestListener;
   #nonce: Record<string, string>;
   #endpoints: OAuth2Endpoints;
 
@@ -82,7 +81,6 @@ export class OAuth2Service extends EventEmitter {
 
     this.#endpoints = { ...DEFAULT_ENDPOINTS, ...endpoints };
     this.#requestHandler = this.buildRequestHandler();
-
     this.#nonce = {};
   }
 
@@ -129,14 +127,14 @@ export class OAuth2Service extends EventEmitter {
    *
    * @type {Function}
    */
-  get requestHandler(): Express {
+  get requestHandler(): RequestListener {
     return this.#requestHandler;
   }
 
-  private buildRequestHandler = () => {
+  private buildRequestHandler = (): RequestListener => {
     const app = express();
     app.disable('x-powered-by');
-    app.use(json());
+    app.use(express.json());
     app.use(cors());
     app.get(this.#endpoints.wellKnownDocument, this.openidConfigurationHandler);
     app.get(this.#endpoints.jwks, this.jwksHandler);
@@ -183,7 +181,7 @@ export class OAuth2Service extends EventEmitter {
   };
 
   private jwksHandler: RequestHandler = (_req, res) => {
-    res.json({ keys: this.issuer.keys.toJSON() });
+    return res.json({ keys: this.issuer.keys.toJSON() });
   };
 
   private tokenHandler: RequestHandler = async (req, res, next) => {
@@ -248,6 +246,7 @@ export class OAuth2Service extends EventEmitter {
         expires_in: tokenTtl,
         scope,
       };
+
       if (req.body.grant_type !== 'client_credentials') {
         const credentials = basicAuth(req);
         const clientId = credentials ? credentials.name : req.body.client_id;
@@ -345,7 +344,7 @@ export class OAuth2Service extends EventEmitter {
     // for the sake of security.
     //
     // This is *not* a real oAuth2 server. This is *not* to be run in production.
-    res.redirect(url.href);
+    return res.redirect(url.href);
   };
 
   private userInfoHandler: RequestHandler = (req, res) => {
@@ -365,7 +364,7 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeUserinfo, userInfoResponse, req);
 
-    res.status(userInfoResponse.statusCode).json(userInfoResponse.body);
+    return res.status(userInfoResponse.statusCode).json(userInfoResponse.body);
   };
 
   private revokeHandler: RequestHandler = (req, res) => {
@@ -404,7 +403,7 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforePostLogoutRedirect, postLogoutRedirectUri, req);
 
-    res.redirect(postLogoutRedirectUri.url.href);
+    return res.redirect(postLogoutRedirectUri.url.href);
   };
 
   private introspectHandler: RequestHandler = (req, res) => {
@@ -424,6 +423,8 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeIntrospect, introspectResponse, req);
 
-    res.status(introspectResponse.statusCode).json(introspectResponse.body);
+    return res
+      .status(introspectResponse.statusCode)
+      .json(introspectResponse.body);
   };
 }
