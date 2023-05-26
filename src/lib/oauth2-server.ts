@@ -15,7 +15,6 @@
 
 /**
  * OAuth2 HTTP Server library
- *
  * @module lib/oauth2-server
  */
 
@@ -38,7 +37,6 @@ export class OAuth2Server extends HttpServer {
 
   /**
    * Creates a new instance of OAuth2Server.
-   *
    * @param {string | undefined} key Optional key file path for ssl
    * @param {string | undefined} cert Optional cert file path for ssl
    * @param {OAuth2Options | undefined} oauth2Options Optional additional settings
@@ -67,7 +65,6 @@ export class OAuth2Server extends HttpServer {
 
   /**
    * Returns the OAuth2Issuer instance used by the server.
-   *
    * @type {OAuth2Issuer}
    */
   get issuer(): OAuth2Issuer {
@@ -76,7 +73,6 @@ export class OAuth2Server extends HttpServer {
 
   /**
    * Returns the OAuth2Service instance used by the server.
-   *
    * @type {OAuth2Service}
    */
   get service(): OAuth2Service {
@@ -85,7 +81,6 @@ export class OAuth2Server extends HttpServer {
 
   /**
    * Returns a value indicating whether or not the server is listening for connections.
-   *
    * @type {boolean}
    */
   override get listening(): boolean {
@@ -95,7 +90,6 @@ export class OAuth2Server extends HttpServer {
   /**
    * Returns the bound address, family name and port where the server is listening,
    * or null if the server has not been started.
-   *
    * @returns {AddressInfo} The server bound address information.
    */
   override address(): AddressInfo {
@@ -108,7 +102,6 @@ export class OAuth2Server extends HttpServer {
 
   /**
    * Starts the server.
-   *
    * @param {number} [port] Port number. If omitted, it will be assigned by the operating system.
    * @param {string} [host] Host name.
    * @returns {Promise<void>} A promise that resolves when the server has been started.
@@ -125,7 +118,6 @@ export class OAuth2Server extends HttpServer {
 
   /**
    * Stops the server.
-   *
    * @returns {Promise} Resolves when the server has been stopped.
    */
   override async stop(): Promise<void> {

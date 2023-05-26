@@ -15,7 +15,6 @@
 
 /**
  * OAuth2 Service library
- *
  * @module lib/oauth2-service
  */
 
@@ -64,7 +63,6 @@ const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
 export class OAuth2Service extends EventEmitter {
   /**
    * Creates a new instance of OAuth2Server.
-   *
    * @param {OAuth2Issuer} oauth2Issuer The OAuth2Issuer instance
    *     that will be offered through the service.
    * @param {OAuth2EndpointsInput | undefined} paths Endpoint path name overrides.
@@ -86,7 +84,6 @@ export class OAuth2Service extends EventEmitter {
 
   /**
    * Returns the OAuth2Issuer instance bound to this service.
-   *
    * @type {OAuth2Issuer}
    */
   get issuer(): OAuth2Issuer {
@@ -95,7 +92,6 @@ export class OAuth2Service extends EventEmitter {
 
   /**
    * Builds a JWT with a key in the keystore. The key will be selected in a round-robin fashion.
-   *
    * @param {IncomingMessage} req The incoming HTTP request.
    * @param {number} expiresIn Time in seconds for the JWT to expire. Default: 3600 seconds.
    * @param {ScopesOrTransform} [scopesOrTransform] A scope, array of scopes,
@@ -111,7 +107,6 @@ export class OAuth2Service extends EventEmitter {
     this.issuer.once(InternalEvents.BeforeSigning, (token: MutableToken) => {
       /**
        * Before token signing event.
-       *
        * @event OAuth2Service#beforeTokenSigning
        * @param {MutableToken} token The unsigned JWT header and payload.
        * @param {IncomingMessage} req The incoming HTTP request.
@@ -124,7 +119,6 @@ export class OAuth2Service extends EventEmitter {
 
   /**
    * Returns a request handler to be used as a callback for http.createServer().
-   *
    * @type {Function}
    */
   get requestHandler(): RequestListener {
@@ -275,7 +269,6 @@ export class OAuth2Service extends EventEmitter {
 
       /**
        * Before token response event.
-       *
        * @event OAuth2Service#beforeResponse
        * @param {MutableResponse} response The response body and status code.
        * @param {IncomingMessage} req The incoming HTTP request.
@@ -328,7 +321,6 @@ export class OAuth2Service extends EventEmitter {
 
     /**
      * Before authorize redirect event.
-     *
      * @event OAuth2Service#beforeAuthorizeRedirect
      * @param {MutableRedirectUri} authorizeRedirectUri The redirect uri and query params to redirect to.
      * @param {IncomingMessage} req The incoming HTTP request.
@@ -357,7 +349,6 @@ export class OAuth2Service extends EventEmitter {
 
     /**
      * Before user info event.
-     *
      * @event OAuth2Service#beforeUserinfo
      * @param {MutableResponse} response The response body and status code.
      * @param {IncomingMessage} req The incoming HTTP request.
@@ -374,7 +365,6 @@ export class OAuth2Service extends EventEmitter {
 
     /**
      * Before revoke event.
-     *
      * @event OAuth2Service#beforeRevoke
      * @param {StatusCodeMutableResponse} response The response status code.
      * @param {IncomingMessage} req The incoming HTTP request.
@@ -396,7 +386,6 @@ export class OAuth2Service extends EventEmitter {
 
     /**
      * Before post logout redirect event.
-     *
      * @event OAuth2Service#beforePostLogoutRedirect
      * @param {MutableRedirectUri} postLogoutRedirectUri
      * @param {IncomingMessage} req The incoming HTTP request.
@@ -416,7 +405,6 @@ export class OAuth2Service extends EventEmitter {
 
     /**
      * Before introspect event.
-     *
      * @event OAuth2Service#beforeIntrospect
      * @param {MutableResponse} response The response body and status code.
      * @param {IncomingMessage} req The incoming HTTP request.

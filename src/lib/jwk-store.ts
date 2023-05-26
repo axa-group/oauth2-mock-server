@@ -15,7 +15,6 @@
 
 /**
  * JWK Store library
- *
  * @module lib/jwk-store
  */
 
@@ -120,7 +119,6 @@ export class JWKStore {
 
   /**
    * Generates a new random key and adds it into this keystore.
-   *
    * @param {string} alg The selected algorithm.
    * @param {object} [opts] The options.
    * @param {string} [opts.kid] The key identifier to use.
@@ -147,7 +145,6 @@ export class JWKStore {
 
   /**
    * Adds a JWK key to this keystore.
-   *
    * @param {object} maybeJwk The JWK key to add.
    * @returns {Promise<JWK>} The promise for the added key.
    */
@@ -182,7 +179,6 @@ export class JWKStore {
   /**
    * Gets a key from the keystore in a round-robin fashion.
    * If a 'kid' is provided, only keys that match will be taken into account.
-   *
    * @param {string} [kid] The optional key identifier to match keys against.
    * @returns {JWK.Key | null} The retrieved key.
    */
@@ -193,7 +189,6 @@ export class JWKStore {
   /**
    * Generates a JSON representation of this keystore, which conforms
    * to a JWK Set from {I-D.ietf-jose-json-web-key}.
-   *
    * @param {boolean} [includePrivateFields = false] `true` if the private fields
    *        of stored keys are to be included.
    * @returns {JWK[]} The JSON representation of this keystore.

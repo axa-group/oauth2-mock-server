@@ -15,7 +15,6 @@
 
 /**
  * HTTP Server library
- *
  * @module lib/http-server
  */
 
@@ -36,7 +35,6 @@ export class HttpServer {
 
   /**
    * Creates a new instance of HttpServer.
-   *
    * @param {RequestListener} requestListener The function that will handle the server's requests.
    * @param {HttpServerOptions} options Optional HttpServerOptions to start the server with https.
    */
@@ -53,7 +51,6 @@ export class HttpServer {
 
   /**
    * Returns a value indicating whether or not the server is listening for connections.
-   *
    * @type {boolean}
    */
   get listening(): boolean {
@@ -63,7 +60,6 @@ export class HttpServer {
   /**
    * Returns the bound address, family name and port where the server is listening,
    * or null if the server has not been started.
-   *
    * @returns {AddressInfo} The server bound address information.
    */
   address(): AddressInfo {
@@ -80,7 +76,6 @@ export class HttpServer {
 
   /**
    * Starts the server.
-   *
    * @param {number} [port] Port number. If omitted, it will be assigned by the operating system.
    * @param {string} [host] Host name.
    * @returns {Promise<void>} A promise that resolves when the server has been started.
@@ -100,7 +95,6 @@ export class HttpServer {
 
   /**
    * Stops the server.
-   *
    * @returns {Promise} Resolves when the server has been stopped.
    */
   async stop(): Promise<void> {
