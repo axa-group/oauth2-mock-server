@@ -425,6 +425,20 @@ describe('OAuth 2 service', () => {
     });
   });
 
+  it('should redirect to callback url when calling authorize endpoint with code response type and no state', async () => {
+    const res = await request(service.requestHandler)
+      .get('/authorize')
+      .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&client_id=abcecedf')
+      .redirects(0)
+      .expect(302);
+
+    expect(res).toMatchObject({
+      headers: {
+        location: expect.stringMatching(/http:\/\/example\.com\/callback\?code=[^&]*/)
+      }
+    });
+  });
+
   it('should redirect to callback url keeping state when calling authorize endpoint with code response type', async () => {
     const res = await request(service.requestHandler)
       .get('/authorize')
@@ -434,7 +448,7 @@ describe('OAuth 2 service', () => {
 
     expect(res).toMatchObject({
       headers: {
-        location: expect.stringMatching(/http:\/\/example\.com\/callback\?code=[^&]*&scope=dummy_scope&state=state123/)
+        location: expect.stringMatching(/http:\/\/example\.com\/callback\?code=[^&]*&state=state123/)
       }
     });
   });
@@ -443,14 +457,14 @@ describe('OAuth 2 service', () => {
     service.once('beforeAuthorizeRedirect', (authorizeRedirectUri: MutableRedirectUri, req) => {
       expect(req).toBeInstanceOf(IncomingMessage);
 
-      expect(authorizeRedirectUri.url.toString()).toMatch(/http:\/\/example.com\/callback\?code=[^&]+&scope=dummy_scope&state=state123/);
+      expect(authorizeRedirectUri.url.toString()).toMatch(/http:\/\/example.com\/callback\?code=[^&]+&state=state123/);
 
       authorizeRedirectUri.url.hostname = 'foo.com';
       authorizeRedirectUri.url.pathname = '/cb';
       authorizeRedirectUri.url.protocol = 'https';
       authorizeRedirectUri.url.searchParams.set('code', 'testcode');
       authorizeRedirectUri.url.searchParams.set('extra_param', 'value');
-      authorizeRedirectUri.url.searchParams.delete('scope');
+      authorizeRedirectUri.url.searchParams.delete('state');
     });
 
     const res = await request(service.requestHandler)
@@ -461,7 +475,7 @@ describe('OAuth 2 service', () => {
 
     expect(res).toMatchObject({
       headers: {
-        location: expect.stringMatching(/https:\/\/foo\.com\/cb\?code=testcode&state=state123&extra_param=value/)
+        location: expect.stringMatching(/https:\/\/foo\.com\/cb\?code=testcode&extra_param=value/)
       }
     });
   });

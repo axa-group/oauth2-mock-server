@@ -4,6 +4,7 @@ import {
   assertIsAddressInfo,
   assertIsPlainObject,
   assertIsString,
+  assertIsStringOrUndefined,
   assertIsValidTokenRequest,
   shift,
 } from '../src/lib/helpers';
@@ -22,6 +23,26 @@ describe('helpers', () => {
 
     it('does not throw on strings', () => {
       expect(() => assertIsString("good", "will not throw")).not.toThrow();
+    });
+  });
+
+  describe('assertIsStringOrUndefined', () => {
+    it.each([
+      null,
+      1,
+      true,
+      {},
+      []
+    ])('throws on wrong types (%s)', (input) => {
+      expect(() => assertIsStringOrUndefined(input, "boom")).toThrow();
+    });
+
+    it('does not throw on strings', () => {
+      expect(() => assertIsStringOrUndefined("good", "will not throw")).not.toThrow();
+    });
+
+    it('does not throw on undefined', () => {
+      expect(() => assertIsStringOrUndefined(undefined, "will not throw")).not.toThrow();
     });
   });
 
