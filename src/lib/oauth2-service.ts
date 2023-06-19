@@ -31,6 +31,7 @@ import { json } from 'body-parser';
 import { OAuth2Issuer } from './oauth2-issuer';
 import {
   assertIsString,
+  assertIsStringOrUndefined,
   assertIsValidTokenRequest,
   defaultTokenTtl,
 } from './helpers';
@@ -291,37 +292,36 @@ export class OAuth2Service extends EventEmitter {
   };
 
   private authorizeHandler: RequestHandler = (req, res) => {
-    const { scope, state } = req.query;
-    const responseType = req.query.response_type;
-    const redirectUri = req.query.redirect_uri;
     const code = uuidv4();
-
-    let queryNonce: string | undefined;
-
-    if ('nonce' in req.query) {
-      assertIsString(req.query.nonce, 'Invalid nonce type');
-      queryNonce = req.query.nonce;
-    }
+    const {
+      nonce,
+      scope,
+      redirect_uri: redirectUri,
+      response_type: responseType,
+      state,
+    } = req.query;
 
     assertIsString(redirectUri, 'Invalid redirectUri type');
-    assertIsString(scope, 'Invalid scope type');
-    assertIsString(state, 'Invalid state type');
+    assertIsStringOrUndefined(nonce, 'Invalid nonce type');
+    assertIsStringOrUndefined(scope, 'Invalid scope type');
+    assertIsStringOrUndefined(state, 'Invalid state type');
 
     const url = new URL(redirectUri);
 
     if (responseType === 'code') {
-      if (queryNonce !== undefined) {
-        this.#nonce[code] = queryNonce;
+      if (nonce !== undefined) {
+        this.#nonce[code] = nonce;
       }
       url.searchParams.set('code', code);
-      url.searchParams.set('scope', scope);
-      url.searchParams.set('state', state);
     } else {
       url.searchParams.set('error', 'unsupported_response_type');
       url.searchParams.set(
         'error_description',
         'The authorization server does not support obtaining an access token using this response_type.'
       );
+    }
+
+    if (state) {
       url.searchParams.set('state', state);
     }
 

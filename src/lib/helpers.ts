@@ -34,6 +34,15 @@ export function assertIsString(
   }
 }
 
+export function assertIsStringOrUndefined(
+  input: unknown,
+  errorMessage: string
+): asserts input is string | undefined {
+  if (typeof input !== 'string' && input !== undefined) {
+    throw new AssertionError({ message: errorMessage });
+  }
+}
+
 export function assertIsAddressInfo(
   input: string | null | AddressInfo
 ): asserts input is AddressInfo {
