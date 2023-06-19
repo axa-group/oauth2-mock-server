@@ -72,17 +72,17 @@ export interface TokenBuildOptions {
    * The 'kid' of the key that will be used to sign the JWT.
    * If omitted, the next key in the round - robin will be used.
    */
-  kid?: string;
+  kid?: string | undefined;
 
   /**
    * A scope, array of scopes, or JWT transformation callback.
    */
-  scopesOrTransform?: ScopesOrTransform;
+  scopesOrTransform?: ScopesOrTransform | undefined;
 
   /**
    * Time in seconds before the JWT to expire. Default: 3600 seconds.
    */
-  expiresIn?: number;
+  expiresIn?: number | undefined;
 }
 
 export interface JWK extends JWKWithKid {

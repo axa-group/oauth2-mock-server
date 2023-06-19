@@ -1,4 +1,6 @@
+import { describe, it, expect } from 'vitest';
 import request from 'supertest';
+
 import { OAuth2Server } from '../src/lib/oauth2-server';
 
 describe('OAuth 2 Server', () => {
@@ -19,9 +21,9 @@ describe('OAuth 2 Server', () => {
     expect(server.issuer.url).toBeUndefined();
 
     await server.start(undefined, 'localhost');
-    expect(server.issuer.url).toEqual(`http://localhost:${server.address().port}`);
+    expect(server.issuer.url).toBe(`http://localhost:${server.address().port}`);
 
-    await expect(server.stop()).resolves.not.toBeDefined();
+    await expect(server.stop()).resolves.toBeUndefined();
   });
 
   it('should expose the oauth2 service', () => {

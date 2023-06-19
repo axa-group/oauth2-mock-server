@@ -15,7 +15,6 @@
 
 /**
  * JWK Store library
- *
  * @module lib/jwk-store
  */
 
@@ -30,6 +29,7 @@ import {
 
 import { JWK } from './types';
 import { JWKWithKid } from './types-internals';
+import { AssertionError } from 'assert';
 
 const generateRandomKid = () => {
   return randomBytes(40).toString('hex');
@@ -93,14 +93,14 @@ function normalizeKeyKid(
   jwk: Record<string, unknown>,
   opts?: { kid?: string }
 ): asserts jwk is JWKWithKid {
-  if (jwk.kid !== undefined) {
+  if (jwk['kid'] !== undefined) {
     return;
   }
 
   if (opts !== undefined && opts.kid !== undefined) {
-    jwk.kid = opts.kid;
+    jwk['kid'] = opts.kid;
   } else {
-    jwk.kid = generateRandomKid();
+    jwk['kid'] = generateRandomKid();
   }
 }
 
@@ -119,7 +119,6 @@ export class JWKStore {
 
   /**
    * Generates a new random key and adds it into this keystore.
-   *
    * @param {string} alg The selected algorithm.
    * @param {object} [opts] The options.
    * @param {string} [opts.kid] The key identifier to use.
@@ -146,7 +145,6 @@ export class JWKStore {
 
   /**
    * Adds a JWK key to this keystore.
-   *
    * @param {object} maybeJwk The JWK key to add.
    * @returns {Promise<JWK>} The promise for the added key.
    */
@@ -181,7 +179,6 @@ export class JWKStore {
   /**
    * Gets a key from the keystore in a round-robin fashion.
    * If a 'kid' is provided, only keys that match will be taken into account.
-   *
    * @param {string} [kid] The optional key identifier to match keys against.
    * @returns {JWK.Key | null} The retrieved key.
    */
@@ -192,7 +189,6 @@ export class JWKStore {
   /**
    * Generates a JSON representation of this keystore, which conforms
    * to a JWK Set from {I-D.ietf-jose-json-web-key}.
-   *
    * @param {boolean} [includePrivateFields = false] `true` if the private fields
    *        of stored keys are to be included.
    * @returns {JWK[]} The JSON representation of this keystore.
@@ -235,6 +231,11 @@ class KeyRotator {
       }
 
       const cleaner = privateToPublicTransformerMap[key.alg];
+
+      if (cleaner === undefined) {
+        throw new Error(`Unsupported algo '{key.alg}'`);
+      }
+
       keys.push(cleaner(key));
     }
 
@@ -255,6 +256,12 @@ class KeyRotator {
 
   private moveToTheEnd(i: number): JWK {
     const [key] = this.#keys.splice(i, 1);
+
+    if (key === undefined) {
+      throw new AssertionError({
+        message: 'Unexpected error. key is supposed to exist',
+      });
+    }
 
     this.#keys.push(key);
 

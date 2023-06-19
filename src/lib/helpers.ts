@@ -55,7 +55,6 @@ export function assertIsPlainObject(
   obj: unknown,
   errMessage: string
 ): asserts obj is Record<string, unknown> {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-call
   if (!isPlainObject(obj)) {
     throw new AssertionError({ message: errMessage });
   }
@@ -67,13 +66,13 @@ export function assertIsValidTokenRequest(
   assertIsPlainObject(body, 'Invalid token request body');
 
   if ('scope' in body) {
-    assertIsString(body.scope, "Invalid 'scope' type");
+    assertIsString(body['scope'], "Invalid 'scope' type");
   }
 
-  assertIsString(body.grant_type, "Invalid 'grant_type' type");
+  assertIsString(body['grant_type'], "Invalid 'grant_type' type");
 
   if ('code' in body) {
-    assertIsString(body.code, "Invalid 'code' type");
+    assertIsString(body['code'], "Invalid 'code' type");
   }
 }
 

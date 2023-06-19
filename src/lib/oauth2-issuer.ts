@@ -15,7 +15,6 @@
 
 /**
  * OAuth2 Issuer library
- *
  * @module lib/oauth2-issuer
  */
 
@@ -34,7 +33,6 @@ import { InternalEvents } from './types-internals';
 export class OAuth2Issuer extends EventEmitter {
   /**
    * Sets or returns the issuer URL.
-   *
    * @type {string}
    */
   url: string | undefined;
@@ -53,7 +51,6 @@ export class OAuth2Issuer extends EventEmitter {
 
   /**
    * Returns the key store.
-   *
    * @type {JWKStore}
    */
   get keys(): JWKStore {
@@ -62,7 +59,6 @@ export class OAuth2Issuer extends EventEmitter {
 
   /**
    * Builds a JWT.
-   *
    * @param {TokenBuildOptions} [opts] JWT token building overrides
    * @returns {Promise<string>} The produced JWT.
    * @fires OAuth2Issuer#beforeSigning
@@ -93,9 +89,9 @@ export class OAuth2Issuer extends EventEmitter {
       const scopesOrTransform = opts.scopesOrTransform;
 
       if (typeof scopesOrTransform === 'string') {
-        payload.scope = scopesOrTransform;
+        payload['scope'] = scopesOrTransform;
       } else if (Array.isArray(scopesOrTransform)) {
-        payload.scope = scopesOrTransform.join(' ');
+        payload['scope'] = scopesOrTransform.join(' ');
       } else if (typeof scopesOrTransform === 'function') {
         scopesOrTransform(header, payload);
       }
@@ -108,7 +104,6 @@ export class OAuth2Issuer extends EventEmitter {
 
     /**
      * Before signing event.
-     *
      * @event OAuth2Issuer#beforeSigning
      * @param {MutableToken} token The JWT header and payload.
      */

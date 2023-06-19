@@ -15,15 +15,12 @@
  * limitations under the License.
  */
 
-import { writeFile } from 'fs';
-import { promisify } from 'util';
+import { writeFile } from 'fs/promises';
 import path from 'path';
 
 import { OAuth2Server } from './index';
 import { assertIsString, readJsonFromFile, shift } from './lib/helpers';
 import type { JWK, Options } from './lib/types';
-
-const writeFileAsync = promisify(writeFile);
 
 /* eslint no-console: off */
 
@@ -33,8 +30,6 @@ const defaultOptions: Options = {
   saveJWK: false,
 };
 
-module.exports = cli(process.argv.slice(2));
-
 async function cli(args: string[]): Promise<OAuth2Server | null> {
   let options;
 
@@ -43,12 +38,12 @@ async function cli(args: string[]): Promise<OAuth2Server | null> {
   } catch (err) {
     console.error(err instanceof Error ? err.message : err);
     process.exitCode = 1;
-    return Promise.reject(err);
+    throw err;
   }
 
-  if (!options) {
-    process.exitCode = 0;
-    return Promise.resolve(null);
+  if (options === null) {
+    showHelp();
+    return null;
   }
 
   return await startServer(options);
@@ -63,7 +58,6 @@ function parseCliArgs(args: string[]): Options | null {
     switch (arg) {
       case '-h':
       case '--help':
-        showHelp();
         return null;
       case '-a':
         opts.host = shift(args);
@@ -131,7 +125,7 @@ function parsePort(portStr: string) {
 async function saveJWK(keys: JWK[]) {
   for (const key of keys) {
     const filename = `${key.kid}.json`;
-    await writeFileAsync(filename, JSON.stringify(key, null, 2));
+    await writeFile(filename, JSON.stringify(key, null, 2));
     console.log(`JSON web key written to file "${filename}".`);
   }
 }
@@ -165,12 +159,21 @@ async function startServer(opts: Options) {
   assertIsString(server.issuer.url, 'Empty host');
   console.log(`OAuth 2 issuer is ${server.issuer.url}`);
 
-  // eslint-disable-next-line @typescript-eslint/no-misused-promises
-  process.once('SIGINT', async () => {
+  process.once('SIGINT', () => {
     console.log('OAuth 2 server is stopping...');
-    await server.stop();
+
+    const handler = async () => {
+      await server.stop();
+    };
+
+    handler().catch((e) => {
+      throw e;
+    });
+
     console.log('OAuth 2 server has been stopped.');
   });
 
   return server;
 }
+
+export default cli(process.argv.slice(2));

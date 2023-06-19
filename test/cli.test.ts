@@ -1,10 +1,17 @@
+import { afterEach, describe, it, expect, vi } from 'vitest';
+import { writeFile } from 'fs/promises';
+
 import { exec } from './lib/child-script';
 
-const cliPath = require.resolve('../src/oauth2-mock-server');
+vi.mock('fs/promises', () => ({
+  writeFile: vi.fn().mockImplementation(() => ''),
+}));
+
+const mockWriteFileAsync = vi.mocked(writeFile);
 
 describe('CLI', () => {
-  beforeEach(() => {
-    jest.resetModules();
+  afterEach(() => {
+    vi.resetModules();
   });
 
   it.each([
@@ -14,7 +21,7 @@ describe('CLI', () => {
     const res = await executeCli(arg);
 
     expect(res.result).toBeNull();
-    expect(res.exitCode).toBe(0);
+    expect(res.exitCode).toBeUndefined();
     expect(res.stdout).toMatch(/^Usage: oauth2-mock-server \[options\]/);
   });
 
@@ -75,10 +82,17 @@ describe('CLI', () => {
   });
 
   it('should allow exporting JSON-formatted keys', async () => {
-    const fs = require('fs');
-    const wfn = jest.spyOn(fs, 'writeFile').mockImplementation((_f, _d, callback) => {
-      const cb = callback as () => void;
-      cb();
+
+    let generatedPath = '';
+
+    mockWriteFileAsync.mockImplementation((p) => {
+      if (typeof (p) !== 'string') {
+        throw new Error("Unepextected path type.");
+      }
+
+      generatedPath = p;
+
+      return Promise.resolve();
     });
 
     const res = await executeCli('--save-jwk', '-p', '0');
@@ -89,13 +103,7 @@ describe('CLI', () => {
     expect(key).toBeDefined();
     expect(key).toHaveProperty('kid');
 
-    expect(wfn).toHaveBeenCalledWith(
-      `${key!.kid}.json`,
-      expect.stringMatching(/^{[^}]+}$/),
-      expect.any(Function),
-    );
-
-    wfn.mockRestore();
+    expect(generatedPath).toBe(`${key!.kid}.json`);
 
     expect(res.stdout).toMatch(/^Generated new RSA key with kid "[\w-]+"$/m);
     expect(res.stdout).toMatch(/^JSON web key written to file "[\w-]+\.json"\.$/m);
@@ -103,7 +111,7 @@ describe('CLI', () => {
 });
 
 async function executeCli(...args: string[]) {
-  const res = await exec(cliPath, args);
+  const res = await exec(args);
 
   if (res.result) {
     await res.result.stop();

@@ -15,18 +15,16 @@
 
 /**
  * OAuth2 Service library
- *
  * @module lib/oauth2-service
  */
 
-import { IncomingMessage } from 'http';
+import { IncomingMessage, type RequestListener } from 'http';
 import { URL } from 'url';
-import express, { RequestHandler, Express } from 'express';
+import express, { type RequestHandler } from 'express';
 import cors from 'cors';
 import basicAuth from 'basic-auth';
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
-import { json } from 'body-parser';
 
 import { OAuth2Issuer } from './oauth2-issuer';
 import {
@@ -65,14 +63,13 @@ const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
 export class OAuth2Service extends EventEmitter {
   /**
    * Creates a new instance of OAuth2Server.
-   *
    * @param {OAuth2Issuer} oauth2Issuer The OAuth2Issuer instance
    *     that will be offered through the service.
    * @param {OAuth2EndpointsInput | undefined} paths Endpoint path name overrides.
    */
 
   #issuer: OAuth2Issuer;
-  #requestHandler: Express;
+  #requestHandler: RequestListener;
   #nonce: Record<string, string>;
   #endpoints: OAuth2Endpoints;
 
@@ -82,13 +79,11 @@ export class OAuth2Service extends EventEmitter {
 
     this.#endpoints = { ...DEFAULT_ENDPOINTS, ...endpoints };
     this.#requestHandler = this.buildRequestHandler();
-
     this.#nonce = {};
   }
 
   /**
    * Returns the OAuth2Issuer instance bound to this service.
-   *
    * @type {OAuth2Issuer}
    */
   get issuer(): OAuth2Issuer {
@@ -97,7 +92,6 @@ export class OAuth2Service extends EventEmitter {
 
   /**
    * Builds a JWT with a key in the keystore. The key will be selected in a round-robin fashion.
-   *
    * @param {IncomingMessage} req The incoming HTTP request.
    * @param {number} expiresIn Time in seconds for the JWT to expire. Default: 3600 seconds.
    * @param {ScopesOrTransform} [scopesOrTransform] A scope, array of scopes,
@@ -113,7 +107,6 @@ export class OAuth2Service extends EventEmitter {
     this.issuer.once(InternalEvents.BeforeSigning, (token: MutableToken) => {
       /**
        * Before token signing event.
-       *
        * @event OAuth2Service#beforeTokenSigning
        * @param {MutableToken} token The unsigned JWT header and payload.
        * @param {IncomingMessage} req The incoming HTTP request.
@@ -126,17 +119,16 @@ export class OAuth2Service extends EventEmitter {
 
   /**
    * Returns a request handler to be used as a callback for http.createServer().
-   *
    * @type {Function}
    */
-  get requestHandler(): Express {
+  get requestHandler(): RequestListener {
     return this.#requestHandler;
   }
 
-  private buildRequestHandler = () => {
+  private buildRequestHandler = (): RequestListener => {
     const app = express();
     app.disable('x-powered-by');
-    app.use(json());
+    app.use(express.json());
     app.use(cors());
     app.get(this.#endpoints.wellKnownDocument, this.openidConfigurationHandler);
     app.get(this.#endpoints.jwks, this.jwksHandler);
@@ -183,7 +175,7 @@ export class OAuth2Service extends EventEmitter {
   };
 
   private jwksHandler: RequestHandler = (_req, res) => {
-    res.json({ keys: this.issuer.keys.toJSON() });
+    return res.json({ keys: this.issuer.keys.toJSON() });
   };
 
   private tokenHandler: RequestHandler = async (req, res, next) => {
@@ -248,6 +240,7 @@ export class OAuth2Service extends EventEmitter {
         expires_in: tokenTtl,
         scope,
       };
+
       if (req.body.grant_type !== 'client_credentials') {
         const credentials = basicAuth(req);
         const clientId = credentials ? credentials.name : req.body.client_id;
@@ -265,8 +258,8 @@ export class OAuth2Service extends EventEmitter {
           }
         };
 
-        body.id_token = await this.buildToken(req, tokenTtl, xfn);
-        body.refresh_token = uuidv4();
+        body['id_token'] = await this.buildToken(req, tokenTtl, xfn);
+        body['refresh_token'] = uuidv4();
       }
 
       const tokenEndpointResponse: MutableResponse = {
@@ -276,7 +269,6 @@ export class OAuth2Service extends EventEmitter {
 
       /**
        * Before token response event.
-       *
        * @event OAuth2Service#beforeResponse
        * @param {MutableResponse} response The response body and status code.
        * @param {IncomingMessage} req The incoming HTTP request.
@@ -329,7 +321,6 @@ export class OAuth2Service extends EventEmitter {
 
     /**
      * Before authorize redirect event.
-     *
      * @event OAuth2Service#beforeAuthorizeRedirect
      * @param {MutableRedirectUri} authorizeRedirectUri The redirect uri and query params to redirect to.
      * @param {IncomingMessage} req The incoming HTTP request.
@@ -345,7 +336,7 @@ export class OAuth2Service extends EventEmitter {
     // for the sake of security.
     //
     // This is *not* a real oAuth2 server. This is *not* to be run in production.
-    res.redirect(url.href);
+    return res.redirect(url.href);
   };
 
   private userInfoHandler: RequestHandler = (req, res) => {
@@ -358,14 +349,13 @@ export class OAuth2Service extends EventEmitter {
 
     /**
      * Before user info event.
-     *
      * @event OAuth2Service#beforeUserinfo
      * @param {MutableResponse} response The response body and status code.
      * @param {IncomingMessage} req The incoming HTTP request.
      */
     this.emit(Events.BeforeUserinfo, userInfoResponse, req);
 
-    res.status(userInfoResponse.statusCode).json(userInfoResponse.body);
+    return res.status(userInfoResponse.statusCode).json(userInfoResponse.body);
   };
 
   private revokeHandler: RequestHandler = (req, res) => {
@@ -375,7 +365,6 @@ export class OAuth2Service extends EventEmitter {
 
     /**
      * Before revoke event.
-     *
      * @event OAuth2Service#beforeRevoke
      * @param {StatusCodeMutableResponse} response The response status code.
      * @param {IncomingMessage} req The incoming HTTP request.
@@ -387,24 +376,23 @@ export class OAuth2Service extends EventEmitter {
 
   private endSessionHandler: RequestHandler = (req, res) => {
     assertIsString(
-      req.query.post_logout_redirect_uri,
+      req.query['post_logout_redirect_uri'],
       'Invalid post_logout_redirect_uri type'
     );
 
     const postLogoutRedirectUri: MutableRedirectUri = {
-      url: new URL(req.query.post_logout_redirect_uri),
+      url: new URL(req.query['post_logout_redirect_uri']),
     };
 
     /**
      * Before post logout redirect event.
-     *
      * @event OAuth2Service#beforePostLogoutRedirect
      * @param {MutableRedirectUri} postLogoutRedirectUri
      * @param {IncomingMessage} req The incoming HTTP request.
      */
     this.emit(Events.BeforePostLogoutRedirect, postLogoutRedirectUri, req);
 
-    res.redirect(postLogoutRedirectUri.url.href);
+    return res.redirect(postLogoutRedirectUri.url.href);
   };
 
   private introspectHandler: RequestHandler = (req, res) => {
@@ -417,13 +405,14 @@ export class OAuth2Service extends EventEmitter {
 
     /**
      * Before introspect event.
-     *
      * @event OAuth2Service#beforeIntrospect
      * @param {MutableResponse} response The response body and status code.
      * @param {IncomingMessage} req The incoming HTTP request.
      */
     this.emit(Events.BeforeIntrospect, introspectResponse, req);
 
-    res.status(introspectResponse.statusCode).json(introspectResponse.body);
+    return res
+      .status(introspectResponse.statusCode)
+      .json(introspectResponse.body);
   };
 }

@@ -4,7 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## [5.0.2](https://github.com/axa-group/oauth2-mock-server/compare/v5.0.1...v5.0.2) — 2022-02-20
+## [6.0.0](https://github.com/axa-group/oauth2-mock-server/compare/v5.0.2...v6.0.0) — 2023-06-19
+
+### Changed
+
+- **Breaking:** No longer support Node.js 14
+- Fix authorize endpoint compliance (remove scope requirement, make state optional) (by [jirutka](https://github.com/jirutka))
+- Add support for Node.js 20
+- Update dependencies
+
+## [5.0.2](https://github.com/axa-group/oauth2-mock-server/compare/v5.0.1...v5.0.2) — 2023-02-20
 
 ### Security
 

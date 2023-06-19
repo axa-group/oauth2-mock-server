@@ -1,6 +1,6 @@
+import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
-import { IncomingMessage } from 'http';
-import type { Express } from 'express';
+import { IncomingMessage, type RequestListener } from 'http';
 
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import { OAuth2Service } from '../src/lib/oauth2-service';
@@ -47,8 +47,7 @@ describe('OAuth 2 service', () => {
       introspection_endpoint: `${url!}/custom-introspect`,
     });
 
-    // GET
-    for (const [path, expectedStatus, query] of [
+    const getTestCases: [string, number, string?][] = [
       ['/custom-jwks', 200],
       ['/jwks', 404],
       ['/custom-userinfo', 200],
@@ -56,22 +55,27 @@ describe('OAuth 2 service', () => {
       ['/authorize', 404],
       ['/custom-authorize', 302, 'redirect_uri=http://example.com&scope=dummy_scope&state=1'],
       ['/endsession', 302, 'post_logout_redirect_uri=http://example.com']
-    ]) {
+    ];
+
+    // GET
+    for (const [path, expectedStatus, query] of getTestCases) {
       await request(customService.requestHandler)
-        .get(path as string)
-        .query((query as string) ?? '')
+        .get(path )
+        .query(query ?? '')
         .expect(expectedStatus);
     }
 
-    // POST
-    for (const [path, expectedStatus] of [
+    const postTestCases: [string, number][] = [
       ['/custom-token', 500], // 500 implies it was routed successfully
       ['/token', 404],
       ['/revoke', 200],
       ['/custom-introspect', 200],
-    ]) {
+    ];
+
+    // POST
+    for (const [path, expectedStatus] of postTestCases) {
       await request(customService.requestHandler)
-        .post(path as string)
+        .post(path)
         .expect(expectedStatus);
     }
   });
@@ -608,7 +612,7 @@ describe('OAuth 2 service', () => {
       })
       .expect(200);
 
-    expect(res.text).toEqual('');
+    expect(res.text).toBe('');
   });
 
   it('should allow customizing the revoke response through a beforeRevoke event', async () => {
@@ -655,7 +659,7 @@ describe('OAuth 2 service', () => {
 
     const res = await request(service.requestHandler)
       .get('/endsession')
-      .query(`post_logout_redirect_uri=${postLogoutRedirectUri}`)
+      .query(`post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`)
       .redirects(0)
       .expect(302);
 
@@ -675,7 +679,7 @@ describe('OAuth 2 service', () => {
 
     const res = await request(service.requestHandler)
       .get('/endsession')
-      .query(`post_logout_redirect_uri=${postLogoutRedirectUri}`)
+      .query(`post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`)
       .redirects(0)
       .expect(302);
 
@@ -724,7 +728,7 @@ function getCode(response: request.Response) {
   return url.searchParams.get('code');
 }
 
-function tokenRequest(app: Express) {
+function tokenRequest(app: RequestListener) {
   return request(app)
     .post('/token')
     .type('form')

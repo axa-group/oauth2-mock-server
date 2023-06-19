@@ -9,9 +9,8 @@ interface Output {
   stderr: string;
 }
 
-export async function exec(scriptPath: string, args: string[]): Promise<Output> {
-  const argv = process.argv;
-  process.argv = [argv[0], scriptPath, ...args];
+export async function exec(args: string[]): Promise<Output> {
+  process.argv = ['irrelevant', 'irrelevant as well', ...args];
 
   const log = ConsoleOutHook('log');
   const error = ConsoleOutHook('error');
@@ -25,7 +24,8 @@ export async function exec(scriptPath: string, args: string[]): Promise<Output> 
   };
 
   try {
-    res.result = await Promise.resolve(require(scriptPath)) as OAuth2Server | null;
+    const mod = await import('../../src/oauth2-mock-server');
+    res.result = await mod.default;
   } catch (err) {
     res.err = err;
   } finally {
