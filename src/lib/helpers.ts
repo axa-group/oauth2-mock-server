@@ -124,3 +124,14 @@ export const createPKCEVerifier = () => {
   const randomBytes = crypto.getRandomValues(new Uint8Array(32));
   return Buffer.from(randomBytes).toString('base64url');
 };
+
+export const createPKCECodeChallenge = async (
+  verifier: string = createPKCEVerifier()
+) => {
+  const algorithm = 'SHA-256';
+  const buffer = await crypto.subtle.digest(
+    algorithm,
+    new TextEncoder().encode(verifier)
+  );
+  return Buffer.from(buffer).toString('base64url');
+};

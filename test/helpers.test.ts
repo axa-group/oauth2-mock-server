@@ -6,7 +6,7 @@ import {
   assertIsPlainObject,
   assertIsString,
   assertIsStringOrUndefined,
-  assertIsValidTokenRequest,
+  assertIsValidTokenRequest, createPKCECodeChallenge,
   createPKCEVerifier,
   isValidPkceCodeVerifier,
   shift
@@ -145,6 +145,16 @@ describe("helpers", () => {
 
       it("should create a valid code_verifier", () => {
         expect(isValidPkceCodeVerifier(createPKCEVerifier())).toBeTruthy();
+      });
+
+      it('should create a valid code_challenge', async () => {
+        const verifier = "xyo94uhy3zKvgB0NJwLms86SwcjtWviEOpkBnGgaLlo";
+        const expectedChallenge = "b7elB7ZyxIXgFyvBznKvxl7wOB-H17Pz0a3B62NIMFI";
+        const generatedCodeChallenge = await createPKCECodeChallenge(verifier);
+        expect(generatedCodeChallenge).toBe(expectedChallenge);
+        const expectedCodeLength = 43; // BASE64-urlencoded sha256 hashes should always be 43 characters in length.
+        expect(await createPKCECodeChallenge()).toHaveLength(expectedCodeLength);
+        expect(await createPKCECodeChallenge(createPKCEVerifier())).toHaveLength(expectedCodeLength);
       });
     });
   });
