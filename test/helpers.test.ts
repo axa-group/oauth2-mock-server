@@ -1,12 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, expect, it } from "vitest";
 import type { AddressInfo } from "net";
 
 import {
   assertIsAddressInfo,
   assertIsPlainObject,
   assertIsString,
-  assertIsStringOrUndefined, isValidPkceCodeVerifier,
+  assertIsStringOrUndefined,
   assertIsValidTokenRequest,
+  createPKCEVerifier,
+  isValidPkceCodeVerifier,
   shift
 } from "../src/lib/helpers";
 
@@ -129,16 +131,20 @@ describe("helpers", () => {
   });
 
   describe("pkce", () => {
-    describe("code_challenge", () => {
-      it("should accept a valid PKCE code_challenge", () => {
-        const challenge128 = "PXa7p8YHHUAJGrcG2eW0x7FY_EBtRTlaUHnyz1jKWnNp0G-2HZt9KjA0UOp87DmuIqoV4Y_owVsM-QICvrSa5dWxOndVEhSsFMMgy68AYkw4PGHkGaN_aIRIHJ8mQ4EZ";
-        const challenge43 = "xyo94uhy3zKvgB0NJwLms86SwcjtWviEOpkBnGgaLlo";
-        expect(isValidPkceCodeVerifier(challenge128)).toBeTruthy();
-        expect(isValidPkceCodeVerifier(challenge43)).toBeTruthy();
+    describe("code_verifier", () => {
+      it("should accept a valid PKCE code_verifier", () => {
+        const verifier128 = "PXa7p8YHHUAJGrcG2eW0x7FY_EBtRTlaUHnyz1jKWnNp0G-2HZt9KjA0UOp87DmuIqoV4Y_owVsM-QICvrSa5dWxOndVEhSsFMMgy68AYkw4PGHkGaN_aIRIHJ8mQ4EZ";
+        const verifier42 = "xyo94uhy3zKvgB0NJwLms86SwcjtWviEOpkBnGgaLlo";
+        expect(isValidPkceCodeVerifier(verifier128)).toBeTruthy();
+        expect(isValidPkceCodeVerifier(verifier42)).toBeTruthy();
 
-        const challengeWith129chars = `${challenge128}a`;
-        expect(isValidPkceCodeVerifier(challengeWith129chars)).toBeFalsy();
-        expect(isValidPkceCodeVerifier(challenge43.slice(0, challenge43.length - 1))).toBeFalsy();
+        const verifierWith129chars = `${verifier128}a`;
+        expect(isValidPkceCodeVerifier(verifierWith129chars)).toBeFalsy();
+        expect(isValidPkceCodeVerifier(verifier42.slice(0, verifier42.length - 1))).toBeFalsy();
+      });
+
+      it("should create a valid code_verifier", () => {
+        expect(isValidPkceCodeVerifier(createPKCEVerifier())).toBeTruthy();
       });
     });
   });

@@ -22,6 +22,7 @@ import { readFileSync } from 'fs';
 import { isPlainObject } from 'is-plain-object';
 
 import type { TokenRequest } from './types';
+import { webcrypto as crypto } from 'crypto';
 
 export const defaultTokenTtl = 3600;
 
@@ -112,9 +113,14 @@ export const readJsonFromFile = (filepath: string): Record<string, unknown> => {
   return maybeJson;
 };
 
-export const isValidPkceCodeVerifier = (challenge: unknown) => {
-  assertIsString(challenge, 'Invalid PKCE challenge');
+export const isValidPkceCodeVerifier = (verifier: unknown) => {
+  assertIsString(verifier, 'Invalid PKCE verifier');
 
   const PKCE_CHALLENGE_REGEX = /^[A-Za-z0-9\-._~]{43,128}$/;
-  return PKCE_CHALLENGE_REGEX.test(challenge);
+  return PKCE_CHALLENGE_REGEX.test(verifier);
+};
+
+export const createPKCEVerifier = () => {
+  const randomBytes = crypto.getRandomValues(new Uint8Array(32));
+  return Buffer.from(randomBytes).toString('base64url');
 };
