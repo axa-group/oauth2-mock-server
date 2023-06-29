@@ -86,6 +86,19 @@ export function assertIsValidTokenRequest(
   }
 }
 
+export const assertIsValidPkceCodeChallengeMethod = (
+  method: unknown
+): asserts method is PKCEAlgorithm => {
+  assertIsString(method, "Invalid 'code_challenge_method' type");
+  if (!supportedPkceAlgorithms.includes(method as PKCEAlgorithm)) {
+    throw new AssertionError({
+      message: `Unsupported code_challenge method ${method}. The one of the following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
+        ', '
+      )}`,
+    });
+  }
+};
+
 export function shift(arr: (string | undefined)[]): string {
   if (arr.length === 0) {
     throw new AssertionError({ message: 'Empty array' });
@@ -125,13 +138,29 @@ export const createPKCEVerifier = () => {
   return Buffer.from(randomBytes).toString('base64url');
 };
 
+const supportedPkceAlgorithms = ['plain', 'S256'] as const;
+
+type PKCEAlgorithm = (typeof supportedPkceAlgorithms)[number];
+
 export const createPKCECodeChallenge = async (
-  verifier: string = createPKCEVerifier()
+  verifier: string = createPKCEVerifier(),
+  algorithm: PKCEAlgorithm = 'plain'
 ) => {
-  const algorithm = 'SHA-256';
-  const buffer = await crypto.subtle.digest(
-    algorithm,
-    new TextEncoder().encode(verifier)
-  );
-  return Buffer.from(buffer).toString('base64url');
+  let challenge: string;
+
+  switch (algorithm) {
+    case 'plain': {
+      challenge = verifier;
+      break;
+    }
+    case 'S256': {
+      const buffer = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(verifier)
+      );
+      challenge = Buffer.from(buffer).toString('base64url');
+      break;
+    }
+  }
+  return challenge;
 };

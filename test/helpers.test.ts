@@ -5,7 +5,7 @@ import {
   assertIsAddressInfo,
   assertIsPlainObject,
   assertIsString,
-  assertIsStringOrUndefined,
+  assertIsStringOrUndefined, assertIsValidPkceCodeChallengeMethod,
   assertIsValidTokenRequest, createPKCECodeChallenge,
   createPKCEVerifier,
   isValidPkceCodeVerifier,
@@ -147,14 +147,23 @@ describe("helpers", () => {
         expect(isValidPkceCodeVerifier(createPKCEVerifier())).toBeTruthy();
       });
 
-      it('should create a valid code_challenge', async () => {
+      it("should create a valid code_challenge", async () => {
         const verifier = "xyo94uhy3zKvgB0NJwLms86SwcjtWviEOpkBnGgaLlo";
         const expectedChallenge = "b7elB7ZyxIXgFyvBznKvxl7wOB-H17Pz0a3B62NIMFI";
-        const generatedCodeChallenge = await createPKCECodeChallenge(verifier);
+        const generatedCodeChallenge = await createPKCECodeChallenge(verifier, "S256");
         expect(generatedCodeChallenge).toBe(expectedChallenge);
         const expectedCodeLength = 43; // BASE64-urlencoded sha256 hashes should always be 43 characters in length.
-        expect(await createPKCECodeChallenge()).toHaveLength(expectedCodeLength);
-        expect(await createPKCECodeChallenge(createPKCEVerifier())).toHaveLength(expectedCodeLength);
+        expect(await createPKCECodeChallenge(createPKCEVerifier(), "S256")).toHaveLength(expectedCodeLength);
+      });
+    });
+
+    describe("assertIsValidPkceCodeChallengeMethod", () => {
+      it("should throw on invalid input", () => {
+        expect(() => assertIsValidPkceCodeChallengeMethod("invalid method")).toThrowErrorMatchingInlineSnapshot("\"Unsupported code_challenge method invalid method. The one of the following code_challenge_method are supported: plain, S256\"");
+      });
+      it("should not throw on valid input", () => {
+        expect(() => assertIsValidPkceCodeChallengeMethod("plain")).not.toThrow();
+        expect(() => assertIsValidPkceCodeChallengeMethod("S256")).not.toThrow();
       });
     });
   });
