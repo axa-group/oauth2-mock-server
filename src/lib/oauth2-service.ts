@@ -294,12 +294,19 @@ export class OAuth2Service extends EventEmitter {
       redirect_uri: redirectUri,
       response_type: responseType,
       state,
+      code_challenge,
+      code_challenge_method,
     } = req.query;
 
     assertIsString(redirectUri, 'Invalid redirectUri type');
     assertIsStringOrUndefined(nonce, 'Invalid nonce type');
     assertIsStringOrUndefined(scope, 'Invalid scope type');
     assertIsStringOrUndefined(state, 'Invalid state type');
+    assertIsStringOrUndefined(code_challenge, 'Invalid code_challenge type');
+    assertIsStringOrUndefined(
+      code_challenge_method,
+      'Invalid code_challenge_method type'
+    );
 
     const url = new URL(redirectUri);
 
