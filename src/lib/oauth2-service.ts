@@ -205,10 +205,10 @@ export class OAuth2Service extends EventEmitter {
         try {
           const code = req.body.code;
           const verifier = req.body['code_verifier'];
-          assertIsValidCodeVerifier(verifier);
           const savedCodeChallenge = this.#codeChallenges.get(code);
           assertIsCodeChallenge(savedCodeChallenge);
           this.#codeChallenges.delete(code);
+          assertIsValidCodeVerifier(verifier);
           const doesVerifierMatchCodeChallenge =
             await pkceVerifierMatchesChallenge(verifier, savedCodeChallenge);
           if (!doesVerifierMatchCodeChallenge) {
