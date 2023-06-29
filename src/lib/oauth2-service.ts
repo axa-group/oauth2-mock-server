@@ -28,12 +28,17 @@ import { randomUUID } from 'crypto';
 
 import { OAuth2Issuer } from './oauth2-issuer';
 import {
+  assertIsCodeChallenge,
   assertIsString,
   assertIsStringOrUndefined,
+  assertIsValidCodeVerifier,
+  assertIsValidPkceCodeChallengeMethod,
   assertIsValidTokenRequest,
   defaultTokenTtl,
+  pkceVerifierMatchesChallenge,
 } from './helpers';
 import type {
+  CodeChallenge,
   JwtTransform,
   MutableRedirectUri,
   MutableResponse,
@@ -45,6 +50,7 @@ import type {
 } from './types';
 import { Events } from './types';
 import { InternalEvents } from './types-internals';
+import { AssertionError } from 'assert';
 
 const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
   wellKnownDocument: '/.well-known/openid-configuration',
@@ -71,6 +77,7 @@ export class OAuth2Service extends EventEmitter {
   #issuer: OAuth2Issuer;
   #requestHandler: RequestListener;
   #nonce: Record<string, string>;
+  #codeChallenges: Map<string, CodeChallenge>;
   #endpoints: OAuth2Endpoints;
 
   constructor(oauth2Issuer: OAuth2Issuer, endpoints?: OAuth2EndpointsInput) {
@@ -80,6 +87,7 @@ export class OAuth2Service extends EventEmitter {
     this.#endpoints = { ...DEFAULT_ENDPOINTS, ...endpoints };
     this.#requestHandler = this.buildRequestHandler();
     this.#nonce = {};
+    this.#codeChallenges = new Map();
   }
 
   /**
@@ -190,6 +198,30 @@ export class OAuth2Service extends EventEmitter {
       let xfn: ScopesOrTransform | undefined;
 
       assertIsValidTokenRequest(req.body);
+
+      if ('code_verifier' in req.body && 'code' in req.body) {
+        try {
+          const code = req.body.code;
+          const verifier = req.body['code_verifier'];
+          assertIsValidCodeVerifier(verifier);
+          const savedCodeChallenge = this.#codeChallenges.get(code);
+          assertIsCodeChallenge(savedCodeChallenge);
+          this.#codeChallenges.delete(code);
+          const doesVerifierMatchCodeChallenge =
+            await pkceVerifierMatchesChallenge(verifier, savedCodeChallenge);
+          if (!doesVerifierMatchCodeChallenge) {
+            throw new AssertionError({
+              message: 'code_verifier provided does not match code_challenge',
+            });
+          }
+        } catch (e) {
+          return res.status(400).json({
+            error: 'invalid_request',
+            error_description: (e as AssertionError).message,
+          });
+        }
+      }
+
       const reqBody = req.body;
 
       let { scope } = reqBody;
@@ -311,6 +343,14 @@ export class OAuth2Service extends EventEmitter {
     const url = new URL(redirectUri);
 
     if (responseType === 'code') {
+      if (code_challenge) {
+        const codeChallengeMethod = code_challenge_method ?? 'plain';
+        assertIsValidPkceCodeChallengeMethod(codeChallengeMethod);
+        this.#codeChallenges.set(code, {
+          challenge: code_challenge,
+          method: codeChallengeMethod,
+        });
+      }
       if (nonce !== undefined) {
         this.#nonce[code] = nonce;
       }
