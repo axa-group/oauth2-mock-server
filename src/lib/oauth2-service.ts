@@ -36,6 +36,7 @@ import {
   assertIsValidTokenRequest,
   defaultTokenTtl,
   pkceVerifierMatchesChallenge,
+  supportedPkceAlgorithms,
 } from './helpers';
 import type {
   CodeChallenge,
@@ -177,6 +178,7 @@ export class OAuth2Service extends EventEmitter {
       subject_types_supported: ['public'],
       end_session_endpoint: `${this.issuer.url}${this.#endpoints.endSession}`,
       introspection_endpoint: `${this.issuer.url}${this.#endpoints.introspect}`,
+      code_challenge_methods_supported: supportedPkceAlgorithms,
     };
 
     return res.json(openidConfig);
