@@ -76,7 +76,7 @@ export function assertIsValidCodeVerifier(
 export function assertIsCodeChallenge(
   challenge?: CodeChallenge,
 ): asserts challenge is CodeChallenge {
-  if (challenge !== undefined) {
+  if (challenge === undefined) {
     throw new AssertionError({
       message: 'code_challenge required',
     });
