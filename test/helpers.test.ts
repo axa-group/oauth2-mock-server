@@ -5,12 +5,13 @@ import {
   assertIsAddressInfo,
   assertIsPlainObject,
   assertIsString,
-  assertIsStringOrUndefined, assertIsValidPkceCodeChallengeMethod,
+  assertIsStringOrUndefined, assertIsValidCodeVerifier, assertIsValidPkceCodeChallengeMethod,
   assertIsValidTokenRequest, createPKCECodeChallenge,
   createPKCEVerifier,
-  isValidPkceCodeVerifier,
+  isValidPkceCodeVerifier, pkceVerifierMatchesChallenge,
   shift
 } from "../src/lib/helpers";
+import { CodeChallenge } from "../src";
 
 describe("helpers", () => {
   describe("assertIsString", () => {
@@ -155,9 +156,28 @@ describe("helpers", () => {
         const expectedCodeLength = 43; // BASE64-urlencoded sha256 hashes should always be 43 characters in length.
         expect(await createPKCECodeChallenge(createPKCEVerifier(), "S256")).toHaveLength(expectedCodeLength);
       });
+
+      it("should match code_verifier and code_challenge", async () => {
+        const verifier = createPKCEVerifier();
+        const codeChallengeMethod = "S256";
+        const challenge: CodeChallenge = {
+          challenge: await createPKCECodeChallenge(verifier, codeChallengeMethod),
+          method: codeChallengeMethod
+        };
+        expect(pkceVerifierMatchesChallenge(verifier, challenge)).toBeTruthy();
+      });
     });
 
     describe("assertIsValidPkceCodeChallengeMethod", () => {
+      it("should throw on invalid input", () => {
+        expect(() => assertIsValidCodeVerifier("invalid")).toThrowErrorMatchingInlineSnapshot("\"Invalid 'code_verifier'. The verifier does not confirm with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1\"");
+      });
+      it("should not throw on valid input", () => {
+        expect(() => assertIsValidCodeVerifier(createPKCEVerifier())).not.toThrow();
+      });
+    });
+
+    describe("assertIsValidCodeVerifier", () => {
       it("should throw on invalid input", () => {
         expect(() => assertIsValidPkceCodeChallengeMethod("invalid method")).toThrowErrorMatchingInlineSnapshot("\"Unsupported code_challenge method invalid method. The one of the following code_challenge_method are supported: plain, S256\"");
       });

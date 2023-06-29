@@ -21,7 +21,7 @@ import { readFileSync } from 'fs';
 
 import { isPlainObject } from 'is-plain-object';
 
-import type { TokenRequest } from './types';
+import type { CodeChallenge, PKCEAlgorithm, TokenRequest } from './types';
 import { webcrypto as crypto } from 'crypto';
 
 export const defaultTokenTtl = 3600;
@@ -61,6 +61,39 @@ export function assertIsPlainObject(
   }
 }
 
+export function assertIsValidCodeVerifier(
+  verifier: unknown
+): asserts verifier is string {
+  assertIsString(verifier, "Invalid 'code_verifier' type");
+  if (!isValidPkceCodeVerifier(verifier)) {
+    throw new AssertionError({
+      message:
+        "Invalid 'code_verifier'. The verifier does not confirm with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
+    });
+  }
+}
+
+export function assertIsCodeChallenge(
+  challenge: CodeChallenge | undefined
+): asserts challenge is CodeChallenge {
+  if (challenge !== undefined) {
+    throw new AssertionError({
+      message: 'code_challenge required',
+    });
+  }
+}
+
+export async function pkceVerifierMatchesChallenge(
+  verifier: string,
+  challenge: CodeChallenge
+) {
+  const generatedChallenge = await createPKCECodeChallenge(
+    verifier,
+    challenge.method
+  );
+  return generatedChallenge === challenge.challenge;
+}
+
 export function assertIsValidTokenRequest(
   body: unknown,
 ): asserts body is TokenRequest {
@@ -86,9 +119,9 @@ export function assertIsValidTokenRequest(
   }
 }
 
-export const assertIsValidPkceCodeChallengeMethod = (
+export function assertIsValidPkceCodeChallengeMethod(
   method: unknown
-): asserts method is PKCEAlgorithm => {
+): asserts method is PKCEAlgorithm {
   assertIsString(method, "Invalid 'code_challenge_method' type");
   if (!supportedPkceAlgorithms.includes(method as PKCEAlgorithm)) {
     throw new AssertionError({
@@ -97,7 +130,7 @@ export const assertIsValidPkceCodeChallengeMethod = (
       )}`,
     });
   }
-};
+}
 
 export function shift(arr: (string | undefined)[]): string {
   if (arr.length === 0) {
@@ -126,9 +159,7 @@ export const readJsonFromFile = (filepath: string): Record<string, unknown> => {
   return maybeJson;
 };
 
-export const isValidPkceCodeVerifier = (verifier: unknown) => {
-  assertIsString(verifier, 'Invalid PKCE verifier');
-
+export const isValidPkceCodeVerifier = (verifier: string) => {
   const PKCE_CHALLENGE_REGEX = /^[A-Za-z0-9\-._~]{43,128}$/;
   return PKCE_CHALLENGE_REGEX.test(verifier);
 };
@@ -138,9 +169,7 @@ export const createPKCEVerifier = () => {
   return Buffer.from(randomBytes).toString('base64url');
 };
 
-const supportedPkceAlgorithms = ['plain', 'S256'] as const;
-
-type PKCEAlgorithm = (typeof supportedPkceAlgorithms)[number];
+export const supportedPkceAlgorithms = ['plain', 'S256'] as const;
 
 export const createPKCECodeChallenge = async (
   verifier: string = createPKCEVerifier(),

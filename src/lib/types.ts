@@ -1,5 +1,6 @@
 import { ServerOptions } from 'https';
 import { JWKWithKid } from './types-internals';
+import { supportedPkceAlgorithms } from './helpers';
 
 export interface TokenRequest {
   scope?: string;
@@ -34,6 +35,7 @@ export interface MutableToken {
 
 export interface Header {
   kid: string;
+
   [key: string]: unknown;
 }
 
@@ -42,6 +44,7 @@ export interface Payload {
   iat: number;
   exp: number;
   nbf: number;
+
   [key: string]: unknown;
 }
 
@@ -106,4 +109,11 @@ export type OAuth2EndpointsInput = Partial<OAuth2Endpoints>;
 
 export interface OAuth2Options {
   endpoints?: OAuth2EndpointsInput;
+}
+
+export type PKCEAlgorithm = (typeof supportedPkceAlgorithms)[number];
+
+export interface CodeChallenge {
+  challenge: string;
+  method: PKCEAlgorithm;
 }
