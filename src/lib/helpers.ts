@@ -115,6 +115,6 @@ export const readJsonFromFile = (filepath: string): Record<string, unknown> => {
 export const isValidPkceCodeVerifier = (challenge: unknown) => {
   assertIsString(challenge, 'Invalid PKCE challenge');
 
-  const PKCE_CHALLENGE_REGEX = /^[A-Za-z0-9_-]{43,128}$/;
+  const PKCE_CHALLENGE_REGEX = /^[A-Za-z0-9\-._~]{43,128}$/;
   return PKCE_CHALLENGE_REGEX.test(challenge);
 };
