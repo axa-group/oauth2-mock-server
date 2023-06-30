@@ -6,8 +6,6 @@ import {
   assertIsPlainObject,
   assertIsString,
   assertIsStringOrUndefined,
-  assertIsValidCodeVerifier,
-  assertIsValidPkceCodeChallengeMethod,
   assertIsValidTokenRequest,
   createPKCECodeChallenge,
   createPKCEVerifier,
@@ -180,22 +178,6 @@ describe('helpers', () => {
           method: codeChallengeMethod,
         };
         expect(pkceVerifierMatchesChallenge(verifier, challenge)).toBeTruthy();
-      });
-    });
-
-    describe('assertIsValidPkceCodeChallengeMethod', () => {
-      it('should throw on invalid input', () => {
-        expect(() =>
-          assertIsValidPkceCodeChallengeMethod('invalid method')
-        ).toThrowErrorMatchingInlineSnapshot('"Unsupported code_challenge method invalid method. The one of the following code_challenge_method are supported: plain, S256"');
-      });
-      it('should not throw on valid input', () => {
-        expect(() =>
-          assertIsValidPkceCodeChallengeMethod('plain')
-        ).not.toThrow();
-        expect(() =>
-          assertIsValidPkceCodeChallengeMethod('S256')
-        ).not.toThrow();
       });
     });
   });

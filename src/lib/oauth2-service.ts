@@ -31,7 +31,6 @@ import {
   assertIsCodeChallenge,
   assertIsString,
   assertIsStringOrUndefined,
-  assertIsValidPkceCodeChallengeMethod,
   assertIsValidTokenRequest,
   defaultTokenTtl,
   isValidPkceCodeVerifier,
@@ -46,6 +45,7 @@ import type {
   MutableToken,
   OAuth2Endpoints,
   OAuth2EndpointsInput,
+  PKCEAlgorithm,
   ScopesOrTransform,
   StatusCodeMutableResponse,
 } from './types';
@@ -352,10 +352,25 @@ export class OAuth2Service extends EventEmitter {
     if (responseType === 'code') {
       if (code_challenge) {
         const codeChallengeMethod = code_challenge_method ?? 'plain';
-        assertIsValidPkceCodeChallengeMethod(codeChallengeMethod);
+        assertIsString(
+          codeChallengeMethod,
+          "Invalid 'code_challenge_method' type"
+        );
+        if (
+          !supportedPkceAlgorithms.includes(
+            codeChallengeMethod as PKCEAlgorithm
+          )
+        ) {
+          return res.status(400).json({
+            error: 'invalid_request',
+            error_description: `Unsupported code_challenge method ${codeChallengeMethod}. The one of the following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
+              ', '
+            )}`,
+          });
+        }
         this.#codeChallenges.set(code, {
           challenge: code_challenge,
-          method: codeChallengeMethod,
+          method: codeChallengeMethod as PKCEAlgorithm,
         });
       }
       if (nonce !== undefined) {

@@ -1057,6 +1057,30 @@ describe('OAuth 2 service', () => {
       `);
     });
 
+    it('should revoke on unsupported code_challende_method', async () => {
+      const searchParams = new URLSearchParams({
+        response_type: 'code',
+        redirect_uri:
+          'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+        code_challenge: await createPKCECodeChallenge(),
+        code_challenge_method: 'invalid'
+      });
+
+      const resAuth = await request(service.requestHandler)
+        .get('/authorize')
+        .query(searchParams.toString());
+
+      expect(resAuth.statusCode).toBe(400);
+      expect(resAuth.body).toMatchInlineSnapshot(`
+        {
+          "error": "invalid_request",
+          "error_description": "Unsupported code_challenge method invalid. The one of the following code_challenge_method are supported: plain, S256",
+        }
+      `);
+
+
+    });
+
     it('should default to plain code_challenge_method if not provided', async () => {
       const verifier = createPKCEVerifier();
 
