@@ -19,12 +19,18 @@ import { CodeChallenge } from '../src';
 
 describe('helpers', () => {
   describe('assertIsString', () => {
-    it.each([null, 1, true, {}, []])('throws on wrong types (%s)', (input) => {
-      expect(() => assertIsString(input, 'boom')).toThrow();
+    it.each([
+      null,
+      1,
+      true,
+      {},
+      []
+    ])('throws on wrong types (%s)', (input) => {
+      expect(() => assertIsString(input, "boom")).toThrow();
     });
 
     it('does not throw on strings' , () => {
-      expect(() => assertIsString('good' , 'will not throw')).not.toThrow();
+      expect(() => assertIsString("good" , "will not throw")).not.toThrow();
     });
   });
 
@@ -35,29 +41,30 @@ describe('helpers', () => {
       true,
       {},
     []])('throws on wrong types (%s)', (input) => {
-      expect(() => assertIsStringOrUndefined(input, 'boom')).toThrow();
+      expect(() => assertIsStringOrUndefined(input, "boom")).toThrow();
     });
 
     it('does not throw on strings', () => {
-      expect(() => assertIsStringOrUndefined('good', 'will not throw')).not.toThrow();
+      expect(() => assertIsStringOrUndefined("good", "will not throw")).not.toThrow();
     });
 
     it('does not throw on undefined', () => {
-      expect(() =>
-        assertIsStringOrUndefined(undefined, 'will not throw')
-      ).not.toThrow();
+      expect(() =>assertIsStringOrUndefined(undefined, "will not throw")).not.toThrow();
     });
   });
 
   describe('assertIsAddressInfo', () => {
-    it.each(['nope', null])('throws on wrong values (%s)', (input) => {
+    it.each([
+      'nope',
+      null
+    ])('throws on wrong values (%s)', (input) => {
       expect(() => assertIsAddressInfo(input)).toThrow();
     });
 
     it('does not throw on valid input', () => {
       const input: AddressInfo = {
-        address: 'here',
-        family: 'We are family!',
+        address: "here",
+        family: "We are family!",
         port: 42,
       };
       expect(() => assertIsAddressInfo(input)).not.toThrow();
