@@ -79,7 +79,7 @@ describe('helpers', () => {
       1,
       false,
       []
-    ])('throws on wrong values (%s)',(input) => {
+    ])('throws on wrong values (%s)', (input) => {
       expect(() => assertIsPlainObject(input, "boom")).toThrow();
     });
 
