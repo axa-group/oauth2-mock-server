@@ -31,10 +31,10 @@ import {
   assertIsCodeChallenge,
   assertIsString,
   assertIsStringOrUndefined,
-  assertIsValidCodeVerifier,
   assertIsValidPkceCodeChallengeMethod,
   assertIsValidTokenRequest,
   defaultTokenTtl,
+  isValidPkceCodeVerifier,
   pkceVerifierMatchesChallenge,
   supportedPkceAlgorithms,
 } from './helpers';
@@ -208,7 +208,12 @@ export class OAuth2Service extends EventEmitter {
           const savedCodeChallenge = this.#codeChallenges.get(code);
           assertIsCodeChallenge(savedCodeChallenge);
           this.#codeChallenges.delete(code);
-          assertIsValidCodeVerifier(verifier);
+          if (!isValidPkceCodeVerifier(verifier)) {
+            throw new AssertionError({
+              message:
+                "Invalid 'code_verifier'. The verifier does not confirm with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
+            });
+          }
           const doesVerifierMatchCodeChallenge =
             await pkceVerifierMatchesChallenge(verifier, savedCodeChallenge);
           if (!doesVerifierMatchCodeChallenge) {

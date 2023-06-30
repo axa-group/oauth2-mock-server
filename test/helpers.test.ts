@@ -186,19 +186,6 @@ describe('helpers', () => {
     describe('assertIsValidPkceCodeChallengeMethod', () => {
       it('should throw on invalid input', () => {
         expect(() =>
-          assertIsValidCodeVerifier('invalid')
-        ).toThrowErrorMatchingInlineSnapshot('"Invalid \'code_verifier\'. The verifier does not confirm with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1"');
-      });
-      it('should not throw on valid input', () => {
-        expect(() =>
-          assertIsValidCodeVerifier(createPKCEVerifier())
-        ).not.toThrow();
-      });
-    });
-
-    describe('assertIsValidCodeVerifier', () => {
-      it('should throw on invalid input', () => {
-        expect(() =>
           assertIsValidPkceCodeChallengeMethod('invalid method')
         ).toThrowErrorMatchingInlineSnapshot('"Unsupported code_challenge method invalid method. The one of the following code_challenge_method are supported: plain, S256"');
       });
