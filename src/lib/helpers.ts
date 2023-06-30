@@ -61,28 +61,6 @@ export function assertIsPlainObject(
   }
 }
 
-export function assertIsValidCodeVerifier(
-  verifier: unknown
-): asserts verifier is string {
-  assertIsString(verifier, "Invalid 'code_verifier' type");
-  if (!isValidPkceCodeVerifier(verifier)) {
-    throw new AssertionError({
-      message:
-        "Invalid 'code_verifier'. The verifier does not confirm with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
-    });
-  }
-}
-
-export function assertIsCodeChallenge(
-  challenge: CodeChallenge | undefined
-): asserts challenge is CodeChallenge {
-  if (challenge === undefined) {
-    throw new AssertionError({
-      message: 'code_challenge required',
-    });
-  }
-}
-
 export async function pkceVerifierMatchesChallenge(
   verifier: string,
   challenge: CodeChallenge
@@ -107,19 +85,6 @@ export function assertIsValidTokenRequest(
 
   if ('code' in body) {
     assertIsString(body['code'], "Invalid 'code' type");
-  }
-}
-
-export function assertIsValidPkceCodeChallengeMethod(
-  method: unknown
-): asserts method is PKCEAlgorithm {
-  assertIsString(method, "Invalid 'code_challenge_method' type");
-  if (!supportedPkceAlgorithms.includes(method as PKCEAlgorithm)) {
-    throw new AssertionError({
-      message: `Unsupported code_challenge method ${method}. The one of the following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
-        ', '
-      )}`,
-    });
   }
 }
 
