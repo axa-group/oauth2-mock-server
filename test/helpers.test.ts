@@ -80,8 +80,8 @@ describe('helpers', () => {
       false,
       []
     ])('throws on wrong values (%s)',(input) => {
-        expect(() => assertIsPlainObject(input, "boom")).toThrow();
-      });
+      expect(() => assertIsPlainObject(input, "boom")).toThrow();
+    });
 
     it.each([
       {},
