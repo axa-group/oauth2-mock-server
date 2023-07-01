@@ -71,7 +71,7 @@
     "eslint-plugin-import": "^2.27.5",
     "eslint-plugin-jsdoc": "^45.0.0",
     "eslint-plugin-prettier": "^4.2.1",
-    "eslint-plugin-vitest": "^0.2.3",
+    "eslint-plugin-vitest": "^0.2.6",
     "prettier": "^2.8.8",
     "rimraf": "^5.0.1",
     "supertest": "^6.3.3",
