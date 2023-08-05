@@ -210,6 +210,12 @@ NOTE: Enabling HTTPS will also update the issuer URL to reflect the current prot
 
 Returns the [OpenID Provider Configuration Information](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig) for the server.
 
+Note by default the hostname used in the .well-known endpoint is the same hostname
+used to start the server.  You can override the hostname returned by the .well-known
+endpoint by setting the `IDP_WELLKNOWN_HOST_OVERRIDE` environment prior to running
+the oAuth server.  This can be useful if you are running the server behind a reverse
+proxy or within a container environment like Kubernetes.
+
 ### GET `/jwks`
 
 Returns the JSON Web Key Set (JWKS) of all the keys configured in the server.
