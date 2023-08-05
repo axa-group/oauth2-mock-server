@@ -107,6 +107,10 @@ Options:
                     Can be specified many times.
   --save-jwk        Saves all the keys in the keystore as "{kid}.json".
 
+  Setting the environment variable IDP_WELLKNOWN_HOST_OVERRIDE will override
+  the hostname used when hitting the .well-known endpoint.  This might be
+  useful when running behind a reverse proxy or when deploying in kubernetes.
+
 If no keys are added via the --jwk option, a new random RSA key
 will be generated. This key can then be saved to disk with the --save-jwk
 for later reuse.`);
