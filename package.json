@@ -19,7 +19,7 @@
   },
   "license": "MIT",
   "engines": {
-    "node": "^16.13 || ^18.12 || ^20",
+    "node": "^18.12 || ^20",
     "yarn": "^1.15.2"
   },
   "repository": {
@@ -60,7 +60,7 @@
     "@types/cors": "^2.8.14",
     "@types/express": "^4.17.18",
     "@types/lodash.isplainobject": "^4.0.7",
-    "@types/node": "^16.18.55",
+    "@types/node": "^18.18.1",
     "@types/supertest": "^2.0.13",
     "@types/uuid": "^9.0.4",
     "@typescript-eslint/eslint-plugin": "^6.7.3",
@@ -79,6 +79,6 @@
     "vitest": "^0.34.6"
   },
   "resolutions": {
-    "@types/node": "^16"
+    "@types/node": "^18"
   }
 }
