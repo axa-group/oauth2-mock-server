@@ -115,7 +115,7 @@ export class HttpServer {
 
   protected buildIssuerUrl(host: string | undefined, port: number): string {
     const url = new URL(
-      `${this.#isSecured ? 'https' : 'http'}://localhost:${port}`
+      `${this.#isSecured ? 'https' : 'http'}://localhost:${port}`,
     );
 
     if (host && !coversLocalhost(host)) {

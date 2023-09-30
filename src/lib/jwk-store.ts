@@ -91,7 +91,7 @@ const supportedAlgs = Object.keys(privateToPublicTransformerMap);
 
 function normalizeKeyKid(
   jwk: Record<string, unknown>,
-  opts?: { kid?: string }
+  opts?: { kid?: string },
 ): asserts jwk is JWKWithKid {
   if (jwk['kid'] !== undefined) {
     return;
@@ -127,7 +127,7 @@ export class JWKStore {
    */
   async generate(
     alg: string,
-    opts?: { kid?: string; crv?: string }
+    opts?: { kid?: string; crv?: string },
   ): Promise<JWK> {
     const generateOpts: GenerateKeyPairOptions =
       opts !== undefined && opts.crv !== undefined ? { crv: opts.crv } : {};
@@ -167,7 +167,7 @@ export class JWKStore {
 
     if (!(privateKey instanceof KeyObject) || privateKey.type !== 'private') {
       throw new Error(
-        `Invalid JWK type. No "private" key related data has been found.`
+        `Invalid JWK type. No "private" key related data has been found.`,
       );
     }
 
@@ -189,7 +189,7 @@ export class JWKStore {
   /**
    * Generates a JSON representation of this keystore, which conforms
    * to a JWK Set from {I-D.ietf-jose-json-web-key}.
-   * @param {boolean} [includePrivateFields = false] `true` if the private fields
+   * @param {boolean} [includePrivateFields] `true` if the private fields
    *        of stored keys are to be included.
    * @returns {JWK[]} The JSON representation of this keystore.
    */

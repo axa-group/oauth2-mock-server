@@ -102,7 +102,7 @@ export class OAuth2Service extends EventEmitter {
   async buildToken(
     req: IncomingMessage,
     expiresIn: number,
-    scopesOrTransform: ScopesOrTransform | undefined
+    scopesOrTransform: ScopesOrTransform | undefined,
   ): Promise<string> {
     this.issuer.once(InternalEvents.BeforeSigning, (token: MutableToken) => {
       /**
@@ -135,7 +135,7 @@ export class OAuth2Service extends EventEmitter {
     app.post(
       this.#endpoints.token,
       express.urlencoded({ extended: false }),
-      this.tokenHandler
+      this.tokenHandler,
     );
     app.get(this.#endpoints.authorize, this.authorizeHandler);
     app.get(this.#endpoints.userinfo, this.userInfoHandler);
@@ -309,7 +309,7 @@ export class OAuth2Service extends EventEmitter {
       url.searchParams.set('error', 'unsupported_response_type');
       url.searchParams.set(
         'error_description',
-        'The authorization server does not support obtaining an access token using this response_type.'
+        'The authorization server does not support obtaining an access token using this response_type.',
       );
     }
 
@@ -377,7 +377,7 @@ export class OAuth2Service extends EventEmitter {
   private endSessionHandler: RequestHandler = (req, res) => {
     assertIsString(
       req.query['post_logout_redirect_uri'],
-      'Invalid post_logout_redirect_uri type'
+      'Invalid post_logout_redirect_uri type',
     );
 
     const postLogoutRedirectUri: MutableRedirectUri = {
