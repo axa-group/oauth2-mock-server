@@ -123,7 +123,8 @@ It also provides a convenient way, through event emitters, to programmatically c
 - The token endpoint response body and status
 
   ```js
-  // Force the oidc service to provide an invalid_grant response on next call to the token endpoint
+  // Force the oidc service to provide an invalid_grant response
+  // on next call to the token endpoint
   service.once('beforeResponse', (tokenEndpointResponse, req) => {
     tokenEndpointResponse.body = {
       error: 'invalid_grant',
@@ -135,7 +136,8 @@ It also provides a convenient way, through event emitters, to programmatically c
 - The userinfo endpoint response body and status
 
   ```js
-  // Force the oidc service to provide an error on next call to userinfo endpoint
+  // Force the oidc service to provide an error
+  // on next call to userinfo endpoint
   service.once('beforeUserinfo', (userInfoResponse, req) => {
     userInfoResponse.body = {
       error: 'invalid_token',
@@ -159,7 +161,8 @@ It also provides a convenient way, through event emitters, to programmatically c
 - The authorization endpoint redirect uri and query parameters
 
   ```js
-  // Modify the uri and query parameters before the authorization redirect
+  // Modify the uri and query parameters
+  // before the authorization redirect
   service.once('beforeAuthorizeRedirect', (authorizeRedirectUri, req) => {
     authorizeRedirectUri.url.searchParams.set('foo', 'bar');
   });
@@ -168,7 +171,8 @@ It also provides a convenient way, through event emitters, to programmatically c
 - The end session endpoint post logout redirect uri
 
   ```js
-  // Modify the uri and query parameters before the post_logout_redirect_uri redirect
+  // Modify the uri and query parameters
+  // before the post_logout_redirect_uri redirect
   service.once('beforePostLogoutRedirect', (postLogoutRedirectUri, req) => {
     postLogoutRedirectUri.url.searchParams.set('foo', 'bar');
   });
