@@ -138,7 +138,7 @@ async function startServer(opts: Options) {
       const jwk = await server.issuer.keys.add(key);
 
       console.log(`Added key with kid "${jwk.kid}"`);
-    })
+    }),
   );
 
   if (opts.keys.length === 0) {

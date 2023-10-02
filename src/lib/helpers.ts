@@ -27,7 +27,7 @@ export const defaultTokenTtl = 3600;
 
 export function assertIsString(
   input: unknown,
-  errorMessage: string
+  errorMessage: string,
 ): asserts input is string {
   if (typeof input !== 'string') {
     throw new AssertionError({ message: errorMessage });
@@ -36,7 +36,7 @@ export function assertIsString(
 
 export function assertIsStringOrUndefined(
   input: unknown,
-  errorMessage: string
+  errorMessage: string,
 ): asserts input is string | undefined {
   if (typeof input !== 'string' && input !== undefined) {
     throw new AssertionError({ message: errorMessage });
@@ -44,7 +44,7 @@ export function assertIsStringOrUndefined(
 }
 
 export function assertIsAddressInfo(
-  input: string | null | AddressInfo
+  input: string | null | AddressInfo,
 ): asserts input is AddressInfo {
   if (input === null || typeof input === 'string') {
     throw new AssertionError({ message: 'Unexpected address type' });
@@ -53,7 +53,7 @@ export function assertIsAddressInfo(
 
 export function assertIsPlainObject(
   obj: unknown,
-  errMessage: string
+  errMessage: string,
 ): asserts obj is Record<string, unknown> {
   if (!isPlainObject(obj)) {
     throw new AssertionError({ message: errMessage });
@@ -61,7 +61,7 @@ export function assertIsPlainObject(
 }
 
 export function assertIsValidTokenRequest(
-  body: unknown
+  body: unknown,
 ): asserts body is TokenRequest {
   assertIsPlainObject(body, 'Invalid token request body');
 
@@ -97,7 +97,7 @@ export const readJsonFromFile = (filepath: string): Record<string, unknown> => {
 
   assertIsPlainObject(
     maybeJson,
-    `File "${filepath}" doesn't contain a properly JSON serialized object.`
+    `File "${filepath}" doesn't contain a properly JSON serialized object.`,
   );
 
   return maybeJson;
