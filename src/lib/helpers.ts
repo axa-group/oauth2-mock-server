@@ -19,7 +19,7 @@ import { AssertionError } from 'assert';
 import type { AddressInfo } from 'net';
 import { readFileSync } from 'fs';
 
-import isPlainObject from 'lodash.isplainobject';
+import isPlainObject from 'is-plain-obj';
 
 import type { TokenRequest } from './types';
 
