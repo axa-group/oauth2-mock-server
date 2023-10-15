@@ -152,6 +152,24 @@ describe('OAuth 2 service', () => {
     });
   });
 
+  it('should expose a token endpoint that includes an aud claim on Client Credentials grants', async () => {
+    const res = await tokenRequest(service.requestHandler)
+      .send({
+        grant_type: 'client_credentials',
+        scope: 'urn:first-scope urn:second-scope',
+        aud: 'aud'
+      })
+      .expect(200);
+
+    const resBody = res.body as { access_token: string; scope: string };
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+
+    expect(decoded.payload).toMatchObject({
+      aud: 'aud',
+    });
+  });
+
+
   it('should expose a token endpoint that handles Resource Owner Password Credentials grants', async () => {
     const res = await request(service.requestHandler)
       .post('/token')

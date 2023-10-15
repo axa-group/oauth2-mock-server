@@ -193,10 +193,13 @@ export class OAuth2Service extends EventEmitter {
       const reqBody = req.body;
 
       let { scope } = reqBody;
+      const { aud } = reqBody;
 
       switch (req.body.grant_type) {
         case 'client_credentials':
-          xfn = scope;
+          xfn = (_header, payload) => {
+            Object.assign(payload, { scope, aud });
+          };
           break;
         case 'password':
           xfn = (_header, payload) => {

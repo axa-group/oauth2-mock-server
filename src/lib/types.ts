@@ -7,6 +7,7 @@ export interface TokenRequest {
   username?: unknown;
   client_id?: unknown;
   code?: string;
+  aud?: string[] | string;
 }
 
 export interface Options {
