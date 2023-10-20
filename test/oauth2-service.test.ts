@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 import { IncomingMessage, type RequestListener } from 'http';
+import qs from 'querystring';
 
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import { OAuth2Service } from '../src/lib/oauth2-service';
@@ -157,12 +158,11 @@ describe('OAuth 2 service', () => {
     ['aud1', 'aud2']
   ])('should expose a token endpoint that includes an aud claim on Client Credentials grants', async (aud) => {
     const res = await tokenRequest(service.requestHandler)
-      .type('json')
-      .send({
+      .send(qs.stringify({
         grant_type: 'client_credentials',
         scope: 'urn:first-scope urn:second-scope',
         aud,
-      })
+      }))
       .expect(200);
 
     const resBody = res.body as { access_token: string; scope: string };
