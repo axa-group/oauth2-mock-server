@@ -160,12 +160,11 @@ describe('OAuth 2 service', () => {
     const res = await tokenRequest(service.requestHandler)
       .send(qs.stringify({
         grant_type: 'client_credentials',
-        scope: 'urn:first-scope urn:second-scope',
         aud,
       }))
       .expect(200);
 
-    const resBody = res.body as { access_token: string; scope: string };
+    const resBody = res.body as { access_token: string; };
     const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
     expect(decoded.payload).toMatchObject({ aud });
