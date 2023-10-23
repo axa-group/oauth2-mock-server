@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [7.1.0](https://github.com/axa-group/oauth2-mock-server/compare/v7.0.0...v7.1.0) — 2023-10-23
+
+### Added
+
+- Add support for "aud" claim in "client_credentials" grants (by [kadams54](https://github.com/kadams54))
+
+### Changed
+
+- Update dependencies
+
 ## [7.0.0](https://github.com/axa-group/oauth2-mock-server/compare/v6.0.1...v7.0.0) — 2023-10-04
 
 ### Changed
