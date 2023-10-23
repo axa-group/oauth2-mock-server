@@ -96,6 +96,8 @@ describe('helpers', () => {
       { grant_type: "g", scope: 1 },
       { grant_type: "g", scope: "s", code: 1 },
       { grant_type: "g", scope: 1, code: "c" },
+      { grant_type: "g", scope: "1", code: "c", aud: 1 },
+      { grant_type: "g", scope: "1", code: "c", aud: [1] },
     ])('throws on wrong values (%s)', (input) => {
       expect(() => assertIsValidTokenRequest(input)).toThrow();
     });
@@ -105,6 +107,8 @@ describe('helpers', () => {
       { grant_type: "g", code: "c" },
       { grant_type: "g", scope: "s" },
       { grant_type: "g", scope: "s", code: "c" },
+      { grant_type: "g", scope: "s", code: "c", aud: "a" },
+      { grant_type: "g", scope: "s", code: "c", aud: ["a", "b"] },
     ])('does not throw on valid input (%s)', (input) => {
       expect(() => assertIsValidTokenRequest(input)).not.toThrow();
     });

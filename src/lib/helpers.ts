@@ -74,6 +74,15 @@ export function assertIsValidTokenRequest(
   if ('code' in body) {
     assertIsString(body['code'], "Invalid 'code' type");
   }
+
+  if ('aud' in body) {
+    const aud = body['aud'];
+    if (Array.isArray(aud)) {
+      aud.forEach((a) => assertIsString(a, "Invalid 'aud' type"));
+    } else {
+      assertIsString(aud, "Invalid 'aud' type");
+    }
+  }
 }
 
 export function shift(arr: (string | undefined)[]): string {
