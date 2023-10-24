@@ -1,6 +1,6 @@
 {
   "name": "oauth2-mock-server",
-  "version": "7.1.0",
+  "version": "7.1.1",
   "description": "OAuth 2 mock server",
   "keywords": [
     "oauth",
@@ -51,7 +51,7 @@
     "basic-auth": "^2.0.1",
     "cors": "^2.8.5",
     "express": "^4.18.2",
-    "is-plain-obj": "^4.1.0",
+    "is-plain-object": "^5.0.0",
     "jose": "^4.15.4"
   },
   "devDependencies": {

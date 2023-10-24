@@ -19,7 +19,7 @@ import { AssertionError } from 'assert';
 import type { AddressInfo } from 'net';
 import { readFileSync } from 'fs';
 
-import isPlainObject from 'is-plain-obj';
+import { isPlainObject } from 'is-plain-object';
 
 import type { TokenRequest } from './types';
 
