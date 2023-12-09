@@ -9,6 +9,7 @@ import { MutableRedirectUri } from '../src/lib/types';
 
 import * as testKeys from './keys';
 import { verifyTokenWithKey } from './lib/test_helpers';
+import { assertIsString } from '../src/lib/helpers';
 
 describe('OAuth 2 service', () => {
   let issuer: OAuth2Issuer;
@@ -682,7 +683,7 @@ describe('OAuth 2 service', () => {
       .redirects(0)
       .expect(302);
 
-    expect(res.headers.location).toBe(postLogoutRedirectUri);
+    expect(res.headers["location"]).toBe(postLogoutRedirectUri);
   });
 
   it('should be able to manipulate url and query params when redirecting within post_logout_redirect_uri', async () => {
@@ -702,7 +703,7 @@ describe('OAuth 2 service', () => {
       .redirects(0)
       .expect(302);
 
-    expect(res.headers.location).toBe('http://post-logout.com/signin?param=test');
+    expect(res.headers["location"]).toBe('http://post-logout.com/signin?param=test');
   });
 
   it('should expose a token introspection endpoint that returns information about a token', async () => {
@@ -742,8 +743,10 @@ function getCode(response: request.Response) {
   expect(response).toMatchObject({
     header: { location: expect.any(String) },
   });
-  const parsed = response as { header: { location: string } };
-  const url = new URL(parsed.header.location);
+  const location = response.header["location"];
+  assertIsString(location, "Undefined location");
+
+  const url = new URL(location);
   return url.searchParams.get('code');
 }
 
