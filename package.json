@@ -52,7 +52,7 @@
     "cors": "^2.8.5",
     "express": "^4.18.2",
     "is-plain-object": "^5.0.0",
-    "jose": "^4.15.4"
+    "jose": "^5.2.0"
   },
   "devDependencies": {
     "@types/basic-auth": "^1.1.5",
