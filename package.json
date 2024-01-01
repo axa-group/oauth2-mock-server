@@ -72,7 +72,7 @@
     "prettier": "^3.0.3",
     "rimraf": "^5.0.5",
     "supertest": "^6.3.3",
-    "typescript": "^5.2.2",
+    "typescript": "^5.3.3",
     "vitest": "^0.34.6"
   },
   "resolutions": {
