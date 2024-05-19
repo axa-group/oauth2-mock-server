@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [7.1.2](https://github.com/axa-group/oauth2-mock-server/compare/v7.1.1...v7.1.2) — 2024-05-21
+
+### Changed
+
+- Add support for Node.js 22
+
 ## [7.1.1](https://github.com/axa-group/oauth2-mock-server/compare/v7.1.0...v7.1.1) — 2023-10-24
 
 ### Fixed
