@@ -240,6 +240,42 @@ describe('OAuth 2 service', () => {
     });
   });
 
+  it('should expose a token endpoint that copies scope for authorization_code grants', async () => {
+    const res = await request(service.requestHandler)
+      .post('/token')
+      .type('form')
+      .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
+      .send({
+        grant_type: 'authorization_code',
+        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+        redirect_uri: 'https://example.com/callback',
+        scope: 'test'
+      })
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      access_token: expect.any(String),
+      token_type: 'Bearer',
+      expires_in: 3600,
+      scope: 'test',
+      id_token: expect.any(String),
+      refresh_token: expect.any(String),
+    });
+
+    const key = service.issuer.keys.get('test-rs256-key');
+    expect(key).not.toBeNull();
+
+    const resBody = res.body as { access_token: string };
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+
+    expect(decoded.payload).toMatchObject({
+      iss: service.issuer.url,
+      scope: 'test',
+      sub: 'johndoe',
+      amr: ['pwd'],
+    });
+  });
+
   it('should expose a token endpoint that handles authorization_code grants without the basic authorization', async () => {
     const res = await request(service.requestHandler)
       .post('/token')
@@ -314,6 +350,41 @@ describe('OAuth 2 service', () => {
     expect(decoded.payload).toMatchObject({
       iss: service.issuer.url,
       scope: 'dummy',
+      sub: 'johndoe',
+      amr: ['pwd'],
+    });
+  });
+
+  it('should expose a token endpoint that copies scope for refresh_token grants', async () => {
+    const res = await request(service.requestHandler)
+      .post('/token')
+      .type('form')
+      .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
+      .send({
+        grant_type: 'refresh_token',
+        refresh_token: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+        scope: 'test'
+      })
+      .expect(200);
+
+    expect(res.body).toMatchObject({
+      access_token: expect.any(String),
+      token_type: 'Bearer',
+      expires_in: 3600,
+      scope: 'test',
+      id_token: expect.any(String),
+      refresh_token: expect.any(String),
+    });
+
+    const key = service.issuer.keys.get('test-rs256-key');
+    expect(key).not.toBeNull();
+
+    const resBody = res.body as { access_token: string };
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+
+    expect(decoded.payload).toMatchObject({
+      iss: service.issuer.url,
+      scope: 'test',
       sub: 'johndoe',
       amr: ['pwd'],
     });
