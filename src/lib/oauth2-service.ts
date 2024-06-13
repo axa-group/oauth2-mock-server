@@ -149,13 +149,18 @@ export class OAuth2Service extends EventEmitter {
   private openidConfigurationHandler: RequestHandler = (_req, res) => {
     assertIsString(this.issuer.url, 'Unknown issuer url.');
 
+    const WELL_KNOWN_SERVER =
+      process.env['IDP_WELLKNOWN_HOST_OVERRIDE'] || this.issuer.url;
+
     const openidConfig = {
-      issuer: this.issuer.url,
-      token_endpoint: `${this.issuer.url}${this.#endpoints.token}`,
-      authorization_endpoint: `${this.issuer.url}${this.#endpoints.authorize}`,
-      userinfo_endpoint: `${this.issuer.url}${this.#endpoints.userinfo}`,
+      issuer: WELL_KNOWN_SERVER,
+      token_endpoint: `${WELL_KNOWN_SERVER}${this.#endpoints.token}`,
+      authorization_endpoint: `${WELL_KNOWN_SERVER}${
+        this.#endpoints.authorize
+      }`,
+      userinfo_endpoint: `${WELL_KNOWN_SERVER}${this.#endpoints.userinfo}`,
       token_endpoint_auth_methods_supported: ['none'],
-      jwks_uri: `${this.issuer.url}${this.#endpoints.jwks}`,
+      jwks_uri: `${WELL_KNOWN_SERVER}${this.#endpoints.jwks}`,
       response_types_supported: ['code'],
       grant_types_supported: [
         'client_credentials',
@@ -165,10 +170,12 @@ export class OAuth2Service extends EventEmitter {
       token_endpoint_auth_signing_alg_values_supported: ['RS256'],
       response_modes_supported: ['query'],
       id_token_signing_alg_values_supported: ['RS256'],
-      revocation_endpoint: `${this.issuer.url}${this.#endpoints.revoke}`,
+      revocation_endpoint: `${WELL_KNOWN_SERVER}${this.#endpoints.revoke}`,
       subject_types_supported: ['public'],
-      end_session_endpoint: `${this.issuer.url}${this.#endpoints.endSession}`,
-      introspection_endpoint: `${this.issuer.url}${this.#endpoints.introspect}`,
+      end_session_endpoint: `${WELL_KNOWN_SERVER}${this.#endpoints.endSession}`,
+      introspection_endpoint: `${WELL_KNOWN_SERVER}${
+        this.#endpoints.introspect
+      }`,
     };
 
     return res.json(openidConfig);
