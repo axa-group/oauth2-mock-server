@@ -177,7 +177,7 @@ describe('helpers', () => {
           ),
           method: codeChallengeMethod,
         };
-        expect(pkceVerifierMatchesChallenge(verifier, challenge)).resolves.toBe(true);
+        expect(await pkceVerifierMatchesChallenge(verifier, challenge)).toBe(true);
       });
     });
   });

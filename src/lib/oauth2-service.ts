@@ -347,7 +347,7 @@ export class OAuth2Service extends EventEmitter {
     assertIsStringOrUndefined(code_challenge, 'Invalid code_challenge type');
     assertIsStringOrUndefined(
       code_challenge_method,
-      'Invalid code_challenge_method type'
+      'Invalid code_challenge_method type',
     );
 
     const url = new URL(redirectUri);
@@ -357,17 +357,17 @@ export class OAuth2Service extends EventEmitter {
         const codeChallengeMethod = code_challenge_method ?? 'plain';
         assertIsString(
           codeChallengeMethod,
-          "Invalid 'code_challenge_method' type"
+          "Invalid 'code_challenge_method' type",
         );
         if (
           !supportedPkceAlgorithms.includes(
-            codeChallengeMethod as PKCEAlgorithm
+            codeChallengeMethod as PKCEAlgorithm,
           )
         ) {
           return res.status(400).json({
             error: 'invalid_request',
             error_description: `Unsupported code_challenge method ${codeChallengeMethod}. The one of the following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
-              ', '
+              ', ',
             )}`,
           });
         }
