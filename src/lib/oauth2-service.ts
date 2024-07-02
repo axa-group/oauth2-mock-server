@@ -28,7 +28,6 @@ import { randomUUID } from 'crypto';
 
 import { OAuth2Issuer } from './oauth2-issuer';
 import {
-  assertIsCodeChallenge,
   assertIsString,
   assertIsStringOrUndefined,
   assertIsValidTokenRequest,
@@ -206,7 +205,11 @@ export class OAuth2Service extends EventEmitter {
           const code = req.body.code;
           const verifier = req.body['code_verifier'];
           const savedCodeChallenge = this.#codeChallenges.get(code);
-          assertIsCodeChallenge(savedCodeChallenge);
+          if (savedCodeChallenge === undefined) {
+            throw new AssertionError({
+              message: 'code_challenge required',
+            });
+          }
           this.#codeChallenges.delete(code);
           if (!isValidPkceCodeVerifier(verifier)) {
             throw new AssertionError({
