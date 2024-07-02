@@ -1029,7 +1029,7 @@ describe("OAuth 2 service", () => {
       expect(res.body).toMatchInlineSnapshot(`
         {
           "error": "invalid_request",
-          "error_description": "Invalid "code_verifier". The verifier does not confirm with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
+          "error_description": "Invalid 'code_verifier'. The verifier does not confirm with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
         }
       `);
     });
