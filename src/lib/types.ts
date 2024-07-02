@@ -8,6 +8,7 @@ export interface TokenRequest {
   client_id?: unknown;
   code?: string;
   aud?: string[] | string;
+  code_verifier?: string;
 }
 
 export interface Options {
