@@ -62,7 +62,7 @@ export function assertIsPlainObject(
 }
 
 export function assertIsValidCodeVerifier(
-  verifier: unknown
+  verifier: unknown,
 ): asserts verifier is string {
   assertIsString(verifier, "Invalid 'code_verifier' type");
   if (!isValidPkceCodeVerifier(verifier)) {
@@ -74,7 +74,7 @@ export function assertIsValidCodeVerifier(
 }
 
 export function assertIsCodeChallenge(
-  challenge: CodeChallenge | undefined
+  challenge?: CodeChallenge,
 ): asserts challenge is CodeChallenge {
   if (challenge !== undefined) {
     throw new AssertionError({
@@ -85,11 +85,11 @@ export function assertIsCodeChallenge(
 
 export async function pkceVerifierMatchesChallenge(
   verifier: string,
-  challenge: CodeChallenge
+  challenge: CodeChallenge,
 ) {
   const generatedChallenge = await createPKCECodeChallenge(
     verifier,
-    challenge.method
+    challenge.method,
   );
   return generatedChallenge === challenge.challenge;
 }
@@ -120,13 +120,13 @@ export function assertIsValidTokenRequest(
 }
 
 export function assertIsValidPkceCodeChallengeMethod(
-  method: unknown
+  method: unknown,
 ): asserts method is PKCEAlgorithm {
   assertIsString(method, "Invalid 'code_challenge_method' type");
   if (!supportedPkceAlgorithms.includes(method as PKCEAlgorithm)) {
     throw new AssertionError({
       message: `Unsupported code_challenge method ${method}. The one of the following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
-        ', '
+        ', ',
       )}`,
     });
   }
@@ -173,7 +173,7 @@ export const supportedPkceAlgorithms = ['plain', 'S256'] as const;
 
 export const createPKCECodeChallenge = async (
   verifier: string = createPKCEVerifier(),
-  algorithm: PKCEAlgorithm = 'plain'
+  algorithm: PKCEAlgorithm = 'plain',
 ) => {
   let challenge: string;
 
@@ -185,7 +185,7 @@ export const createPKCECodeChallenge = async (
     case 'S256': {
       const buffer = await crypto.subtle.digest(
         'SHA-256',
-        new TextEncoder().encode(verifier)
+        new TextEncoder().encode(verifier),
       );
       challenge = Buffer.from(buffer).toString('base64url');
       break;
