@@ -29,8 +29,8 @@ describe('helpers', () => {
       expect(() => assertIsString(input, "boom")).toThrow();
     });
 
-    it('does not throw on strings' , () => {
-      expect(() => assertIsString("good" , "will not throw")).not.toThrow();
+    it('does not throw on strings', () => {
+      expect(() => assertIsString("good", "will not throw")).not.toThrow();
     });
   });
 
@@ -40,7 +40,8 @@ describe('helpers', () => {
       1,
       true,
       {},
-    []])('throws on wrong types (%s)', (input) => {
+      []
+    ])('throws on wrong types (%s)', (input) => {
       expect(() => assertIsStringOrUndefined(input, "boom")).toThrow();
     });
 
@@ -49,14 +50,14 @@ describe('helpers', () => {
     });
 
     it('does not throw on undefined', () => {
-      expect(() =>assertIsStringOrUndefined(undefined, "will not throw")).not.toThrow();
+      expect(() => assertIsStringOrUndefined(undefined, "will not throw")).not.toThrow();
     });
   });
 
   describe('assertIsAddressInfo', () => {
     it.each([
-      'nope',
-      null
+      "nope",
+      null,
     ])('throws on wrong values (%s)', (input) => {
       expect(() => assertIsAddressInfo(input)).toThrow();
     });
@@ -65,37 +66,43 @@ describe('helpers', () => {
       const input: AddressInfo = {
         address: "here",
         family: "We are family!",
-        port: 42,
+        port: 42
       };
       expect(() => assertIsAddressInfo(input)).not.toThrow();
     });
   });
 
   describe('assertIsPlainObject', () => {
-    it.each(['nope', null, 1, false, []])(
-      'throws on wrong values (%s)',
-      (input) => {
-        expect(() => assertIsPlainObject(input, 'boom')).toThrow();
-      }
-    );
+    it.each([
+      "nope",
+      null,
+      1,
+      false,
+      []
+    ])('throws on wrong values (%s)',(input) => {
+        expect(() => assertIsPlainObject(input, "boom")).toThrow();
+      });
 
-    it.each([{}, { a: 1 }])('does not throw on valid input (%s)', (input) => {
-      expect(() => assertIsPlainObject(input, 'boom')).not.toThrow();
+    it.each([
+      {},
+      { a: 1 },
+    ])('does not throw on valid input (%s)', (input) => {
+      expect(() => assertIsPlainObject(input, "boom")).not.toThrow();
     });
   });
 
   describe('assertIsValidTokenRequest', () => {
     it.each([
-      'nope',
+      "nope",
       null,
       1,
       false,
       [],
       { grant_type: 1 },
-      { grant_type: 'g', code: 1 },
-      { grant_type: 'g', scope: 1 },
-      { grant_type: 'g', scope: 's', code: 1 },
-      { grant_type: 'g', scope: 1, code: 'c' },
+      { grant_type: "g", code: 1 },
+      { grant_type: "g", scope: 1 },
+      { grant_type: "g", scope: "s", code: 1 },
+      { grant_type: "g", scope: 1, code: "c" },
       { grant_type: "g", scope: "1", code: "c", aud: 1 },
       { grant_type: "g", scope: "1", code: "c", aud: [1] }
     ])('throws on wrong values (%s)', (input) => {
@@ -103,10 +110,10 @@ describe('helpers', () => {
     });
 
     it.each([
-      { grant_type: 'g' },
-      { grant_type: 'g', code: 'c' },
-      { grant_type: 'g', scope: 's' },
-      { grant_type: 'g', scope: 's', code: 'c' },
+      { grant_type: "g" },
+      { grant_type: "g", code: "c" },
+      { grant_type: "g", scope: "s" },
+      { grant_type: "g", scope: "s", code: "c" },
       { grant_type: "g", scope: "s", code: "c", aud: "a" },
       { grant_type: "g", scope: "s", code: "c", aud: ["a", "b"] }
     ])('does not throw on valid input (%s)', (input) => {
@@ -124,7 +131,7 @@ describe('helpers', () => {
     });
 
     it('does not throw on valid input', () => {
-      expect(() => shift(['a'])).not.toThrow();
+      expect(() => shift(["a"])).not.toThrow();
     });
   });
 
