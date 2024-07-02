@@ -139,18 +139,18 @@ describe('helpers', () => {
         const verifier128 =
           'PXa7p8YHHUAJGrcG2eW0x7FY_EBtRTlaUHnyz1jKWnNp0G-2HZt9KjA0UOp87DmuIqoV4Y_owVsM-QICvrSa5dWxOndVEhSsFMMgy68AYkw4PGHkGaN_aIRIHJ8mQ4EZ';
         const verifier42 = 'xyo94uhy3zKvgB0NJwLms86SwcjtWviEOpkBnGgaLlo';
-        expect(isValidPkceCodeVerifier(verifier128)).toBeTruthy();
-        expect(isValidPkceCodeVerifier(verifier42)).toBeTruthy();
+        expect(isValidPkceCodeVerifier(verifier128)).toBe(true);
+        expect(isValidPkceCodeVerifier(verifier42)).toBe(true);
 
         const verifierWith129chars = `${verifier128}a`;
-        expect(isValidPkceCodeVerifier(verifierWith129chars)).toBeFalsy();
+        expect(isValidPkceCodeVerifier(verifierWith129chars)).toBe(false);
         expect(
           isValidPkceCodeVerifier(verifier42.slice(0, verifier42.length - 1))
-        ).toBeFalsy();
+        ).toBe(false);
       });
 
       it('should create a valid code_verifier', () => {
-        expect(isValidPkceCodeVerifier(createPKCEVerifier())).toBeTruthy();
+        expect(isValidPkceCodeVerifier(createPKCEVerifier())).toBe(true);
       });
 
       it('should create a valid code_challenge', async () => {
@@ -177,7 +177,7 @@ describe('helpers', () => {
           ),
           method: codeChallengeMethod,
         };
-        expect(pkceVerifierMatchesChallenge(verifier, challenge)).toBeTruthy();
+        expect(pkceVerifierMatchesChallenge(verifier, challenge)).resolves.toBe(true);
       });
     });
   });
