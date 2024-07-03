@@ -214,7 +214,7 @@ export class OAuth2Service extends EventEmitter {
           if (!isValidPkceCodeVerifier(verifier)) {
             throw new AssertionError({
               message:
-                "Invalid 'code_verifier'. The verifier does not confirm with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
+                "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
             });
           }
           const doesVerifierMatchCodeChallenge =
