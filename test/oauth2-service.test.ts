@@ -756,6 +756,15 @@ describe('OAuth 2 service', () => {
     expect(res.headers.location).toBe(postLogoutRedirectUri);
   });
 
+  it('should show a page with the text "Logout successful" if no post_logout_redirect_uri was passed to the end_session_endpoint', async () => {
+    const res = await request(service.requestHandler)
+      .get('/endsession')
+      .redirects(0)
+      .expect(200);
+
+    expect(res.text).toBe("Logout successful");
+  });
+
   it('should be able to manipulate url and query params when redirecting within post_logout_redirect_uri', async () => {
     const postLogoutRedirectUri = 'http://example.com/signin?param=test';
 

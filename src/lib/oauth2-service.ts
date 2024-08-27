@@ -378,14 +378,16 @@ export class OAuth2Service extends EventEmitter {
   };
 
   private endSessionHandler: RequestHandler = (req, res) => {
-    assertIsString(
-      req.query['post_logout_redirect_uri'],
-      'Invalid post_logout_redirect_uri type',
-    );
-
-    const postLogoutRedirectUri: MutableRedirectUri = {
-      url: new URL(req.query['post_logout_redirect_uri']),
-    };
+    let postLogoutRedirectUri: MutableRedirectUri | undefined = undefined;
+    if (req.query['post_logout_redirect_uri']) {
+      assertIsString(
+        req.query['post_logout_redirect_uri'],
+        'Invalid post_logout_redirect_uri type',
+      );
+      postLogoutRedirectUri = {
+        url: new URL(req.query['post_logout_redirect_uri']),
+      };
+    }
 
     /**
      * Before post logout redirect event.
@@ -395,7 +397,11 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforePostLogoutRedirect, postLogoutRedirectUri, req);
 
-    return res.redirect(postLogoutRedirectUri.url.href);
+    if (postLogoutRedirectUri !== undefined) {
+      return res.redirect(postLogoutRedirectUri.url.href);
+    } else {
+      return res.status(200).send('Logout successful');
+    }
   };
 
   private introspectHandler: RequestHandler = (req, res) => {
