@@ -82,7 +82,7 @@ export class HttpServer {
    * @param host Host name.
    * @returns A promise that resolves when the server has been started.
    */
-  async start(port?: number, host?: string): Promise<Server> {
+  async start(port?: number, host?: string): Promise<void> {
     if (this.listening) {
       throw new Error('Server has already been started.');
     }
