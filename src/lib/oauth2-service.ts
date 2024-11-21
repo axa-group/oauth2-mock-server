@@ -32,19 +32,25 @@ import {
   assertIsStringOrUndefined,
   assertIsValidTokenRequest,
   defaultTokenTtl,
+  isValidPkceCodeVerifier,
+  pkceVerifierMatchesChallenge,
+  supportedPkceAlgorithms,
 } from './helpers';
 import type {
+  CodeChallenge,
   JwtTransform,
   MutableRedirectUri,
   MutableResponse,
   MutableToken,
   OAuth2Endpoints,
   OAuth2EndpointsInput,
+  PKCEAlgorithm,
   ScopesOrTransform,
   StatusCodeMutableResponse,
 } from './types';
 import { Events } from './types';
 import { InternalEvents } from './types-internals';
+import { AssertionError } from 'assert';
 
 const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
   wellKnownDocument: '/.well-known/openid-configuration',
@@ -71,6 +77,7 @@ export class OAuth2Service extends EventEmitter {
   #issuer: OAuth2Issuer;
   #requestHandler: RequestListener;
   #nonce: Record<string, string>;
+  #codeChallenges: Map<string, CodeChallenge>;
   #endpoints: OAuth2Endpoints;
 
   constructor(oauth2Issuer: OAuth2Issuer, endpoints?: OAuth2EndpointsInput) {
@@ -80,6 +87,7 @@ export class OAuth2Service extends EventEmitter {
     this.#endpoints = { ...DEFAULT_ENDPOINTS, ...endpoints };
     this.#requestHandler = this.buildRequestHandler();
     this.#nonce = {};
+    this.#codeChallenges = new Map();
   }
 
   /**
@@ -169,6 +177,7 @@ export class OAuth2Service extends EventEmitter {
       subject_types_supported: ['public'],
       end_session_endpoint: `${this.issuer.url}${this.#endpoints.endSession}`,
       introspection_endpoint: `${this.issuer.url}${this.#endpoints.introspect}`,
+      code_challenge_methods_supported: supportedPkceAlgorithms,
     };
 
     return res.json(openidConfig);
@@ -190,6 +199,39 @@ export class OAuth2Service extends EventEmitter {
       let xfn: ScopesOrTransform | undefined;
 
       assertIsValidTokenRequest(req.body);
+
+      if ('code_verifier' in req.body && 'code' in req.body) {
+        try {
+          const code = req.body.code;
+          const verifier = req.body['code_verifier'];
+          const savedCodeChallenge = this.#codeChallenges.get(code);
+          if (savedCodeChallenge === undefined) {
+            throw new AssertionError({
+              message: 'code_challenge required',
+            });
+          }
+          this.#codeChallenges.delete(code);
+          if (!isValidPkceCodeVerifier(verifier)) {
+            throw new AssertionError({
+              message:
+                "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
+            });
+          }
+          const doesVerifierMatchCodeChallenge =
+            await pkceVerifierMatchesChallenge(verifier, savedCodeChallenge);
+          if (!doesVerifierMatchCodeChallenge) {
+            throw new AssertionError({
+              message: 'code_verifier provided does not match code_challenge',
+            });
+          }
+        } catch (e) {
+          return res.status(400).json({
+            error: 'invalid_request',
+            error_description: (e as AssertionError).message,
+          });
+        }
+      }
+
       const reqBody = req.body;
 
       let { scope } = reqBody;
@@ -294,16 +336,46 @@ export class OAuth2Service extends EventEmitter {
       redirect_uri: redirectUri,
       response_type: responseType,
       state,
+      code_challenge,
+      code_challenge_method,
     } = req.query;
 
     assertIsString(redirectUri, 'Invalid redirectUri type');
     assertIsStringOrUndefined(nonce, 'Invalid nonce type');
     assertIsStringOrUndefined(scope, 'Invalid scope type');
     assertIsStringOrUndefined(state, 'Invalid state type');
+    assertIsStringOrUndefined(code_challenge, 'Invalid code_challenge type');
+    assertIsStringOrUndefined(
+      code_challenge_method,
+      'Invalid code_challenge_method type',
+    );
 
     const url = new URL(redirectUri);
 
     if (responseType === 'code') {
+      if (code_challenge) {
+        const codeChallengeMethod = code_challenge_method ?? 'plain';
+        assertIsString(
+          codeChallengeMethod,
+          "Invalid 'code_challenge_method' type",
+        );
+        if (
+          !supportedPkceAlgorithms.includes(
+            codeChallengeMethod as PKCEAlgorithm,
+          )
+        ) {
+          return res.status(400).json({
+            error: 'invalid_request',
+            error_description: `Unsupported code_challenge method ${codeChallengeMethod}. The following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
+              ', ',
+            )}`,
+          });
+        }
+        this.#codeChallenges.set(code, {
+          challenge: code_challenge,
+          method: codeChallengeMethod as PKCEAlgorithm,
+        });
+      }
       if (nonce !== undefined) {
         this.#nonce[code] = nonce;
       }

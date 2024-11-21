@@ -21,7 +21,8 @@ import { readFileSync } from 'fs';
 
 import { isPlainObject } from 'is-plain-object';
 
-import type { TokenRequest } from './types';
+import type { CodeChallenge, PKCEAlgorithm, TokenRequest } from './types';
+import { webcrypto as crypto } from 'crypto';
 
 export const defaultTokenTtl = 3600;
 
@@ -58,6 +59,17 @@ export function assertIsPlainObject(
   if (!isPlainObject(obj)) {
     throw new AssertionError({ message: errMessage });
   }
+}
+
+export async function pkceVerifierMatchesChallenge(
+  verifier: string,
+  challenge: CodeChallenge,
+) {
+  const generatedChallenge = await createPKCECodeChallenge(
+    verifier,
+    challenge.method,
+  );
+  return generatedChallenge === challenge.challenge;
 }
 
 export function assertIsValidTokenRequest(
@@ -110,4 +122,41 @@ export const readJsonFromFile = (filepath: string): Record<string, unknown> => {
   );
 
   return maybeJson;
+};
+
+export const isValidPkceCodeVerifier = (verifier: string) => {
+  const PKCE_CHALLENGE_REGEX = /^[A-Za-z0-9\-._~]{43,128}$/;
+  return PKCE_CHALLENGE_REGEX.test(verifier);
+};
+
+export const createPKCEVerifier = () => {
+  const randomBytes = crypto.getRandomValues(new Uint8Array(32));
+  return Buffer.from(randomBytes).toString('base64url');
+};
+
+export const supportedPkceAlgorithms = ['plain', 'S256'] as const;
+
+export const createPKCECodeChallenge = async (
+  verifier: string = createPKCEVerifier(),
+  algorithm: PKCEAlgorithm = 'plain',
+) => {
+  let challenge: string;
+
+  switch (algorithm) {
+    case 'plain': {
+      challenge = verifier;
+      break;
+    }
+    case 'S256': {
+      const buffer = await crypto.subtle.digest(
+        'SHA-256',
+        new TextEncoder().encode(verifier),
+      );
+      challenge = Buffer.from(buffer).toString('base64url');
+      break;
+    }
+    default:
+      throw new Error(`Unsupported PKCE method ("${algorithm as string}")`);
+  }
+  return challenge;
 };
