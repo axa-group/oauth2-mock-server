@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [7.2.0](https://github.com/axa-group/oauth2-mock-server/compare/v7.1.2...v7.2.0) — 2024-11-21
+
+### Added
+
+- Add PKCE support (by [tanettrimas](https://github.com/tanettrimas))
+
 ## [7.1.2](https://github.com/axa-group/oauth2-mock-server/compare/v7.1.1...v7.1.2) — 2024-05-21
 
 ### Changed
