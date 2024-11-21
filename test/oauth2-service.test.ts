@@ -9,6 +9,10 @@ import { MutableRedirectUri } from '../src/lib/types';
 
 import * as testKeys from './keys';
 import { verifyTokenWithKey } from './lib/test_helpers';
+import {
+  createPKCECodeChallenge,
+  createPKCEVerifier,
+} from '../src/lib/helpers';
 
 describe('OAuth 2 service', () => {
   let issuer: OAuth2Issuer;
@@ -61,7 +65,7 @@ describe('OAuth 2 service', () => {
     // GET
     for (const [path, expectedStatus, query] of getTestCases) {
       await request(customService.requestHandler)
-        .get(path )
+        .get(path)
         .query(query ?? '')
         .expect(expectedStatus);
     }
@@ -89,7 +93,7 @@ describe('OAuth 2 service', () => {
     const { url } = service.issuer;
     expect(url).not.toBeNull();
 
-    expect(res.body).toMatchObject({
+    expect(res.body).toEqual({
       issuer: url,
       token_endpoint: `${url!}/token`,
       authorization_endpoint: `${url!}/authorize`,
@@ -104,6 +108,8 @@ describe('OAuth 2 service', () => {
       revocation_endpoint: `${url!}/revoke`,
       subject_types_supported: ['public'],
       introspection_endpoint: `${url!}/introspect`,
+      code_challenge_methods_supported: ['plain', 'S256'],
+      end_session_endpoint: `${url!}/endsession`,
     });
   });
 
@@ -805,6 +811,188 @@ describe('OAuth 2 service', () => {
       active: true,
       scope: 'dummy',
       username: 'johndoe',
+    });
+  });
+
+  describe('PKCE', () => {
+    it('should grant access in normal PKCE flow with SHA-256 code_verifier', async () => {
+      const verifier = createPKCEVerifier();
+
+      const searchParams = new URLSearchParams({
+        response_type: 'code',
+        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+        code_challenge: await createPKCECodeChallenge(verifier, 'S256'),
+        code_challenge_method: 'S256',
+      });
+
+      const resAuth = await request(service.requestHandler)
+        .get('/authorize')
+        .query(searchParams.toString());
+
+      const res = await tokenRequest(service.requestHandler).send({
+        grant_type: 'authorization_code',
+        code: getCode(resAuth),
+        redirect_uri: 'https://example.com/callback',
+        client_id: 'abcecedf',
+        code_verifier: verifier,
+      });
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('should grant access in normal PKCE flow with plain code_verifier', async () => {
+      const verifier = createPKCEVerifier();
+
+      const searchParams = new URLSearchParams({
+        response_type: 'code',
+        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+        code_challenge: await createPKCECodeChallenge(verifier),
+        code_challenge_method: 'plain',
+      });
+
+      const resAuth = await request(service.requestHandler)
+        .get('/authorize')
+        .query(searchParams.toString());
+
+      const res = await tokenRequest(service.requestHandler).send({
+        grant_type: 'authorization_code',
+        code: getCode(resAuth),
+        redirect_uri: 'https://example.com/callback',
+        client_id: 'abcecedf',
+        code_verifier: verifier,
+      });
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('should revoke on mismatching code_challenge_method', async () => {
+      const verifier = createPKCEVerifier();
+
+      const searchParams = new URLSearchParams({
+        response_type: 'code',
+        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+        code_challenge: await createPKCECodeChallenge(verifier, 'plain'),
+        code_challenge_method: 'S256',
+      });
+
+      const resAuth = await request(service.requestHandler)
+        .get('/authorize')
+        .query(searchParams.toString());
+
+      const res = await tokenRequest(service.requestHandler).send({
+        grant_type: 'authorization_code',
+        code: getCode(resAuth),
+        redirect_uri: 'https://example.com/callback',
+        client_id: 'abcecedf',
+        code_verifier: verifier,
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.body).toMatchInlineSnapshot(`
+        {
+          "error": "invalid_request",
+          "error_description": "code_verifier provided does not match code_challenge",
+        }
+      `);
+    });
+
+    it('should revoke on invalid code_verifier', async () => {
+      const verifier = createPKCEVerifier();
+
+      const searchParams = new URLSearchParams({
+        response_type: 'code',
+        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+        code_challenge: await createPKCECodeChallenge(verifier),
+        code_challenge_method: 'S256',
+      });
+
+      const resAuth = await request(service.requestHandler)
+        .get('/authorize')
+        .query(searchParams.toString());
+
+      const res = await tokenRequest(service.requestHandler).send({
+        grant_type: 'authorization_code',
+        code: getCode(resAuth),
+        redirect_uri: 'https://example.com/callback',
+        client_id: 'abcecedf',
+        code_verifier: 'invalid',
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.body).toMatchInlineSnapshot(`
+        {
+          "error": "invalid_request",
+          "error_description": "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
+        }
+      `);
+    });
+
+    it('should revoke on non-matching challenge', async () => {
+      const searchParams = new URLSearchParams({
+        response_type: 'code',
+        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+      });
+
+      const resAuth = await request(service.requestHandler)
+        .get('/authorize')
+        .query(searchParams.toString());
+
+      const res = await tokenRequest(service.requestHandler).send({
+        grant_type: 'authorization_code',
+        code: getCode(resAuth),
+        redirect_uri: 'https://example.com/callback',
+        client_id: 'abcecedf',
+        code_verifier: createPKCEVerifier(),
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.body).toMatchInlineSnapshot(`
+        {
+          "error": "invalid_request",
+          "error_description": "code_challenge required",
+        }
+      `);
+    });
+
+    it('should revoke on unsupported code_challende_method', async () => {
+      const searchParams = new URLSearchParams({
+        response_type: 'code',
+        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+        code_challenge: await createPKCECodeChallenge(),
+        code_challenge_method: 'invalid'
+      });
+
+      const resAuth = await request(service.requestHandler)
+        .get('/authorize')
+        .query(searchParams.toString());
+
+      expect(resAuth.statusCode).toBe(400);
+      expect(resAuth.body).toMatchInlineSnapshot(`
+        {
+          "error": "invalid_request",
+          "error_description": "Unsupported code_challenge method invalid. The following code_challenge_method are supported: plain, S256",
+        }
+      `);
+
+
+    });
+
+    it('should default to plain code_challenge_method if not provided', async () => {
+      const verifier = createPKCEVerifier();
+
+      const searchParams = new URLSearchParams({
+        response_type: 'code',
+        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+        code_challenge: await createPKCECodeChallenge(verifier, 'plain'),
+      });
+
+      const resAuth = await request(service.requestHandler)
+        .get('/authorize')
+        .query(searchParams.toString());
+
+      const res = await tokenRequest(service.requestHandler).send({
+        grant_type: 'authorization_code',
+        code: getCode(resAuth),
+        redirect_uri: 'https://example.com/callback',
+        client_id: 'abcecedf',
+        code_verifier: verifier,
+      });
+      expect(res.statusCode).toBe(200);
     });
   });
 });

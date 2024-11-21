@@ -45,7 +45,8 @@
     "lint": "eslint --cache --cache-location .cache/ --ext=.ts src test --max-warnings 0",
     "prepack": "yarn build --tsBuildInfoFile null --incremental false",
     "pretest": "yarn lint",
-    "test": "yarn vitest --run  --coverage"
+    "test": "yarn vitest --run  --coverage",
+    "test:watch": "yarn vitest --watch"
   },
   "dependencies": {
     "basic-auth": "^2.0.1",

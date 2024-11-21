@@ -87,6 +87,14 @@ request.get(
 );
 ```
 
+### Supported grant types
+
+- No authentication
+- Client Credentials grant
+- Resource Owner Password Credentials grant
+- Authorization Code grant, with Proof Key for Code Exchange (PKCE) support
+- Refresh token grant
+
 ### Supported JWK formats
 
 | Algorithm         | kty | alg                         |
@@ -220,13 +228,7 @@ Returns the JSON Web Key Set (JWKS) of all the keys configured in the server.
 
 ### POST `/token`
 
-Issues access tokens. Currently, this endpoint is limited to:
-
-- No authentication
-- Client Credentials grant
-- Resource Owner Password Credentials grant
-- Authorization code grant
-- Refresh token grant
+Issues access tokens.
 
 ### GET `/authorize`
 
