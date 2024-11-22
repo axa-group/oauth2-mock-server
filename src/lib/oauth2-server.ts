@@ -20,7 +20,6 @@
 
 import { readFileSync } from 'fs';
 import { AddressInfo } from 'net';
-import { Server } from 'http';
 
 import { HttpServer } from './http-server';
 import { OAuth2Issuer } from './oauth2-issuer';
@@ -106,7 +105,7 @@ export class OAuth2Server extends HttpServer {
    * @param {string} [host] Host name.
    * @returns {Promise<void>} A promise that resolves when the server has been started.
    */
-  override async start(port?: number, host?: string): Promise<Server> {
+  override async start(port?: number, host?: string): Promise<void> {
     const server = await super.start(port, host);
 
     if (!this.issuer.url) {
