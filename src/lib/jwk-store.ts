@@ -18,18 +18,14 @@
  * @module lib/jwk-store
  */
 
-import { KeyObject, randomBytes } from 'crypto';
+import { KeyObject, randomBytes } from 'node:crypto';
+import { AssertionError } from 'node:assert';
 
-import {
-  exportJWK,
-  importJWK,
-  generateKeyPair,
-  GenerateKeyPairOptions,
-} from 'jose';
+import type { GenerateKeyPairOptions } from 'jose';
+import { exportJWK, importJWK, generateKeyPair } from 'jose';
 
-import { JWK } from './types';
-import { JWKWithKid } from './types-internals';
-import { AssertionError } from 'assert';
+import type { JWK } from './types';
+import type { JWKWithKid } from './types-internals';
 import { assertIsPlainObject } from './helpers';
 
 const generateRandomKid = () => {

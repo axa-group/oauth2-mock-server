@@ -27,10 +27,25 @@
     "curly": "warn",
     "eqeqeq": "warn",
     "semi": "warn",
+    "@typescript-eslint/consistent-type-imports": "warn",
     "jsdoc/require-jsdoc": [
       "warn",
       {
         "publicOnly": true
+      }
+    ],
+    "import/order": [
+      "error",
+      {
+        "groups": [
+          "builtin",
+          "external",
+          "internal",
+          "parent",
+          "sibling",
+          "index"
+        ],
+        "newlines-between": "always"
       }
     ],
     "import/no-unresolved": [

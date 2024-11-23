@@ -18,15 +18,15 @@
  * @module lib/oauth2-server
  */
 
-import { readFileSync } from 'fs';
-import { AddressInfo } from 'net';
-import { Server } from 'http';
+import { readFileSync } from 'node:fs';
+import type { AddressInfo } from 'node:net';
+import type { Server } from 'node:http';
 
 import { HttpServer } from './http-server';
 import { OAuth2Issuer } from './oauth2-issuer';
 import { OAuth2Service } from './oauth2-service';
 import { assertIsAddressInfo } from './helpers';
-import { HttpServerOptions, OAuth2Options } from './types';
+import type { HttpServerOptions, OAuth2Options } from './types';
 
 /**
  * Represents an OAuth2 HTTP server.

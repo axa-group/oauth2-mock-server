@@ -15,12 +15,13 @@
  * limitations under the License.
  */
 
-import { writeFile } from 'fs/promises';
-import path from 'path';
+import { writeFile } from 'node:fs/promises';
+import path from 'node:path';
 
-import { OAuth2Server } from './index';
 import { assertIsString, readJsonFromFile, shift } from './lib/helpers';
 import type { JWK, Options } from './lib/types';
+
+import { OAuth2Server } from './index';
 
 /* eslint no-console: off */
 

@@ -1,4 +1,4 @@
-import { JWK as JoseJWK } from 'jose';
+import type { JWK as JoseJWK } from 'jose';
 
 export interface JWKWithKid extends JoseJWK {
   kid: string;

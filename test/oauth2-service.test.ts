@@ -1,18 +1,19 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import request from 'supertest';
 import { IncomingMessage, type RequestListener } from 'http';
 import qs from 'querystring';
 
+import { describe, it, expect, beforeAll } from 'vitest';
+import request from 'supertest';
+
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import { OAuth2Service } from '../src/lib/oauth2-service';
-import { MutableRedirectUri } from '../src/lib/types';
-
-import * as testKeys from './keys';
-import { verifyTokenWithKey } from './lib/test_helpers';
+import type { MutableRedirectUri } from '../src/lib/types';
 import {
   createPKCECodeChallenge,
   createPKCEVerifier,
 } from '../src/lib/helpers';
+
+import * as testKeys from './keys';
+import { verifyTokenWithKey } from './lib/test_helpers';
 
 describe('OAuth 2 service', () => {
   let issuer: OAuth2Issuer;

@@ -18,15 +18,17 @@
  * @module lib/oauth2-service
  */
 
-import { IncomingMessage, type RequestListener } from 'http';
-import { URL } from 'url';
+import type { IncomingMessage, RequestListener } from 'node:http';
+import { URL } from 'node:url';
+import { randomUUID } from 'node:crypto';
+import { EventEmitter } from 'node:events';
+import { AssertionError } from 'node:assert';
+
 import express, { type RequestHandler } from 'express';
 import cors from 'cors';
 import basicAuth from 'basic-auth';
-import { EventEmitter } from 'events';
-import { randomUUID } from 'crypto';
 
-import { OAuth2Issuer } from './oauth2-issuer';
+import type { OAuth2Issuer } from './oauth2-issuer';
 import {
   assertIsString,
   assertIsStringOrUndefined,
@@ -50,7 +52,6 @@ import type {
 } from './types';
 import { Events } from './types';
 import { InternalEvents } from './types-internals';
-import { AssertionError } from 'assert';
 
 const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
   wellKnownDocument: '/.well-known/openid-configuration',
