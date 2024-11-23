@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 
 import { JWKStore } from '../src/lib/jwk-store';
+
 import * as testKeys from './keys';
 
 describe('JWK Store', () => {

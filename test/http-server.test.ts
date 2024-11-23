@@ -1,6 +1,7 @@
-import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'fs';
-import { RequestListener } from 'http';
+import type { RequestListener } from 'http';
+
+import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 
 import { HttpServer } from '../src/lib/http-server';

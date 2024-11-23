@@ -15,14 +15,14 @@
 
 /* eslint-disable jsdoc/require-jsdoc */
 
-import { AssertionError } from 'assert';
-import type { AddressInfo } from 'net';
-import { readFileSync } from 'fs';
+import { AssertionError } from 'node:assert';
+import type { AddressInfo } from 'node:net';
+import { readFileSync } from 'node:fs';
+import { webcrypto as crypto } from 'node:crypto';
 
 import { isPlainObject } from 'is-plain-object';
 
 import type { CodeChallenge, PKCEAlgorithm, TokenRequest } from './types';
-import { webcrypto as crypto } from 'crypto';
 
 export const defaultTokenTtl = 3600;
 

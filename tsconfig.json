@@ -28,6 +28,7 @@
     "noUncheckedIndexedAccess": true,
     "outDir": "./dist",
     "declaration": true,
-    "removeComments": true
+    "removeComments": true,
+    "skipLibCheck": true
   }
 }

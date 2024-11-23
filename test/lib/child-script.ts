@@ -1,5 +1,6 @@
 import util from 'util';
-import { OAuth2Server } from '../../src';
+
+import type { OAuth2Server } from '../../src';
 
 interface Output {
   result: OAuth2Server | null;

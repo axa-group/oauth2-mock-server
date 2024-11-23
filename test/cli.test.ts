@@ -1,5 +1,6 @@
-import { afterEach, describe, it, expect, vi } from 'vitest';
 import { writeFile } from 'fs/promises';
+
+import { afterEach, describe, it, expect, vi } from 'vitest';
 
 import { exec } from './lib/child-script';
 

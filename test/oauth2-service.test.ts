@@ -1,18 +1,19 @@
-import { describe, it, expect, beforeAll } from 'vitest';
-import request from 'supertest';
 import { IncomingMessage, type RequestListener } from 'http';
 import qs from 'querystring';
 
+import { describe, it, expect, beforeAll } from 'vitest';
+import request from 'supertest';
+
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
 import { OAuth2Service } from '../src/lib/oauth2-service';
-import { MutableRedirectUri } from '../src/lib/types';
-
-import * as testKeys from './keys';
-import { verifyTokenWithKey } from './lib/test_helpers';
+import type { MutableRedirectUri } from '../src/lib/types';
 import {
   createPKCECodeChallenge,
   createPKCEVerifier,
 } from '../src/lib/helpers';
+
+import * as testKeys from './keys';
+import { verifyTokenWithKey } from './lib/test_helpers';
 
 describe('OAuth 2 service', () => {
   let issuer: OAuth2Issuer;
@@ -759,7 +760,7 @@ describe('OAuth 2 service', () => {
       .redirects(0)
       .expect(302);
 
-    expect(res.headers.location).toBe(postLogoutRedirectUri);
+    expect(res.headers['location']).toBe(postLogoutRedirectUri);
   });
 
   it('should be able to manipulate url and query params when redirecting within post_logout_redirect_uri', async () => {
@@ -779,7 +780,7 @@ describe('OAuth 2 service', () => {
       .redirects(0)
       .expect(302);
 
-    expect(res.headers.location).toBe('http://post-logout.com/signin?param=test');
+    expect(res.headers['location']).toBe('http://post-logout.com/signin?param=test');
   });
 
   it('should expose a token introspection endpoint that returns information about a token', async () => {
@@ -1001,7 +1002,7 @@ function getCode(response: request.Response) {
   expect(response).toMatchObject({
     header: { location: expect.any(String) },
   });
-  const parsed = response as { header: { location: string } };
+  const parsed = response as unknown as { header: { location: string } };
   const url = new URL(parsed.header.location);
   return url.searchParams.get('code');
 }

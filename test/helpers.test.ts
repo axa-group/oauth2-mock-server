@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
 import type { AddressInfo } from 'net';
+
+import { describe, expect, it } from 'vitest';
 
 import {
   assertIsAddressInfo,
@@ -13,7 +14,7 @@ import {
   pkceVerifierMatchesChallenge,
   shift,
 } from '../src/lib/helpers';
-import { CodeChallenge, PKCEAlgorithm } from '../src';
+import type { CodeChallenge, PKCEAlgorithm } from '../src';
 
 describe('helpers', () => {
   describe('assertIsString', () => {

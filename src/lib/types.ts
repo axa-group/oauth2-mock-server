@@ -1,6 +1,7 @@
-import { ServerOptions } from 'https';
-import { JWKWithKid } from './types-internals';
-import { supportedPkceAlgorithms } from './helpers';
+import type { ServerOptions } from 'node:https';
+
+import type { JWKWithKid } from './types-internals';
+import type { supportedPkceAlgorithms } from './helpers';
 
 export interface TokenRequest {
   scope?: string;
