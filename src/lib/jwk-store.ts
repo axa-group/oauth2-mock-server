@@ -30,6 +30,7 @@ import {
 import { JWK } from './types';
 import { JWKWithKid } from './types-internals';
 import { AssertionError } from 'assert';
+import { assertIsPlainObject } from './helpers';
 
 const generateRandomKid = () => {
   return randomBytes(40).toString('hex');
@@ -90,9 +91,11 @@ const privateToPublicTransformerMap: Record<string, JwkTransformer> = {
 const supportedAlgs = Object.keys(privateToPublicTransformerMap);
 
 function normalizeKeyKid(
-  jwk: Record<string, unknown>,
+  jwk: unknown,
   opts?: { kid?: string },
 ): asserts jwk is JWKWithKid {
+  assertIsPlainObject(jwk, 'Invalid jwk format');
+
   if (jwk['kid'] !== undefined) {
     return;
   }

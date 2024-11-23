@@ -43,7 +43,9 @@ export class OAuth2Server extends HttpServer {
    */
   constructor(key?: string, cert?: string, oauth2Options?: OAuth2Options) {
     if ((key && !cert) || (!key && cert)) {
-      throw 'Both key and cert need to be supplied to start the server with https';
+      throw new Error(
+        'Both key and cert need to be supplied to start the server with https',
+      );
     }
 
     const iss = new OAuth2Issuer();

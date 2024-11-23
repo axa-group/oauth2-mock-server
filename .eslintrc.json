@@ -6,7 +6,12 @@
     "sourceType": "module",
     "project": "./tsconfig.json"
   },
-  "plugins": ["@typescript-eslint", "import", "vitest", "jsdoc"],
+  "plugins": [
+    "@typescript-eslint",
+    "import",
+    "@vitest",
+    "jsdoc"
+  ],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
@@ -15,7 +20,7 @@
     "plugin:import/warnings",
     "plugin:import/typescript",
     "plugin:jsdoc/recommended",
-    "plugin:vitest/recommended",
+    "plugin:@vitest/legacy-recommended",
     "plugin:prettier/recommended"
   ],
   "rules": {
