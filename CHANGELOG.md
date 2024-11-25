@@ -4,11 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## [7.2.0](https://github.com/axa-group/oauth2-mock-server/compare/v7.1.2...v7.2.0) — 2024-11-25
 
 ### Added
 
 - Include scope in token for authorization_code and refresh_token grants (by [PetrasJaug](https://github.com/PetrasJaug))
+- Add PKCE support (by [tanettrimas](https://github.com/tanettrimas))
 
 ### Changed
 
