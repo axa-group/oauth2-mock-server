@@ -1,7 +1,9 @@
 import { AssertionError } from "assert";
-import { importJWK, jwtVerify,JWTVerifyResult } from "jose";
 
-import { OAuth2Issuer } from "../../src/lib/oauth2-issuer";
+import type {JWTVerifyResult } from "jose";
+import { importJWK, jwtVerify } from "jose";
+
+import type { OAuth2Issuer } from "../../src/lib/oauth2-issuer";
 
 export const verifyTokenWithKey = async (issuer: OAuth2Issuer, token: string, kid: string): Promise<JWTVerifyResult> => {
   const key = issuer.keys.get(kid);

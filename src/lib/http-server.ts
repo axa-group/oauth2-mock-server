@@ -18,13 +18,15 @@
  * @module lib/http-server
  */
 
-import { Server, RequestListener, createServer } from 'http';
-import { createServer as createHttpsServer } from 'https';
-import { AddressInfo, isIP } from 'net';
-import { URL } from 'url';
+import type { Server, RequestListener } from 'node:http';
+import { createServer } from 'node:http';
+import { createServer as createHttpsServer } from 'node:https';
+import type { AddressInfo } from 'node:net';
+import { isIP } from 'node:net';
+import { URL } from 'node:url';
 
 import { assertIsAddressInfo } from './helpers';
-import { HttpServerOptions } from './types';
+import type { HttpServerOptions } from './types';
 
 /**
  * Provides a restartable wrapper for http.CreateServer().
