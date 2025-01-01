@@ -51,7 +51,7 @@
   "dependencies": {
     "basic-auth": "^2.0.1",
     "cors": "^2.8.5",
-    "express": "^4.21.1",
+    "express": "^4.21.2",
     "is-plain-object": "^5.0.0",
     "jose": "^5.9.6"
   },
