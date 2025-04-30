@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [7.2.1](https://github.com/axa-group/oauth2-mock-server/compare/v7.2.0...v7.2.1) — 2025-04-30
+
+### Fixed
+
+- Fix paths of well known endpoints when issuer ends with a forward slash (reported in [#331](https://github.com/axa-group/oauth2-mock-server/issues/331) by [kikisaeba](https://github.com/kikisaeba))
+
+### Changed
+
+- Update dependencies
+
 ## [7.2.0](https://github.com/axa-group/oauth2-mock-server/compare/v7.1.2...v7.2.0) — 2024-11-25
 
 ### Added
