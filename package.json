@@ -8,11 +8,14 @@
     "oauth2",
     "oauth 2",
     "mock",
+    "fake",
+    "stub",
     "server",
     "cli",
     "jwt",
     "oidc",
-    "openid connect"
+    "openid",
+    "connect"
   ],
   "author": {
     "name": "Jorge Poveda",
