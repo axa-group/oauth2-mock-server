@@ -15,13 +15,18 @@ import {
 import * as testKeys from './keys';
 import { verifyTokenWithKey } from './lib/test_helpers';
 
-describe('OAuth 2 service', () => {
+describe.each([
+  'https://issuer.example.com',
+   'https://issuer.example.com/'
+  ])
+  ('OAuth 2 service with issuer %s', (issuerUrl: string) => {
+
   let issuer: OAuth2Issuer;
   let service: OAuth2Service;
 
   beforeAll(async () => {
     issuer = new OAuth2Issuer();
-    issuer.url = 'https://issuer.example.com';
+    issuer.url = issuerUrl;
     await issuer.keys.add(testKeys.getParsed('test-rs256-key.json'));
 
     service = new OAuth2Service(issuer);
@@ -42,15 +47,17 @@ describe('OAuth 2 service', () => {
     const res = await request(customService.requestHandler)
       .get('/custom-well-known')
       .expect(200);
-    const { url } = customService.issuer;
+
+    const endpointsPrefix = wellKnownEndpointsPrefixFrom(customService.issuer);
+
     expect(res.body).toMatchObject({
-      jwks_uri: `${url!}/custom-jwks`,
-      token_endpoint: `${url!}/custom-token`,
-      authorization_endpoint: `${url!}/custom-authorize`,
-      userinfo_endpoint: `${url!}/custom-userinfo`,
-      revocation_endpoint: `${url!}/revoke`,
-      end_session_endpoint: `${url!}/endsession`,
-      introspection_endpoint: `${url!}/custom-introspect`,
+      jwks_uri: `${endpointsPrefix}/custom-jwks`,
+      token_endpoint: `${endpointsPrefix}/custom-token`,
+      authorization_endpoint: `${endpointsPrefix}/custom-authorize`,
+      userinfo_endpoint: `${endpointsPrefix}/custom-userinfo`,
+      revocation_endpoint: `${endpointsPrefix}/revoke`,
+      end_session_endpoint: `${endpointsPrefix}/endsession`,
+      introspection_endpoint: `${endpointsPrefix}/custom-introspect`,
     });
 
     const getTestCases: [string, number, string?][] = [
@@ -86,32 +93,40 @@ describe('OAuth 2 service', () => {
     }
   });
 
+  const wellKnownEndpointsPrefixFrom = (issuer: OAuth2Issuer) => {
+    const { url } = issuer;
+    expect(url).not.toBeNull();
+
+    return url!.endsWith('/') ? url!.slice(0, -1) : url;
+  };
+
   it('should expose an OpenID configuration endpoint', async () => {
     const res = await request(service.requestHandler)
       .get('/.well-known/openid-configuration')
       .expect(200);
 
-    const { url } = service.issuer;
-    expect(url).not.toBeNull();
+    const endpointsPrefix = wellKnownEndpointsPrefixFrom(service.issuer);
 
     expect(res.body).toEqual({
-      issuer: url,
-      token_endpoint: `${url!}/token`,
-      authorization_endpoint: `${url!}/authorize`,
-      userinfo_endpoint: `${url!}/userinfo`,
+      issuer: service.issuer.url,
+      token_endpoint: `${endpointsPrefix}/token`,
+      authorization_endpoint: `${endpointsPrefix}/authorize`,
+      userinfo_endpoint: `${endpointsPrefix}/userinfo`,
       token_endpoint_auth_methods_supported: ['none'],
-      jwks_uri: `${url!}/jwks`,
+      jwks_uri: `${endpointsPrefix}/jwks`,
       response_types_supported: ['code'],
       grant_types_supported: ['client_credentials', 'authorization_code', 'password'],
       token_endpoint_auth_signing_alg_values_supported: ['RS256'],
       response_modes_supported: ['query'],
       id_token_signing_alg_values_supported: ['RS256'],
-      revocation_endpoint: `${url!}/revoke`,
+      revocation_endpoint: `${endpointsPrefix}/revoke`,
       subject_types_supported: ['public'],
-      introspection_endpoint: `${url!}/introspect`,
+      introspection_endpoint: `${endpointsPrefix}/introspect`,
       code_challenge_methods_supported: ['plain', 'S256'],
-      end_session_endpoint: `${url!}/endsession`,
+      end_session_endpoint: `${endpointsPrefix}/endsession`,
     });
+
+    expect(JSON.stringify(res.body)).not.toMatch(/(?<!https:|http:)\/\//);
   });
 
   it('should expose an JWKS endpoint', async () => {
