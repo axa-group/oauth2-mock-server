@@ -192,10 +192,7 @@ export class OAuth2Service extends EventEmitter {
     try {
       const tokenTtl = defaultTokenTtl;
 
-      res.set({
-        'Cache-Control': 'no-store',
-        Pragma: 'no-cache',
-      });
+      res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
 
       let xfn: ScopesOrTransform | undefined;
 
@@ -207,9 +204,7 @@ export class OAuth2Service extends EventEmitter {
           const verifier = req.body['code_verifier'];
           const savedCodeChallenge = this.#codeChallenges.get(code);
           if (savedCodeChallenge === undefined) {
-            throw new AssertionError({
-              message: 'code_challenge required',
-            });
+            throw new AssertionError({ message: 'code_challenge required' });
           }
           this.#codeChallenges.delete(code);
           if (!isValidPkceCodeVerifier(verifier)) {
@@ -256,27 +251,17 @@ export class OAuth2Service extends EventEmitter {
         case 'authorization_code':
           scope = scope ?? 'dummy';
           xfn = (_header, payload) => {
-            Object.assign(payload, {
-              sub: 'johndoe',
-              amr: ['pwd'],
-              scope,
-            });
+            Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
           };
           break;
         case 'refresh_token':
           scope = scope ?? 'dummy';
           xfn = (_header, payload) => {
-            Object.assign(payload, {
-              sub: 'johndoe',
-              amr: ['pwd'],
-              scope,
-            });
+            Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
           };
           break;
         default:
-          return res.status(400).json({
-            error: 'invalid_grant',
-          });
+          return res.status(400).json({ error: 'invalid_grant' });
       }
 
       const token = await this.buildToken(req, tokenTtl, xfn);
@@ -292,14 +277,9 @@ export class OAuth2Service extends EventEmitter {
         const clientId = credentials ? credentials.name : req.body.client_id;
 
         const xfn: JwtTransform = (_header, payload) => {
-          Object.assign(payload, {
-            sub: 'johndoe',
-            aud: clientId,
-          });
+          Object.assign(payload, { sub: 'johndoe', aud: clientId });
           if (reqBody.code !== undefined && this.#nonce[reqBody.code]) {
-            Object.assign(payload, {
-              nonce: this.#nonce[reqBody.code],
-            });
+            Object.assign(payload, { nonce: this.#nonce[reqBody.code] });
             delete this.#nonce[reqBody.code];
           }
         };
@@ -308,10 +288,7 @@ export class OAuth2Service extends EventEmitter {
         body['refresh_token'] = randomUUID();
       }
 
-      const tokenEndpointResponse: MutableResponse = {
-        body,
-        statusCode: 200,
-      };
+      const tokenEndpointResponse: MutableResponse = { body, statusCode: 200 };
 
       /**
        * Before token response event.
@@ -417,9 +394,7 @@ export class OAuth2Service extends EventEmitter {
 
   private userInfoHandler: RequestHandler = (req, res) => {
     const userInfoResponse: MutableResponse = {
-      body: {
-        sub: 'johndoe',
-      },
+      body: { sub: 'johndoe' },
       statusCode: 200,
     };
 
@@ -435,9 +410,7 @@ export class OAuth2Service extends EventEmitter {
   };
 
   private revokeHandler: RequestHandler = (req, res) => {
-    const revokeResponse: StatusCodeMutableResponse = {
-      statusCode: 200,
-    };
+    const revokeResponse: StatusCodeMutableResponse = { statusCode: 200 };
 
     /**
      * Before revoke event.
@@ -473,9 +446,7 @@ export class OAuth2Service extends EventEmitter {
 
   private introspectHandler: RequestHandler = (req, res) => {
     const introspectResponse: MutableResponse = {
-      body: {
-        active: true,
-      },
+      body: { active: true },
       statusCode: 200,
     };
 
