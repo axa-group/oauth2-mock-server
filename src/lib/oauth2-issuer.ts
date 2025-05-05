@@ -33,7 +33,6 @@ import { InternalEvents } from './types-internals';
 export class OAuth2Issuer extends EventEmitter {
   /**
    * Sets or returns the issuer URL.
-   * @type {string}
    */
   url: string | undefined;
 
@@ -51,7 +50,7 @@ export class OAuth2Issuer extends EventEmitter {
 
   /**
    * Returns the key store.
-   * @type {JWKStore}
+   * @returns The key store.
    */
   get keys(): JWKStore {
     return this.#keys;
@@ -59,8 +58,8 @@ export class OAuth2Issuer extends EventEmitter {
 
   /**
    * Builds a JWT.
-   * @param {TokenBuildOptions} [opts] JWT token building overrides
-   * @returns {Promise<string>} The produced JWT.
+   * @param opts JWT token building overrides
+   * @returns The produced JWT.
    * @fires OAuth2Issuer#beforeSigning
    */
   async buildToken(opts?: TokenBuildOptions): Promise<string> {

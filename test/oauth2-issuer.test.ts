@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
 import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
-import type { JwtTransform } from '../src/lib/types';
+import type { JwtTransform, MutableToken } from '../src/lib/types';
 
 import * as testKeys from './keys';
 import { verifyTokenWithKey } from './lib/test_helpers';
@@ -94,9 +94,9 @@ describe('OAuth 2 issuer', () => {
   });
 
   it('should be able to modify the header and the payload through a beforeSigning event', async () => {
-    issuer.once('beforeSigning', (token) => {
-      token.header.x5t = 'a-new-value';
-      token.payload.sub = 'the-subject';
+    issuer.once('beforeSigning', (token: MutableToken) => {
+      token.header['x5t'] = 'a-new-value';
+      token.payload['sub'] = 'the-subject';
     });
 
     const token = await issuer.buildToken({ kid: 'test-rs256-key' });

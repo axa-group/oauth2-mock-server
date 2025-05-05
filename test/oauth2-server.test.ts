@@ -9,7 +9,7 @@ describe('OAuth 2 Server', () => {
 
     await expect(server.start()).resolves.not.toThrow();
 
-    const host = `http://127.0.0.1:${server.address().port}`;
+    const host = `http://127.0.0.1:${server.address().port.toString()}`;
     await request(host).get('/').expect(404);
 
     await expect(server.stop()).resolves.not.toThrow();
@@ -21,7 +21,7 @@ describe('OAuth 2 Server', () => {
     expect(server.issuer.url).toBeUndefined();
 
     await server.start(undefined, 'localhost');
-    expect(server.issuer.url).toBe(`http://localhost:${server.address().port}`);
+    expect(server.issuer.url).toBe(`http://localhost:${server.address().port.toString()}`);
 
     await expect(server.stop()).resolves.toBeUndefined();
   });
@@ -47,7 +47,7 @@ describe('OAuth 2 Server', () => {
 
     await expect(server.start()).resolves.not.toThrow();
 
-    const host = `http://127.0.0.1:${server.address().port}`;
+    const host = `http://127.0.0.1:${server.address().port.toString()}`;
     const res = await request(host)
       .post('/token')
       .set('Content-Type', 'multipart/form-data;');
@@ -63,7 +63,7 @@ describe('OAuth 2 Server', () => {
 
     await expect(server.start()).resolves.not.toThrow();
 
-    const host = `http://127.0.0.1:${server.address().port}`;
+    const host = `http://127.0.0.1:${server.address().port.toString()}`;
     await request(host)
       .get('/custom-jwks')
       .expect(200);

@@ -25,11 +25,11 @@ describe('helpers', () => {
       {},
       []
     ])('throws on wrong types (%s)', (input) => {
-      expect(() => assertIsString(input, "boom")).toThrow();
+      expect(() => { assertIsString(input, "boom"); }).toThrow();
     });
 
     it('does not throw on strings', () => {
-      expect(() => assertIsString("good", "will not throw")).not.toThrow();
+      expect(() => { assertIsString("good", "will not throw"); }).not.toThrow();
     });
   });
 
@@ -41,15 +41,15 @@ describe('helpers', () => {
       {},
       []
     ])('throws on wrong types (%s)', (input) => {
-      expect(() => assertIsStringOrUndefined(input, "boom")).toThrow();
+      expect(() => { assertIsStringOrUndefined(input, "boom"); }).toThrow();
     });
 
     it('does not throw on strings', () => {
-      expect(() => assertIsStringOrUndefined("good", "will not throw")).not.toThrow();
+      expect(() => { assertIsStringOrUndefined("good", "will not throw"); }).not.toThrow();
     });
 
     it('does not throw on undefined', () => {
-      expect(() => assertIsStringOrUndefined(undefined, "will not throw")).not.toThrow();
+      expect(() => { assertIsStringOrUndefined(undefined, "will not throw"); }).not.toThrow();
     });
   });
 
@@ -58,7 +58,7 @@ describe('helpers', () => {
       "nope",
       null,
     ])('throws on wrong values (%s)', (input) => {
-      expect(() => assertIsAddressInfo(input)).toThrow();
+      expect(() => { assertIsAddressInfo(input); }).toThrow();
     });
 
     it('does not throw on valid input', () => {
@@ -67,7 +67,7 @@ describe('helpers', () => {
         family: "We are family!",
         port: 42
       };
-      expect(() => assertIsAddressInfo(input)).not.toThrow();
+      expect(() => { assertIsAddressInfo(input); }).not.toThrow();
     });
   });
 
@@ -79,14 +79,14 @@ describe('helpers', () => {
       false,
       []
     ])('throws on wrong values (%s)', (input) => {
-      expect(() => assertIsPlainObject(input, "boom")).toThrow();
+      expect(() => { assertIsPlainObject(input, "boom"); }).toThrow();
     });
 
     it.each([
       {},
       { a: 1 },
     ])('does not throw on valid input (%s)', (input) => {
-      expect(() => assertIsPlainObject(input, "boom")).not.toThrow();
+      expect(() => { assertIsPlainObject(input, "boom"); }).not.toThrow();
     });
   });
 
@@ -105,7 +105,7 @@ describe('helpers', () => {
       { grant_type: "g", scope: "1", code: "c", aud: 1 },
       { grant_type: "g", scope: "1", code: "c", aud: [1] },
     ])('throws on wrong values (%s)', (input) => {
-      expect(() => assertIsValidTokenRequest(input)).toThrow();
+      expect(() => { assertIsValidTokenRequest(input); }).toThrow();
     });
 
     it.each([
@@ -116,7 +116,7 @@ describe('helpers', () => {
       { grant_type: "g", scope: "s", code: "c", aud: "a" },
       { grant_type: "g", scope: "s", code: "c", aud: ["a", "b"] },
     ])('does not throw on valid input (%s)', (input) => {
-      expect(() => assertIsValidTokenRequest(input)).not.toThrow();
+      expect(() => { assertIsValidTokenRequest(input); }).not.toThrow();
     });
   });
 

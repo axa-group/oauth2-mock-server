@@ -90,7 +90,9 @@ export function assertIsValidTokenRequest(
   if ('aud' in body) {
     const aud = body['aud'];
     if (Array.isArray(aud)) {
-      aud.forEach((a) => assertIsString(a, "Invalid 'aud' type"));
+      aud.forEach((a) => {
+        assertIsString(a, "Invalid 'aud' type");
+      });
     } else {
       assertIsString(aud, "Invalid 'aud' type");
     }

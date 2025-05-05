@@ -57,9 +57,7 @@ export interface MutableResponse extends StatusCodeMutableResponse {
 
 export type ScopesOrTransform = string | string[] | JwtTransform;
 
-export interface JwtTransform {
-  (header: Header, payload: Payload): void;
-}
+export type JwtTransform = (header: Header, payload: Payload) => void;
 
 export enum Events {
   BeforeTokenSigning = 'beforeTokenSigning',

@@ -12,7 +12,7 @@ describe('HTTP Server', () => {
 
     await expect(server.start()).resolves.not.toThrow();
 
-    const host = `http://127.0.0.1:${server.address().port}`;
+    const host = `http://127.0.0.1:${server.address().port.toString()}`;
     const res = await request(host).get('/').expect(200);
 
     expect(res.body).toEqual({
@@ -43,7 +43,7 @@ describe('HTTP Server', () => {
 
     expect(server.listening).toBe(true);
 
-    const host = `https://127.0.0.1:${server.address().port}`;
+    const host = `https://127.0.0.1:${server.address().port.toString()}`;
     const res = await request(host).get('/').trustLocalhost(true).expect(200);
 
     expect(res.body).toEqual({
