@@ -137,7 +137,7 @@ export class OAuth2Service extends EventEmitter {
   private buildRequestHandler = (): RequestListener => {
     const app = express();
     app.disable('x-powered-by');
-    app.use(json());
+    app.use(json({ strict: true }));
     app.use(cors());
     app.get(this.#endpoints.wellKnownDocument, this.openidConfigurationHandler);
     app.get(this.#endpoints.jwks, this.jwksHandler);
@@ -152,7 +152,7 @@ export class OAuth2Service extends EventEmitter {
     app.get(this.#endpoints.endSession, this.endSessionHandler);
     app.post(this.#endpoints.introspect, this.introspectHandler);
 
-    return app;
+    return app as RequestListener;
   };
 
   private openidConfigurationHandler: RequestHandler = (_req, res) => {

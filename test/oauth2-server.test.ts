@@ -52,7 +52,7 @@ describe('OAuth 2 Server', () => {
       .post('/token')
       .set('Content-Type', 'multipart/form-data;');
 
-    expect(res.text).toContain("[ERR_ASSERTION]: Invalid &#39;grant_type&#39; type");
+    expect(res.text).toContain("[ERR_ASSERTION]: Invalid token request body");
 
     await expect(server.stop()).resolves.not.toThrow();
   });
