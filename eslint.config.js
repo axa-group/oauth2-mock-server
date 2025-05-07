@@ -3,7 +3,7 @@ import jsdoc from 'eslint-plugin-jsdoc';
 import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
 import eslintPluginPrettierRecommendedConfig from 'eslint-plugin-prettier/recommended';
-import importPlugin from 'eslint-plugin-import';
+import importPlugin from 'eslint-plugin-import-x';
 import vitest from '@vitest/eslint-plugin';
 
 export default tseslint.config(
@@ -18,8 +18,7 @@ export default tseslint.config(
   {
     languageOptions: {
       parserOptions: {
-        projectService: true,
-        tsconfigRootDir: import.meta.dirname,
+        project: './tsconfig.eslint.json',
       },
     },
   },
@@ -38,19 +37,19 @@ export default tseslint.config(
           publicOnly: true,
         },
       ],
-      "import/order": [
-        "error",
+      'import-x/order': [
+        'error',
         {
-          "groups": [
-            "builtin",
-            "external",
-            "internal",
-            "parent",
-            "sibling",
-            "index"
+          groups: [
+            'builtin',
+            'external',
+            'internal',
+            'parent',
+            'sibling',
+            'index',
           ],
-          "newlines-between": "always"
-        }
+          'newlines-between': 'always',
+        },
       ],
     },
   },

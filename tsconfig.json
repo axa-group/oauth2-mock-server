@@ -1,18 +1,16 @@
 {
   "include": [
-    "src",
-    "test"
+    "src/",
+    "rollup.config.ts"
   ],
   "compilerOptions": {
-    /* Visit https://aka.ms/tsconfig.json to read more about this file */
-    "incremental": true /* Enable incremental compilation */,
-    "target": "es2022" /* Minimum supported Node version is ^18 => cf. https://stackoverflow.com/a/72380008/335418 */,
-    "module": "commonjs" /* Specify module code generation: 'none', 'commonjs', 'amd', 'system', 'umd', 'es2015', 'es2020', or 'ESNext'. */,
+    /* https://www.npmjs.com/package/@tsconfig/node20 */
+    "target": "ES2022",
+    "module": "preserve",
+    "moduleResolution": "bundler",
     "lib": [
-      "ES2022",
-      "DOM"
-    ] /* Minimum supported Node version is ^18 => cf. https://stackoverflow.com/a/72380008/335418 */,
-    "tsBuildInfoFile": ".cache/.tsbuildinfo",
+      "ES2023"
+    ],
     "strict": true /* Enable all strict type-checking options. */,
     "noUnusedLocals": true /* Report errors on unused locals. */,
     "noUnusedParameters": true /* Report errors on unused parameters. */,
@@ -26,9 +24,7 @@
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": true,
-    "outDir": "./dist",
-    "declaration": true,
     "removeComments": true,
     "skipLibCheck": true
-  }
+  },
 }

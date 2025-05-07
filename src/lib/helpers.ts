@@ -20,7 +20,7 @@ import type { AddressInfo } from 'node:net';
 import { readFileSync } from 'node:fs';
 import { webcrypto as crypto } from 'node:crypto';
 
-import { isPlainObject } from 'is-plain-object';
+import isPlainObject from 'is-plain-obj';
 
 import type { CodeChallenge, PKCEAlgorithm, TokenRequest } from './types';
 
