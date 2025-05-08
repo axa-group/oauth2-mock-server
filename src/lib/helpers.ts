@@ -22,7 +22,7 @@ import { webcrypto as crypto } from 'node:crypto';
 
 import isPlainObject from 'is-plain-obj';
 
-import type { CodeChallenge, PKCEAlgorithm, TokenRequest } from './types';
+import type { CodeChallenge, JWK, PKCEAlgorithm, TokenRequest } from './types';
 
 export const defaultTokenTtl = 3600;
 
@@ -161,4 +161,67 @@ export const createPKCECodeChallenge = async (
       throw new Error(`Unsupported PKCE method ("${algorithm as string}")`);
   }
   return challenge;
+};
+
+type JwkTransformer = (jwk: JWK) => JWK;
+
+const RsaPrivateFieldsRemover: JwkTransformer = (jwk) => {
+  const x = { ...jwk };
+
+  delete x.d;
+  delete x.p;
+  delete x.q;
+  delete x.dp;
+  delete x.dq;
+  delete x.qi;
+
+  return x;
+};
+
+const EcdsaPrivateFieldsRemover: JwkTransformer = (jwk) => {
+  const x = { ...jwk };
+
+  delete x.d;
+
+  return x;
+};
+
+const EddsaPrivateFieldsRemover: JwkTransformer = (jwk) => {
+  const x = { ...jwk };
+
+  delete x.d;
+
+  return x;
+};
+
+const privateToPublicTransformerMap: Record<string, JwkTransformer> = {
+  // RSASSA-PKCS1-v1_5
+  RS256: RsaPrivateFieldsRemover,
+  RS384: RsaPrivateFieldsRemover,
+  RS512: RsaPrivateFieldsRemover,
+
+  // RSASSA-PSS
+  PS256: RsaPrivateFieldsRemover,
+  PS384: RsaPrivateFieldsRemover,
+  PS512: RsaPrivateFieldsRemover,
+
+  // ECDSA
+  ES256: EcdsaPrivateFieldsRemover,
+  ES384: EcdsaPrivateFieldsRemover,
+  ES512: EcdsaPrivateFieldsRemover,
+
+  // Edwards-curve DSA
+  EdDSA: EddsaPrivateFieldsRemover,
+};
+
+export const supportedAlgs = Object.keys(privateToPublicTransformerMap);
+
+export const privateToPublicKeyTransformer = (privateKey: JWK): JWK => {
+  const transformer = privateToPublicTransformerMap[privateKey.alg];
+
+  if (transformer === undefined) {
+    throw new Error(`Unsupported algo '${privateKey.alg}'`);
+  }
+
+  return transformer(privateKey);
 };

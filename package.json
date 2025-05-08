@@ -61,7 +61,7 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "is-plain-obj": "^4.1.0",
-    "jose": "^5.10.0"
+    "jose": "^6.0.11"
   },
   "devDependencies": {
     "@eslint/js": "^9.26.0",

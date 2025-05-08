@@ -95,12 +95,12 @@ axios
 
 ### Supported JWK formats
 
-| Algorithm         | kty | alg                         |
-| ----------------- | --- | --------------------------- |
-| RSASSA-PKCS1-v1_5 | RSA | RS256, RS384, RS512         |
-| RSASSA-PSS        | RSA | PS256, PS384, PS512         |
-| ECDSA             | EC  | ES256, ES256K, ES384, ES512 |
-| Edwards-curve DSA | OKP | EdDSA (Ed25519 / Ed448)     |
+| Algorithm         | kty | alg                 |
+| ----------------- | --- | ------------------- |
+| RSASSA-PKCS1-v1_5 | RSA | RS256, RS384, RS512 |
+| RSASSA-PSS        | RSA | PS256, PS384, PS512 |
+| ECDSA             | EC  | ES256, ES384, ES512 |
+| EdDSA             | OKP | Ed25519             |
 
 ### Customization hooks
 
