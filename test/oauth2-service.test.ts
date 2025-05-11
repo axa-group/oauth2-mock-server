@@ -95,9 +95,9 @@ describe.each([
 
   const wellKnownEndpointsPrefixFrom = (issuer: OAuth2Issuer) => {
     const { url } = issuer;
-    expect(url).not.toBeNull();
+    expect(url).not.toBeUndefined();
 
-    return url!.endsWith('/') ? url!.slice(0, -1) : url;
+    return url!.endsWith('/') ? url!.slice(0, -1) : url!;
   };
 
   it('should expose an OpenID configuration endpoint', async () => {

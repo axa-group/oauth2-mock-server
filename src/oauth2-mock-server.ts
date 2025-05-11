@@ -156,7 +156,10 @@ async function startServer(opts: Options) {
   const addr = server.address();
   const hostname = addr.family === 'IPv6' ? `[${addr.address}]` : addr.address;
 
-  console.log(`OAuth 2 server listening on http://${hostname}:${addr.port}`);
+  console.log(
+    `OAuth 2 server listening on http://${hostname}:${addr.port.toString()}`,
+  );
+
   assertIsString(server.issuer.url, 'Empty host');
   console.log(`OAuth 2 issuer is ${server.issuer.url}`);
 
@@ -167,7 +170,7 @@ async function startServer(opts: Options) {
       await server.stop();
     };
 
-    handler().catch((e) => {
+    handler().catch((e: unknown) => {
       throw e;
     });
 

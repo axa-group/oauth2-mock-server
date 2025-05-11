@@ -37,13 +37,13 @@ export class HttpServer {
 
   /**
    * Creates a new instance of HttpServer.
-   * @param {RequestListener} requestListener The function that will handle the server's requests.
-   * @param {HttpServerOptions} options Optional HttpServerOptions to start the server with https.
+   * @param requestListener The function that will handle the server's requests.
+   * @param options Optional HttpServerOptions to start the server with https.
    */
   constructor(requestListener: RequestListener, options?: HttpServerOptions) {
     this.#isSecured = false;
 
-    if (options?.key && options?.cert) {
+    if (options?.key && options.cert) {
       this.#server = createHttpsServer(options, requestListener);
       this.#isSecured = true;
     } else {
@@ -53,7 +53,7 @@ export class HttpServer {
 
   /**
    * Returns a value indicating whether or not the server is listening for connections.
-   * @type {boolean}
+   * @returns A boolean value indicating whether the server is listening.
    */
   get listening(): boolean {
     return this.#server.listening;
@@ -62,7 +62,7 @@ export class HttpServer {
   /**
    * Returns the bound address, family name and port where the server is listening,
    * or null if the server has not been started.
-   * @returns {AddressInfo} The server bound address information.
+   * @returns The server bound address information.
    */
   address(): AddressInfo {
     if (!this.listening) {
@@ -78,9 +78,9 @@ export class HttpServer {
 
   /**
    * Starts the server.
-   * @param {number} [port] Port number. If omitted, it will be assigned by the operating system.
-   * @param {string} [host] Host name.
-   * @returns {Promise<void>} A promise that resolves when the server has been started.
+   * @param port Port number. If omitted, it will be assigned by the operating system.
+   * @param host Host name.
+   * @returns A promise that resolves when the server has been started.
    */
   async start(port?: number, host?: string): Promise<Server> {
     if (this.listening) {
@@ -97,7 +97,7 @@ export class HttpServer {
 
   /**
    * Stops the server.
-   * @returns {Promise} Resolves when the server has been stopped.
+   * @returns Resolves when the server has been stopped.
    */
   async stop(): Promise<void> {
     if (!this.listening) {
@@ -107,17 +107,18 @@ export class HttpServer {
     return new Promise((resolve, reject) => {
       this.#server.close((err) => {
         if (err) {
-          return reject(err);
+          reject(err);
+          return;
         }
 
-        return resolve();
+        resolve();
       });
     });
   }
 
   protected buildIssuerUrl(host: string | undefined, port: number): string {
     const url = new URL(
-      `${this.#isSecured ? 'https' : 'http'}://localhost:${port}`,
+      `${this.#isSecured ? 'https' : 'http'}://localhost:${port.toString()}`,
     );
 
     if (host && !coversLocalhost(host)) {

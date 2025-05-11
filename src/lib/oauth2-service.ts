@@ -24,7 +24,7 @@ import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { AssertionError } from 'node:assert';
 
-import express, { type RequestHandler } from 'express';
+import express, { json, urlencoded, type RequestHandler } from 'express';
 import cors from 'cors';
 import basicAuth from 'basic-auth';
 
@@ -93,7 +93,7 @@ export class OAuth2Service extends EventEmitter {
 
   /**
    * Returns the OAuth2Issuer instance bound to this service.
-   * @type {OAuth2Issuer}
+   * @returns The OAuth2Issuer instance.
    */
   get issuer(): OAuth2Issuer {
     return this.#issuer;
@@ -101,11 +101,11 @@ export class OAuth2Service extends EventEmitter {
 
   /**
    * Builds a JWT with a key in the keystore. The key will be selected in a round-robin fashion.
-   * @param {IncomingMessage} req The incoming HTTP request.
-   * @param {number} expiresIn Time in seconds for the JWT to expire. Default: 3600 seconds.
-   * @param {ScopesOrTransform} [scopesOrTransform] A scope, array of scopes,
+   * @param req The incoming HTTP request.
+   * @param expiresIn Time in seconds for the JWT to expire. Default: 3600 seconds.
+   * @param scopesOrTransform A scope, array of scopes,
    *     or JWT transformation callback.
-   * @returns {Promise<string>} The produced JWT.
+   * @returns The produced JWT.
    * @fires OAuth2Service#beforeTokenSigning
    */
   async buildToken(
@@ -128,7 +128,7 @@ export class OAuth2Service extends EventEmitter {
 
   /**
    * Returns a request handler to be used as a callback for http.createServer().
-   * @type {Function}
+   * @returns The request handler.
    */
   get requestHandler(): RequestListener {
     return this.#requestHandler;
@@ -137,13 +137,13 @@ export class OAuth2Service extends EventEmitter {
   private buildRequestHandler = (): RequestListener => {
     const app = express();
     app.disable('x-powered-by');
-    app.use(express.json());
+    app.use(json({ strict: true }));
     app.use(cors());
     app.get(this.#endpoints.wellKnownDocument, this.openidConfigurationHandler);
     app.get(this.#endpoints.jwks, this.jwksHandler);
     app.post(
       this.#endpoints.token,
-      express.urlencoded({ extended: false }),
+      urlencoded({ extended: false }),
       this.tokenHandler,
     );
     app.get(this.#endpoints.authorize, this.authorizeHandler);
@@ -152,7 +152,7 @@ export class OAuth2Service extends EventEmitter {
     app.get(this.#endpoints.endSession, this.endSessionHandler);
     app.post(this.#endpoints.introspect, this.introspectHandler);
 
-    return app;
+    return app as RequestListener;
   };
 
   private openidConfigurationHandler: RequestHandler = (_req, res) => {
@@ -183,11 +183,11 @@ export class OAuth2Service extends EventEmitter {
       code_challenge_methods_supported: supportedPkceAlgorithms,
     };
 
-    return res.json(openidConfig);
+    res.json(openidConfig);
   };
 
   private jwksHandler: RequestHandler = (_req, res) => {
-    return res.json({ keys: this.issuer.keys.toJSON() });
+    res.json({ keys: this.issuer.keys.toJSON() });
   };
 
   private tokenHandler: RequestHandler = async (req, res, next) => {
@@ -203,7 +203,7 @@ export class OAuth2Service extends EventEmitter {
       if ('code_verifier' in req.body && 'code' in req.body) {
         try {
           const code = req.body.code;
-          const verifier = req.body['code_verifier'];
+          const verifier = req.body.code_verifier;
           const savedCodeChallenge = this.#codeChallenges.get(code);
           if (savedCodeChallenge === undefined) {
             throw new AssertionError({ message: 'code_challenge required' });
@@ -223,7 +223,7 @@ export class OAuth2Service extends EventEmitter {
             });
           }
         } catch (e) {
-          return res.status(400).json({
+          res.status(400).json({
             error: 'invalid_request',
             error_description: (e as AssertionError).message,
           });
@@ -263,7 +263,9 @@ export class OAuth2Service extends EventEmitter {
           };
           break;
         default:
-          return res.status(400).json({ error: 'invalid_grant' });
+          res.status(400);
+          res.json({ error: 'invalid_grant' });
+          return;
       }
 
       const token = await this.buildToken(req, tokenTtl, xfn);
@@ -280,8 +282,9 @@ export class OAuth2Service extends EventEmitter {
 
         const xfn: JwtTransform = (_header, payload) => {
           Object.assign(payload, { sub: 'johndoe', aud: clientId });
-          if (reqBody.code !== undefined && this.#nonce[reqBody.code]) {
+          if (reqBody.code !== undefined && reqBody.code in this.#nonce) {
             Object.assign(payload, { nonce: this.#nonce[reqBody.code] });
+            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
             delete this.#nonce[reqBody.code];
           }
         };
@@ -300,11 +303,10 @@ export class OAuth2Service extends EventEmitter {
        */
       this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
 
-      return res
-        .status(tokenEndpointResponse.statusCode)
-        .json(tokenEndpointResponse.body);
+      res.status(tokenEndpointResponse.statusCode);
+      res.json(tokenEndpointResponse.body);
     } catch (e) {
-      return next(e);
+      next(e);
     }
   };
 
@@ -344,12 +346,14 @@ export class OAuth2Service extends EventEmitter {
             codeChallengeMethod as PKCEAlgorithm,
           )
         ) {
-          return res.status(400).json({
+          res.status(400);
+          res.json({
             error: 'invalid_request',
             error_description: `Unsupported code_challenge method ${codeChallengeMethod}. The following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
               ', ',
             )}`,
           });
+          return;
         }
         this.#codeChallenges.set(code, {
           challenge: code_challenge,
@@ -391,7 +395,7 @@ export class OAuth2Service extends EventEmitter {
     // for the sake of security.
     //
     // This is *not* a real oAuth2 server. This is *not* to be run in production.
-    return res.redirect(url.href);
+    res.redirect(url.href);
   };
 
   private userInfoHandler: RequestHandler = (req, res) => {
@@ -408,7 +412,7 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeUserinfo, userInfoResponse, req);
 
-    return res.status(userInfoResponse.statusCode).json(userInfoResponse.body);
+    res.status(userInfoResponse.statusCode).json(userInfoResponse.body);
   };
 
   private revokeHandler: RequestHandler = (req, res) => {
@@ -422,7 +426,7 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeRevoke, revokeResponse, req);
 
-    return res.status(revokeResponse.statusCode).send('');
+    res.status(revokeResponse.statusCode).send('');
   };
 
   private endSessionHandler: RequestHandler = (req, res) => {
@@ -443,7 +447,7 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforePostLogoutRedirect, postLogoutRedirectUri, req);
 
-    return res.redirect(postLogoutRedirectUri.url.href);
+    res.redirect(postLogoutRedirectUri.url.href);
   };
 
   private introspectHandler: RequestHandler = (req, res) => {
@@ -460,9 +464,8 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeIntrospect, introspectResponse, req);
 
-    return res
-      .status(introspectResponse.statusCode)
-      .json(introspectResponse.body);
+    res.status(introspectResponse.statusCode);
+    res.json(introspectResponse.body);
   };
 }
 
