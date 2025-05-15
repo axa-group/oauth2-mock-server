@@ -12,7 +12,7 @@ jobs:
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        node-version: [^18.12, ^20, ^22]
+        node-version: [^20.19, ^22.12, ^24]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -20,8 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: yarn
-          cache-dependency-path: yarn.lock
+          cache: npm
+          cache-dependency-path: package-lock.json
 
       - name: Yarn install
         run: yarn install --frozen-lockfile
@@ -34,3 +34,9 @@ jobs:
 
       - name: Pack
         run: npm pack
+
+      - name: Check package exports
+        run: npx publint
+
+      - name: Check dependencies exports
+        run: npx publint deps --prod

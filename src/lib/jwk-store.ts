@@ -18,7 +18,7 @@
  * @module lib/jwk-store
  */
 
-import { KeyObject, randomBytes } from 'node:crypto';
+import { randomBytes } from 'node:crypto';
 import { AssertionError } from 'node:assert';
 
 import type { GenerateKeyPairOptions } from 'jose';
@@ -26,65 +26,15 @@ import { exportJWK, importJWK, generateKeyPair } from 'jose';
 
 import type { JWK } from './types';
 import type { JWKWithKid } from './types-internals';
-import { assertIsPlainObject } from './helpers';
+import {
+  assertIsPlainObject,
+  privateToPublicKeyTransformer,
+  supportedAlgs,
+} from './helpers';
 
 const generateRandomKid = () => {
   return randomBytes(40).toString('hex');
 };
-
-type JwkTransformer = (jwk: JWK) => JWK;
-
-const RsaPrivateFieldsRemover: JwkTransformer = (jwk) => {
-  const x = { ...jwk };
-
-  delete x.d;
-  delete x.p;
-  delete x.q;
-  delete x.dp;
-  delete x.dq;
-  delete x.qi;
-
-  return x;
-};
-
-const EcdsaPrivateFieldsRemover: JwkTransformer = (jwk) => {
-  const x = { ...jwk };
-
-  delete x.d;
-
-  return x;
-};
-
-const EddsaPrivateFieldsRemover: JwkTransformer = (jwk) => {
-  const x = { ...jwk };
-
-  delete x.d;
-
-  return x;
-};
-
-const privateToPublicTransformerMap: Record<string, JwkTransformer> = {
-  // RSASSA-PKCS1-v1_5
-  RS256: RsaPrivateFieldsRemover,
-  RS384: RsaPrivateFieldsRemover,
-  RS512: RsaPrivateFieldsRemover,
-
-  // RSASSA-PSS
-  PS256: RsaPrivateFieldsRemover,
-  PS384: RsaPrivateFieldsRemover,
-  PS512: RsaPrivateFieldsRemover,
-
-  // ECDSA
-  ES256: EcdsaPrivateFieldsRemover,
-  ES256K: EcdsaPrivateFieldsRemover,
-  ES384: EcdsaPrivateFieldsRemover,
-  ES512: EcdsaPrivateFieldsRemover,
-
-  // Edwards-curve DSA
-  EdDSA: EddsaPrivateFieldsRemover,
-};
-
-const supportedAlgs = Object.keys(privateToPublicTransformerMap);
 
 function normalizeKeyKid(
   jwk: unknown,
@@ -131,9 +81,20 @@ export class JWKStore {
     const generateOpts: GenerateKeyPairOptions =
       opts?.crv !== undefined ? { crv: opts.crv } : {};
 
+    generateOpts.extractable = true;
+
+    if (
+      alg === 'EdDSA' &&
+      generateOpts.crv !== undefined &&
+      generateOpts.crv !== 'Ed25519'
+    ) {
+      throw new Error(
+        'Invalid or unsupported crv option provided, supported values are: Ed25519',
+      );
+    }
+
     const pair = await generateKeyPair(alg, generateOpts);
     const joseJwk = await exportJWK(pair.privateKey);
-
     normalizeKeyKid(joseJwk, opts);
     joseJwk.alg = alg;
 
@@ -162,9 +123,9 @@ export class JWKStore {
 
     const jwk = tempJwk as JWK;
 
-    const privateKey = await importJWK(jwk);
+    const privateKey = await importJWK(jwk, jwk.alg, { extractable: false });
 
-    if (!(privateKey instanceof KeyObject) || privateKey.type !== 'private') {
+    if (privateKey instanceof Uint8Array || privateKey.type !== 'private') {
       throw new Error(
         `Invalid JWK type. No "private" key related data has been found.`,
       );
@@ -229,13 +190,7 @@ class KeyRotator {
         continue;
       }
 
-      const cleaner = privateToPublicTransformerMap[key.alg];
-
-      if (cleaner === undefined) {
-        throw new Error(`Unsupported algo '{key.alg}'`);
-      }
-
-      keys.push(cleaner(key));
+      keys.push(privateToPublicKeyTransformer(key));
     }
 
     return keys;

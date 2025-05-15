@@ -13,22 +13,13 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 ## Development prerequisites
 
-- [Node.js 18+](https://nodejs.org/)
-- [Yarn 1.15.2+](https://classic.yarnpkg.com/lang/en/)
+- [Node.js 20.19+](https://nodejs.org/)
 
 ## How to use
 
 ### Installation
 
 Add it to your Node.js project as a development dependency:
-
-With yarn...
-
-```shell
-yarn add -D oauth2-mock-server
-```
-
-...or with npm
 
 ```shell
 npm install --save-dev oauth2-mock-server
@@ -39,7 +30,9 @@ npm install --save-dev oauth2-mock-server
 Here is an example for creating and running a server instance with a single random RSA key:
 
 ```js
-const { OAuth2Server } = require('oauth2-mock-server');
+import { OAuth2Server } from 'oauth2-mock-server';
+// ...or in CommonJS style:
+// const { OAuth2Server } = require('oauth2-mock-server');
 
 let server = new OAuth2Server();
 
@@ -72,19 +65,24 @@ await server.issuer.keys.add({
 JSON Web Tokens (JWT) can be built programmatically:
 
 ```js
-const request = require('request');
+import axios from 'axios';
 
 // Build a new token
 let token = await server.issuer.buildToken();
 
 // Call a remote API with the token
-request.get(
-  'https://server.example.com/api/endpoint',
-  { auth: { bearer: token } },
-  function callback(err, res, body) {
+axios
+  .get('https://server.example.com/api/endpoint', {
+    headers: {
+      authorization: `Bearer ${token}`,
+    },
+  })
+  .then((response) => {
     /* ... */
-  }
-);
+  })
+  .catch((error) => {
+    /* ... */
+  });
 ```
 
 ### Supported grant types
@@ -97,12 +95,12 @@ request.get(
 
 ### Supported JWK formats
 
-| Algorithm         | kty | alg                         |
-| ----------------- | --- | --------------------------- |
-| RSASSA-PKCS1-v1_5 | RSA | RS256, RS384, RS512         |
-| RSASSA-PSS        | RSA | PS256, PS384, PS512         |
-| ECDSA             | EC  | ES256, ES256K, ES384, ES512 |
-| Edwards-curve DSA | OKP | EdDSA (Ed25519 / Ed448)     |
+| Algorithm         | kty | alg                 |
+| ----------------- | --- | ------------------- |
+| RSASSA-PKCS1-v1_5 | RSA | RS256, RS384, RS512 |
+| RSASSA-PSS        | RSA | PS256, PS384, PS512 |
+| ECDSA             | EC  | ES256, ES384, ES512 |
+| EdDSA             | OKP | Ed25519             |
 
 ### Customization hooks
 
@@ -119,8 +117,9 @@ It also provides a convenient way, through event emitters, to programmatically c
   ```
 
   ```js
-  // Add the client ID to a token
   const basicAuth = require('basic-auth');
+
+  // Add the client ID to a token
   service.once('beforeTokenSigning', (token, req) => {
     const credentials = basicAuth(req);
     const clientId = credentials ? credentials.name : req.body.client_id;

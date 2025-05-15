@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 
 import { JWKStore } from '../src/lib/jwk-store';
+import type { JWK } from '../src/lib/types';
+import { privateToPublicKeyTransformer } from '../src/lib/helpers';
 
 import * as testKeys from './keys';
 
@@ -14,7 +16,6 @@ describe('JWK Store', () => {
       ["RSASSA-PSS", "PS384", "RSA"],
       ["RSASSA-PSS", "PS512", "RSA"],
       ["ECDSA", "ES256", "EC"],
-      ["ECDSA", "ES256K", "EC"],
       ["ECDSA", "ES384", "EC"],
       ["ECDSA", "ES512", "EC"],
     ])('should be able to generate a new %s based key (alg = %s)', async (_kind: string, alg: string, expectedKty: string) => {
@@ -29,7 +30,6 @@ describe('JWK Store', () => {
 
     it.each([
       "Ed25519",
-      "Ed448",
     ])('should be able to generate a new EdDSA based key (crv = %s)', async (crv: string) => {
       const store = new JWKStore();
       const key = await store.generate('EdDSA', { crv });
@@ -56,7 +56,7 @@ describe('JWK Store', () => {
     ])('throws on unsupported crv for EdDSA alg (crv = %s)', async (crv: string) => {
       const store = new JWKStore();
 
-      await expect(() => store.generate('EdDSA', { crv })).rejects.toThrow("Invalid or unsupported crv option provided, supported values are Ed25519 and Ed448");
+      await expect(() => store.generate('EdDSA', { crv })).rejects.toThrow("Invalid or unsupported crv option provided, supported values are: Ed25519");
     });
 
     it.each([
@@ -115,14 +115,9 @@ describe('JWK Store', () => {
 
       const testKey = testKeys.getParsed('test-rs256-key.json');
 
-      delete testKey['d'];
-      delete testKey['p'];
-      delete testKey['q'];
-      delete testKey['dp'];
-      delete testKey['dq'];
-      delete testKey['qi'];
+      const publicKey = privateToPublicKeyTransformer(testKey as JWK);
 
-      await expect(() => store.add(testKey)).rejects.toThrow('Invalid JWK type. No "private" key related data has been found.');
+      await expect(() => store.add(publicKey)).rejects.toThrow('Invalid JWK type. No "private" key related data has been found.');
     });
 
     it('throws when serialized EC key is public"', async () => {

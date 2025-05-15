@@ -4,6 +4,7 @@ import type {JWTVerifyResult } from "jose";
 import { importJWK, jwtVerify } from "jose";
 
 import type { OAuth2Issuer } from "../../src/lib/oauth2-issuer";
+import { privateToPublicKeyTransformer } from "../../src/lib/helpers";
 
 export const verifyTokenWithKey = async (issuer: OAuth2Issuer, token: string, kid: string): Promise<JWTVerifyResult> => {
   const key = issuer.keys.get(kid);
@@ -12,8 +13,8 @@ export const verifyTokenWithKey = async (issuer: OAuth2Issuer, token: string, ki
     throw new AssertionError({ message: 'Key is undefined' });
   }
 
-  const privateKey = await importJWK(key);
+  const publicKey = await importJWK(privateToPublicKeyTransformer(key));
 
-  const verified = await jwtVerify(token, privateKey);
+  const verified = await jwtVerify(token, publicKey);
   return verified;
 };

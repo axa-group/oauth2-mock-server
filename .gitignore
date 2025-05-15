@@ -2,4 +2,5 @@
 /coverage/
 /.vscode/
 /.cache/
+/.rollup.cache/
 /dist/
