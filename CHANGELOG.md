@@ -4,6 +4,19 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [8.0.0](https://github.com/axa-group/oauth2-mock-server/compare/v7.2.1...v8.0.0) — 2025-05-18
+
+### Fixed
+
+- Fix wrong typescript annotation (by [sviande](https://github.com/sviande) in [#313](https://github.com/axa-group/oauth2-mock-server/pull/313))
+
+### Changed
+
+- **Breaking:** No longer support Node.js 18
+- Switched to "Universal" ESM. CommonJS `require()` usage pattern still supported for Nodejs ^20.19 & ^22.12
+- Add support for Node.js 24
+- Update dependencies
+
 ## [7.2.1](https://github.com/axa-group/oauth2-mock-server/compare/v7.2.0...v7.2.1) — 2025-04-30
 
 ### Fixed
