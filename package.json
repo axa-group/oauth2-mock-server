@@ -1,6 +1,6 @@
 {
   "name": "oauth2-mock-server",
-  "version": "8.0.0",
+  "version": "8.0.1",
   "description": "OAuth 2 mock server",
   "type": "module",
   "keywords": [
