@@ -16,12 +16,15 @@
  */
 
 import { writeFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 import { assertIsString, readJsonFromFile, shift } from './lib/helpers';
 import type { JWK, Options } from './lib/types';
 
 import { OAuth2Server } from './index';
+
+const __filename = fileURLToPath(import.meta.url);
 
 /* eslint no-console: off */
 
@@ -87,7 +90,7 @@ function parseCliArgs(args: string[]): Options | null {
 }
 
 function showHelp() {
-  const scriptName = path.basename(__filename, '.ts');
+  const scriptName = path.basename(__filename).replace(/\.(ts|js)$/, '');
   console.log(`Usage: ${scriptName} [options]
        ${scriptName} -a localhost -p 8080
 
