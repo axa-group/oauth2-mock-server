@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [8.0.1](https://github.com/axa-group/oauth2-mock-server/compare/v8.0.0...v8.0.1) — 2025-05-28
+
+### Fixed
+
+- Fix crash when running `npx oauth2-mock-server --help` (reported in [#337](https://github.com/axa-group/oauth2-mock-server/issues/337) by [robcresswell](https://github.com/robcresswell))
+
 ## [8.0.0](https://github.com/axa-group/oauth2-mock-server/compare/v7.2.1...v8.0.0) — 2025-05-18
 
 ### Fixed

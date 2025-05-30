@@ -252,14 +252,7 @@ It simulates the [token introspection endpoint](https://www.oauth.com/oauth2-ser
 
 ## Command-Line Interface
 
-The server can be run from the command line. You can either install it globally:
-
-```shell
-npm install -g oauth2-mock-server
-oauth2-mock-server --help
-```
-
-or run it directly:
+The server can be run from the command line.
 
 ```shell
 npx oauth2-mock-server --help
