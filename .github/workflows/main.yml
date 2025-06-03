@@ -23,14 +23,14 @@ jobs:
           cache: npm
           cache-dependency-path: package-lock.json
 
-      - name: Yarn install
-        run: yarn install --frozen-lockfile
+      - name: Npm install
+        run: npm ci
 
       - name: Transpile
-        run: yarn build
+        run: npm run build
 
       - name: Lint and run tests
-        run: yarn test
+        run: npm run test
 
       - name: Pack
         run: npm pack
