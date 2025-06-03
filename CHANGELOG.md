@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [8.1.0](https://github.com/axa-group/oauth2-mock-server/compare/v8.0.1...v8.1.0) — 2025-06-06
+
+### Added
+
+- Export `HttpServer` and `OAuth2Service` (reported in [#344](https://github.com/axa-group/oauth2-mock-server/issues/344) by [jraoult](https://github.com/jraoult))
+
 ## [8.0.1](https://github.com/axa-group/oauth2-mock-server/compare/v8.0.0...v8.0.1) — 2025-05-28
 
 ### Fixed
