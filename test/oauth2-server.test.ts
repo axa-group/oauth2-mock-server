@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 
-import { OAuth2Server } from '../src/lib/oauth2-server';
+import { OAuth2Server } from '../src';
 
 describe('OAuth 2 Server', () => {
   it('should be able to start and stop the server', async () => {

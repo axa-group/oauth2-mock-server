@@ -4,8 +4,7 @@ import qs from 'querystring';
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 
-import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
-import { OAuth2Service } from '../src/lib/oauth2-service';
+import { OAuth2Issuer, OAuth2Service  } from '../src';
 import type { MutableRedirectUri } from '../src/lib/types';
 import {
   createPKCECodeChallenge,
