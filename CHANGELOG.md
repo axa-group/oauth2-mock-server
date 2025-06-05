@@ -10,6 +10,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 - Export `HttpServer` and `OAuth2Service` (reported in [#344](https://github.com/axa-group/oauth2-mock-server/issues/344) by [jraoult](https://github.com/jraoult))
 
+### Changed
+
+- Update dependencies
+
 ## [8.0.1](https://github.com/axa-group/oauth2-mock-server/compare/v8.0.0...v8.0.1) — 2025-05-28
 
 ### Fixed
