@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 
-import { OAuth2Issuer } from '../src/lib/oauth2-issuer';
+import { OAuth2Issuer } from '../src';
 import type { JwtTransform, MutableToken } from '../src/lib/types';
 
 import * as testKeys from './keys';

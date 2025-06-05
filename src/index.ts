@@ -13,7 +13,9 @@
  * limitations under the License.
  */
 
+export { HttpServer } from './lib/http-server';
 export { JWKStore } from './lib/jwk-store';
 export { OAuth2Issuer } from './lib/oauth2-issuer';
 export { OAuth2Server } from './lib/oauth2-server';
+export { OAuth2Service } from './lib/oauth2-service';
 export * from './lib/types';

@@ -4,7 +4,7 @@ import type { RequestListener } from 'http';
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';
 
-import { HttpServer } from '../src/lib/http-server';
+import { HttpServer } from '../src';
 
 describe('HTTP Server', () => {
   it('should be able to start and stop the server', async () => {

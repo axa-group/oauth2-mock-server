@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 
-import { JWKStore } from '../src/lib/jwk-store';
-import type { JWK } from '../src/lib/types';
+import { JWKStore, type JWK } from '../src';
 import { privateToPublicKeyTransformer } from '../src/lib/helpers';
 
 import * as testKeys from './keys';
