@@ -18,7 +18,7 @@
  * @module lib/oauth2-service
  */
 
-import type { IncomingMessage, RequestListener } from 'node:http';
+import type { RequestListener } from 'node:http';
 import { URL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
@@ -49,6 +49,7 @@ import type {
   PKCEAlgorithm,
   ScopesOrTransform,
   StatusCodeMutableResponse,
+  TokenRequestIncomingMessage,
 } from './types';
 import { Events } from './types';
 import { InternalEvents } from './types-internals';
@@ -109,7 +110,7 @@ export class OAuth2Service extends EventEmitter {
    * @fires OAuth2Service#beforeTokenSigning
    */
   async buildToken(
-    req: IncomingMessage,
+    req: TokenRequestIncomingMessage,
     expiresIn: number,
     scopesOrTransform: ScopesOrTransform | undefined,
   ): Promise<string> {
@@ -118,7 +119,7 @@ export class OAuth2Service extends EventEmitter {
        * Before token signing event.
        * @event OAuth2Service#beforeTokenSigning
        * @param {MutableToken} token The unsigned JWT header and payload.
-       * @param {IncomingMessage} req The incoming HTTP request.
+       * @param {TokenRequestIncomingMessage} req The incoming HTTP request.
        */
       this.emit(Events.BeforeTokenSigning, token, req);
     });
@@ -299,7 +300,7 @@ export class OAuth2Service extends EventEmitter {
        * Before token response event.
        * @event OAuth2Service#beforeResponse
        * @param {MutableResponse} response The response body and status code.
-       * @param {IncomingMessage} req The incoming HTTP request.
+       * @param {TokenRequestIncomingMessage} req The incoming HTTP request.
        */
       this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
 

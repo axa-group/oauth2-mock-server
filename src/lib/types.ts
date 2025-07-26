@@ -1,4 +1,5 @@
 import type { ServerOptions } from 'node:https';
+import type { IncomingMessage } from 'node:http';
 
 import type { JWKWithKid } from './types-internals';
 import type { supportedPkceAlgorithms } from './helpers';
@@ -11,6 +12,10 @@ export interface TokenRequest {
   code?: string;
   aud?: string[] | string;
   code_verifier?: string;
+}
+
+export interface TokenRequestIncomingMessage extends IncomingMessage {
+  body: TokenRequest;
 }
 
 export interface Options {
