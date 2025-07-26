@@ -104,101 +104,113 @@ axios
 
 ### Customization hooks
 
-It also provides a convenient way, through event emitters, to programmatically customize the server processing. This is particularly useful when expecting the OIDC service to behave in a specific way on one single test:
+It also provides a convenient way, through event emitters, to programmatically customize the server processing. This is particularly useful when expecting the OIDC service to behave in a specific way on one single test.
 
-- The JWT access token
+#### beforeTokenSigning
 
-  ```js
-  // Modify the expiration time on next token produced
-  service.once('beforeTokenSigning', (token, req) => {
-    const timestamp = Math.floor(Date.now() / 1000);
-    token.payload.exp = timestamp + 400;
-  });
-  ```
+Typed signature: `(token: MutableToken, req: TokenRequestIncomingMessage) => void`
 
-  ```js
-  const basicAuth = require('basic-auth');
+```js
+// Modify the expiration time on next produced token
+service.once('beforeTokenSigning', (token, req) => {
+  const timestamp = Math.floor(Date.now() / 1000);
+  token.payload.exp = timestamp + 400;
+});
+```
 
-  // Add the client ID to a token
-  service.once('beforeTokenSigning', (token, req) => {
-    const credentials = basicAuth(req);
-    const clientId = credentials ? credentials.name : req.body.client_id;
-    token.payload.client_id = clientId;
-  });
-  ```
+```js
+const basicAuth = require('basic-auth');
 
-- The token endpoint response body and status
+// Add the client ID to a token
+service.once('beforeTokenSigning', (token, req) => {
+  const credentials = basicAuth(req);
+  const clientId = credentials ? credentials.name : req.body.client_id;
+  token.payload.client_id = clientId;
+});
+```
 
-  ```js
-  // Force the oidc service to provide an invalid_grant response
-  // on next call to the token endpoint
-  service.once('beforeResponse', (tokenEndpointResponse, req) => {
-    tokenEndpointResponse.body = {
-      error: 'invalid_grant',
-    };
-    tokenEndpointResponse.statusCode = 400;
-  });
-  ```
+#### beforeResponse
 
-- The userinfo endpoint response body and status
+Typed signature: `(tokenEndpointResponse: MutableResponse, req: TokenRequestIncomingMessage) => void`
 
-  ```js
-  // Force the oidc service to provide an error
-  // on next call to userinfo endpoint
-  service.once('beforeUserinfo', (userInfoResponse, req) => {
-    userInfoResponse.body = {
-      error: 'invalid_token',
-      error_message: 'token is expired',
-    };
-    userInfoResponse.statusCode = 401;
-  });
-  ```
+```js
+// Force the oidc service to provide an invalid_grant response
+// on next call to the token endpoint
+service.once('beforeResponse', (tokenEndpointResponse, req) => {
+  tokenEndpointResponse.body = {
+    error: 'invalid_grant',
+  };
+  tokenEndpointResponse.statusCode = 400;
+});
+```
 
-- The revoke endpoint response body and status
+#### beforeUserinfo
 
-  ```js
-  // Simulates a custom token revocation body
-  service.once('beforeRevoke', (revokeResponse, req) => {
-    revokeResponse.body = {
-      result: 'revoked',
-    };
-  });
-  ```
+Typed signature: `(userInfoResponse: MutableResponse, req: IncomingMessage) => void`
 
-- The authorization endpoint redirect uri and query parameters
+```js
+// Force the oidc service to provide an error
+// on next call to userinfo endpoint
+service.once('beforeUserinfo', (userInfoResponse, req) => {
+  userInfoResponse.body = {
+    error: 'invalid_token',
+    error_message: 'token is expired',
+  };
+  userInfoResponse.statusCode = 401;
+});
+```
 
-  ```js
-  // Modify the uri and query parameters
-  // before the authorization redirect
-  service.once('beforeAuthorizeRedirect', (authorizeRedirectUri, req) => {
-    authorizeRedirectUri.url.searchParams.set('foo', 'bar');
-  });
-  ```
+#### beforeRevoke
 
-- The end session endpoint post logout redirect uri
+Typed signature: `(revokeResponse: StatusCodeMutableResponse, req: IncomingMessage) => void`
 
-  ```js
-  // Modify the uri and query parameters
-  // before the post_logout_redirect_uri redirect
-  service.once('beforePostLogoutRedirect', (postLogoutRedirectUri, req) => {
-    postLogoutRedirectUri.url.searchParams.set('foo', 'bar');
-  });
-  ```
+```js
+// Simulates a custom token revocation result code
+service.once('beforeRevoke', (revokeResponse, req) => {
+  revokeResponse.statusCode = 418;
+});
+```
 
-- The introspect endpoint response body
+#### beforeAuthorizeRedirect
 
-  ```js
-  // Simulate a custom token introspection response body
-  service.once('beforeIntrospect', (introspectResponse, req) => {
-    introspectResponse.body = {
-      active: true,
-      scope: 'read write email',
-      client_id: '<client_id>',
-      username: 'dummy',
-      exp: 1643712575,
-    };
-  });
-  ```
+Typed signature: `(authorizeRedirectUri: MutableRedirectUri, req: IncomingMessage) => void`
+
+```js
+// Modify the uri and query parameters
+// before the authorization redirect
+service.once('beforeAuthorizeRedirect', (authorizeRedirectUri, req) => {
+  authorizeRedirectUri.url.searchParams.set('foo', 'bar');
+});
+```
+
+#### beforePostLogoutRedirect
+
+Typed signature: `(postLogoutRedirectUri: MutableRedirectUri, req: IncomingMessage) => void`
+
+```js
+// Modify the uri and query parameters
+// before the post_logout_redirect_uri redirect
+service.once('beforePostLogoutRedirect', (postLogoutRedirectUri, req) => {
+  postLogoutRedirectUri.url.searchParams.set('foo', 'bar');
+});
+```
+
+#### beforeIntrospect
+
+Typed signature: `(introspectResponse: MutableResponse, req: IncomingMessage) => void`
+
+```js
+// Simulate a custom token introspection response body
+service.once('beforeIntrospect', (introspectResponse, req) => {
+  introspectResponse.body = {
+    active: true,
+    scope: 'read write email',
+    client_id: '<client_id>',
+    username: 'dummy',
+    exp: 1643712575,
+  };
+});
+```
 
 ### HTTPS support
 
@@ -231,24 +243,24 @@ Issues access tokens.
 
 ### GET `/authorize`
 
-It simulates the user authentication. It will automatically redirect to the callback endpoint sent as parameter.
+Simulates the user authentication. It will automatically redirect to the callback endpoint sent as parameter.
 It currently supports only 'code' response_type.
 
 ### GET `/userinfo`
 
-It provides extra userinfo claims.
+Provides extra userinfo claims.
 
 ### POST `/revoke`
 
-It simulates a token revocation. This endpoint should always return 200 as stated by [RFC 7009](https://tools.ietf.org/html/rfc7009#section-2.2).
+Simulates a token revocation. This endpoint should always return 200 as stated by [RFC 7009](https://tools.ietf.org/html/rfc7009#section-2.2).
 
 ### GET `/endsession`
 
-It simulates the end session endpoint. It will automatically redirect to the post_logout_redirect_uri sent as parameter.
+Simulates the end session endpoint. It will automatically redirect to the post_logout_redirect_uri sent as parameter.
 
 ### POST `/introspect`
 
-It simulates the [token introspection endpoint](https://www.oauth.com/oauth2-servers/token-introspection-endpoint/).
+Simulates the [token introspection endpoint](https://www.oauth.com/oauth2-servers/token-introspection-endpoint/).
 
 ## Command-Line Interface
 
