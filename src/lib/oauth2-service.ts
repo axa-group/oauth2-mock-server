@@ -84,6 +84,9 @@ export class OAuth2Service extends EventEmitter {
 
   constructor(oauth2Issuer: OAuth2Issuer, endpoints?: OAuth2EndpointsInput) {
     super();
+
+    assertEndpointsStartWithAForwardSlash(endpoints);
+
     this.#issuer = oauth2Issuer;
 
     this.#endpoints = { ...DEFAULT_ENDPOINTS, ...endpoints };
@@ -472,4 +475,24 @@ export class OAuth2Service extends EventEmitter {
 
 const trimPotentialTrailingSlash = (url: string): string => {
   return url.endsWith('/') ? url.slice(0, -1) : url;
+};
+
+const assertEndpointsStartWithAForwardSlash = (
+  endpoints: Partial<OAuth2Endpoints> | undefined,
+): void => {
+  if (endpoints === undefined) {
+    return;
+  }
+
+  const invalidEndpoints = Object.entries(endpoints)
+    .filter(([, path]) => !path.startsWith('/'))
+    .map(([name, path]) => `"${name}": "${path}"`);
+
+  if (invalidEndpoints.length > 0) {
+    throw new AssertionError({
+      message: `All endpoint paths must start with a forward slash. Invalid endpoints: ${invalidEndpoints.join(
+        ', ',
+      )}`,
+    });
+  }
 };
