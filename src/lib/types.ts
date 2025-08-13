@@ -25,6 +25,7 @@ export interface Options {
   key?: string;
   keys: Record<string, unknown>[];
   saveJWK: boolean;
+  issuerUrlTrailingSlash: boolean;
 }
 
 export type HttpServerOptions = Pick<ServerOptions, 'key'> &
@@ -111,6 +112,7 @@ export type OAuth2EndpointsInput = Partial<OAuth2Endpoints>;
 
 export interface OAuth2Options {
   endpoints?: OAuth2EndpointsInput;
+  shouldIssuerUrlBeSuffixedWithATralingSlash?: boolean;
 }
 
 export type PKCEAlgorithm = (typeof supportedPkceAlgorithms)[number];
