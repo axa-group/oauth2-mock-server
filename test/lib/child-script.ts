@@ -5,7 +5,7 @@ import type { OAuth2Server } from '../../src';
 interface Output {
   result: OAuth2Server | null;
   err?: unknown;
-  exitCode: number | undefined;
+  exitCode: string | number | undefined;
   stdout: string;
   stderr: string;
 }
