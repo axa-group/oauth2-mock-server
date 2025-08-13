@@ -1,5 +1,5 @@
-import { readFileSync } from 'fs';
-import type { RequestListener } from 'http';
+import { readFileSync } from 'node:fs';
+import type { RequestListener } from 'node:http';
 
 import { describe, it, expect } from 'vitest';
 import request from 'supertest';

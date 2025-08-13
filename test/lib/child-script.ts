@@ -1,4 +1,4 @@
-import util from 'util';
+import util from 'node:util';
 
 import type { OAuth2Server } from '../../src';
 

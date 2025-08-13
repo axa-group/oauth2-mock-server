@@ -1,5 +1,5 @@
-import { IncomingMessage, type RequestListener } from 'http';
-import qs from 'querystring';
+import { IncomingMessage, type RequestListener } from 'node:http';
+import qs from 'node:querystring';
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
