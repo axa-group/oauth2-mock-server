@@ -31,20 +31,64 @@ import { InternalEvents } from './types-internals';
  * Represents an OAuth 2 issuer.
  */
 export class OAuth2Issuer extends EventEmitter {
-  /**
-   * Sets or returns the issuer URL.
-   */
-  url: string | undefined;
-
+  #url: string | undefined;
   #keys: JWKStore;
+  #shouldIssuerUrlBeSuffixedWithATralingSlash: boolean | undefined;
+
+  /**
+   * Gets the issuer URL.
+   * @returns The issuer URL or undefined if not set.
+   */
+  get url(): string | undefined {
+    return this.#url;
+  }
+
+  /**
+   * Sets the issuer URL, normalizing the value based on the suffixing option defined in the constructor.
+   * When true and the URL doesn't end with a slash, a trailing slash will be added.
+   * When false and the URL ends with a slash, the trailing slash will be removed.
+   * Otherwise, the URL is set as is.
+   */
+  set url(value: string | undefined) {
+    if (
+      value === undefined ||
+      this.#shouldIssuerUrlBeSuffixedWithATralingSlash === undefined
+    ) {
+      this.#url = value;
+      return;
+    }
+
+    if (
+      this.#shouldIssuerUrlBeSuffixedWithATralingSlash &&
+      !value.endsWith('/')
+    ) {
+      this.#url = `${value}/`;
+      return;
+    }
+
+    if (
+      !this.#shouldIssuerUrlBeSuffixedWithATralingSlash &&
+      value.endsWith('/')
+    ) {
+      this.#url = value.slice(0, -1);
+      return;
+    }
+
+    this.#url = value;
+  }
 
   /**
    * Creates a new instance of HttpServer.
+   * @param shouldIssuerUrlBeSuffixedWithATralingSlash When true, ensures the issuer URL always ends with a trailing slash;
+   * when false, ensures it does not end with a trailing slash;
+   * when undefined, no modification is made to the URL.
    */
-  constructor() {
+  constructor(shouldIssuerUrlBeSuffixedWithATralingSlash?: boolean) {
     super();
-    this.url = undefined;
 
+    this.#url = undefined;
+    this.#shouldIssuerUrlBeSuffixedWithATralingSlash =
+      shouldIssuerUrlBeSuffixedWithATralingSlash;
     this.#keys = new JWKStore();
   }
 
