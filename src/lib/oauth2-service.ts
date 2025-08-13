@@ -18,7 +18,7 @@
  * @module lib/oauth2-service
  */
 
-import type { IncomingMessage, RequestListener } from 'node:http';
+import type { RequestListener } from 'node:http';
 import { URL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
@@ -49,6 +49,7 @@ import type {
   PKCEAlgorithm,
   ScopesOrTransform,
   StatusCodeMutableResponse,
+  TokenRequestIncomingMessage,
 } from './types';
 import { Events } from './types';
 import { InternalEvents } from './types-internals';
@@ -83,6 +84,9 @@ export class OAuth2Service extends EventEmitter {
 
   constructor(oauth2Issuer: OAuth2Issuer, endpoints?: OAuth2EndpointsInput) {
     super();
+
+    assertEndpointsStartWithAForwardSlash(endpoints);
+
     this.#issuer = oauth2Issuer;
 
     this.#endpoints = { ...DEFAULT_ENDPOINTS, ...endpoints };
@@ -109,7 +113,7 @@ export class OAuth2Service extends EventEmitter {
    * @fires OAuth2Service#beforeTokenSigning
    */
   async buildToken(
-    req: IncomingMessage,
+    req: TokenRequestIncomingMessage,
     expiresIn: number,
     scopesOrTransform: ScopesOrTransform | undefined,
   ): Promise<string> {
@@ -118,7 +122,7 @@ export class OAuth2Service extends EventEmitter {
        * Before token signing event.
        * @event OAuth2Service#beforeTokenSigning
        * @param {MutableToken} token The unsigned JWT header and payload.
-       * @param {IncomingMessage} req The incoming HTTP request.
+       * @param {TokenRequestIncomingMessage} req The incoming HTTP request.
        */
       this.emit(Events.BeforeTokenSigning, token, req);
     });
@@ -158,15 +162,15 @@ export class OAuth2Service extends EventEmitter {
   private openidConfigurationHandler: RequestHandler = (_req, res) => {
     assertIsString(this.issuer.url, 'Unknown issuer url.');
 
-    const normalizedIssuerUrl = trimPotentialTrailingSlash(this.issuer.url);
+    const issuer = this.issuer.url;
 
     const openidConfig = {
-      issuer: this.issuer.url,
-      token_endpoint: `${normalizedIssuerUrl}${this.#endpoints.token}`,
-      authorization_endpoint: `${normalizedIssuerUrl}${this.#endpoints.authorize}`,
-      userinfo_endpoint: `${normalizedIssuerUrl}${this.#endpoints.userinfo}`,
+      issuer,
+      token_endpoint: urlCombine(issuer, this.#endpoints.token),
+      authorization_endpoint: urlCombine(issuer, this.#endpoints.authorize),
+      userinfo_endpoint: urlCombine(issuer, this.#endpoints.userinfo),
       token_endpoint_auth_methods_supported: ['none'],
-      jwks_uri: `${normalizedIssuerUrl}${this.#endpoints.jwks}`,
+      jwks_uri: urlCombine(issuer, this.#endpoints.jwks),
       response_types_supported: ['code'],
       grant_types_supported: [
         'client_credentials',
@@ -176,10 +180,10 @@ export class OAuth2Service extends EventEmitter {
       token_endpoint_auth_signing_alg_values_supported: ['RS256'],
       response_modes_supported: ['query'],
       id_token_signing_alg_values_supported: ['RS256'],
-      revocation_endpoint: `${normalizedIssuerUrl}${this.#endpoints.revoke}`,
+      revocation_endpoint: urlCombine(issuer, this.#endpoints.revoke),
       subject_types_supported: ['public'],
-      end_session_endpoint: `${normalizedIssuerUrl}${this.#endpoints.endSession}`,
-      introspection_endpoint: `${normalizedIssuerUrl}${this.#endpoints.introspect}`,
+      end_session_endpoint: urlCombine(issuer, this.#endpoints.endSession),
+      introspection_endpoint: urlCombine(issuer, this.#endpoints.introspect),
       code_challenge_methods_supported: supportedPkceAlgorithms,
     };
 
@@ -299,7 +303,7 @@ export class OAuth2Service extends EventEmitter {
        * Before token response event.
        * @event OAuth2Service#beforeResponse
        * @param {MutableResponse} response The response body and status code.
-       * @param {IncomingMessage} req The incoming HTTP request.
+       * @param {TokenRequestIncomingMessage} req The incoming HTTP request.
        */
       this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
 
@@ -469,6 +473,30 @@ export class OAuth2Service extends EventEmitter {
   };
 }
 
-const trimPotentialTrailingSlash = (url: string): string => {
-  return url.endsWith('/') ? url.slice(0, -1) : url;
+const assertEndpointsStartWithAForwardSlash = (
+  endpoints: Partial<OAuth2Endpoints> | undefined,
+): void => {
+  if (endpoints === undefined) {
+    return;
+  }
+
+  const invalidEndpoints = Object.entries(endpoints)
+    .filter(([, path]) => !path.startsWith('/'))
+    .map(([name, path]) => `"${name}": "${path}"`);
+
+  if (invalidEndpoints.length > 0) {
+    throw new AssertionError({
+      message: `All endpoint paths must start with a forward slash. Invalid endpoints: ${invalidEndpoints.join(
+        ', ',
+      )}`,
+    });
+  }
+};
+
+const urlCombine = (base: string, path: string): string => {
+  if (!base.endsWith('/')) {
+    return `${base}${path}`;
+  }
+
+  return `${base.slice(0, -1)}${path}`;
 };

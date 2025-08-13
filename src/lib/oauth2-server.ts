@@ -48,7 +48,9 @@ export class OAuth2Server extends HttpServer {
       );
     }
 
-    const iss = new OAuth2Issuer();
+    const iss = new OAuth2Issuer(
+      oauth2Options?.shouldIssuerUrlBeSuffixedWithATralingSlash,
+    );
     const serv = new OAuth2Service(iss, oauth2Options?.endpoints);
 
     let options: HttpServerOptions | undefined = undefined;
@@ -119,6 +121,6 @@ export class OAuth2Server extends HttpServer {
    */
   override async stop(): Promise<void> {
     await super.stop();
-    this._issuer.url = undefined;
+    this.issuer.url = undefined;
   }
 }

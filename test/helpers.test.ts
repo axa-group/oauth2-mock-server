@@ -13,8 +13,9 @@ import {
   isValidPkceCodeVerifier,
   pkceVerifierMatchesChallenge,
   shift,
+  privateToPublicKeyTransformer,
 } from '../src/lib/helpers';
-import type { CodeChallenge, PKCEAlgorithm } from '../src';
+import type { CodeChallenge, PKCEAlgorithm, JWK } from '../src';
 
 describe('helpers', () => {
   describe('assertIsString', () => {
@@ -185,6 +186,13 @@ describe('helpers', () => {
         const verifier = createPKCEVerifier();
         await expect(createPKCECodeChallenge(verifier, 'BAD-METHOD' as PKCEAlgorithm)).rejects.toThrowError('Unsupported PKCE method ("BAD-METHOD")');
       });
+    });
+  });
+
+  describe('privateToPublicKeyTransformer', () => {
+    it('throws on unsupported algorithm', () => {
+      const invalidKey = { alg: 'INVALID_ALG' } as JWK;
+      expect(() => privateToPublicKeyTransformer(invalidKey)).toThrow("Unsupported algo 'INVALID_ALG'");
     });
   });
 });

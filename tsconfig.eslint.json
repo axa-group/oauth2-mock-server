@@ -3,6 +3,7 @@
   "include": [
     "src/",
     "test/",
+    "rollup.config.ts",
     "vitest.config.ts",
     "eslint.config.js",
   ],

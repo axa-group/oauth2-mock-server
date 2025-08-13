@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## Unreleased
+
+### Added
+
+- Export `TokenRequestIncomingMessage` type to make `/token` related hooks easier to consume (reported in [#355](https://github.com/axa-group/oauth2-mock-server/issues/355) by [kikisaeba](https://github.com/kikisaeba))
+
+### Changed
+
+- Teach the cli to accept a `issuer-url-trailing-slash` option (reported in [#353](https://github.com/axa-group/oauth2-mock-server/issues/353) by [Valdermeyder](https://github.com/Valdermeyder))
+- Update dependencies
+
 ## [8.1.0](https://github.com/axa-group/oauth2-mock-server/compare/v8.0.1...v8.1.0) — 2025-06-06
 
 ### Added

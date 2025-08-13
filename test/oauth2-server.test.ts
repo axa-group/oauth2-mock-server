@@ -70,4 +70,19 @@ describe('OAuth 2 Server', () => {
 
     await expect(server.stop()).resolves.not.toThrow();
   });
+
+  describe('Issuer url trailing slash handling', () => {
+      it.each([
+        [ true],
+        [ false],
+      ])('%s', async (
+        shouldIssuerUrlBeSuffixedWithATralingSlash,
+      ) => {
+        const server = new OAuth2Server(undefined, undefined, { shouldIssuerUrlBeSuffixedWithATralingSlash });
+        await expect(server.start()).resolves.not.toThrow();
+        expect(server.issuer.url).toBeDefined();
+        expect(server.issuer.url!.endsWith('/')).toBe(shouldIssuerUrlBeSuffixedWithATralingSlash);
+      });
+    });
+
 });

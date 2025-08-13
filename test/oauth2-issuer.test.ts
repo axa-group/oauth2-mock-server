@@ -7,6 +7,49 @@ import * as testKeys from './keys';
 import { verifyTokenWithKey } from './lib/test_helpers';
 
 describe('OAuth 2 issuer', () => {
+  describe('URL handling', () => {
+    it.each([
+      {
+        shouldIssuerUrlBeSuffixedWithATralingSlash: undefined,
+        value: 'https://issuer.example.com',
+        expected: 'https://issuer.example.com'
+      },
+      {
+        shouldIssuerUrlBeSuffixedWithATralingSlash: false,
+        value: 'https://issuer.example.com',
+        expected: 'https://issuer.example.com'
+      },
+      {
+        shouldIssuerUrlBeSuffixedWithATralingSlash: true,
+        value: 'https://issuer.example.com',
+        expected: 'https://issuer.example.com/'
+      },
+      {
+        shouldIssuerUrlBeSuffixedWithATralingSlash: undefined,
+        value: 'https://issuer.example.com/',
+        expected: 'https://issuer.example.com/'
+      },
+      {
+        shouldIssuerUrlBeSuffixedWithATralingSlash: false,
+        value: 'https://issuer.example.com/',
+        expected: 'https://issuer.example.com'
+      },
+      {
+        shouldIssuerUrlBeSuffixedWithATralingSlash: true,
+        value: 'https://issuer.example.com/',
+        expected: 'https://issuer.example.com/'
+      },
+    ])('$value / $isIssuerUrlSuffixedWithATralingSlash => $expected', ({
+      shouldIssuerUrlBeSuffixedWithATralingSlash,
+      value,
+      expected
+    }) => {
+      const issuer = new OAuth2Issuer(shouldIssuerUrlBeSuffixedWithATralingSlash);
+      issuer.url = value;
+      expect(issuer.url).toBe(expected);
+    });
+  });
+
   let issuer: OAuth2Issuer;
 
   beforeAll(async () => {

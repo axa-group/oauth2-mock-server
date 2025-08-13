@@ -1,4 +1,4 @@
-import { writeFile } from 'fs/promises';
+import { writeFile } from 'node:fs/promises';
 
 import { afterEach, describe, it, expect, vi } from 'vitest';
 
@@ -108,6 +108,16 @@ describe('CLI', () => {
 
     expect(res.stdout).toMatch(/^Generated new RSA key with kid "[\w-]+"$/m);
     expect(res.stdout).toMatch(/^JSON web key written to file "[\w-]+\.json"\.$/m);
+  });
+
+  it('should allow adding a trailing slash to the issuer url', async () => {
+
+    const res = await executeCli('--issuer-url-trailing-slash');
+
+    expect(res.result).not.toBeNull();
+
+    expect(res.stdout).toMatch(/^OAuth 2 server listening on http:\/\/.+?:\d+$/m);
+    expect(res.stdout).toMatch(/^OAuth 2 issuer is http:\/\/localhost:\d+\/$/m);
   });
 });
 

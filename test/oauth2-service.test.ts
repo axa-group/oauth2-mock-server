@@ -1,5 +1,5 @@
-import { IncomingMessage, type RequestListener } from 'http';
-import qs from 'querystring';
+import { IncomingMessage, type RequestListener } from 'node:http';
+import qs from 'node:querystring';
 
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
@@ -14,10 +14,28 @@ import {
 import * as testKeys from './keys';
 import { verifyTokenWithKey } from './lib/test_helpers';
 
+describe('OAuth2Service endpoint validation', () => {
+  it('should accept undefined endpoints', () => {
+    expect(() => new OAuth2Service(new OAuth2Issuer(), undefined)).not.toThrow();
+  });
+
+  it('should list all invalid endpoints in error message', () => {
+    const issuer = new OAuth2Issuer();
+
+    expect(() => new OAuth2Service(issuer, {
+      token: 'invalid-token',
+      authorize: '/valid-auth',
+      jwks: 'invalid-jwks'
+    })).toThrow(
+      'All endpoint paths must start with a forward slash. Invalid endpoints: "token": "invalid-token", "jwks": "invalid-jwks"'
+    );
+  });
+});
+
 describe.each([
   'https://issuer.example.com',
-   'https://issuer.example.com/'
-  ])
+  'https://issuer.example.com/'
+])
   ('OAuth 2 service with issuer %s', (issuerUrl: string) => {
 
   let issuer: OAuth2Issuer;

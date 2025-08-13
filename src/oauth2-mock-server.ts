@@ -32,6 +32,7 @@ const defaultOptions: Options = {
   port: 8080,
   keys: [],
   saveJWK: false,
+  issuerUrlTrailingSlash: false,
 };
 
 async function cli(args: string[]): Promise<OAuth2Server | null> {
@@ -81,6 +82,9 @@ function parseCliArgs(args: string[]): Options | null {
       case '--save-jwk':
         opts.saveJWK = true;
         break;
+      case '--issuer-url-trailing-slash':
+        opts.issuerUrlTrailingSlash = true;
+        break;
       default:
         throw new Error(`Unrecognized option '${arg}'.`);
     }
@@ -95,21 +99,22 @@ function showHelp() {
        ${scriptName} -a localhost -p 8080
 
 Options:
-  -h, --help        Shows this help information.
-  -a <address>      Address on which the server will listen for connections.
-                    If omitted, the server will accept connections on [::]
-                    if IPv6 is available, or 0.0.0.0 otherwise.
-  -p <port>         TCP port on which the server will listen for connections.
-                    If omitted, 8080 will be used.
-                    If 0 is provided, the operating system will assign
-                    an arbitrary unused port.
-  -c <cert>         Optional file path to an SSL cert. Both cert and key need
-                    to be supplied to enable SSL.
-  -k <key>          Optional file path to an SSL key. Both key and cert need
-                    to be supplied to enable SSL.
-  --jwk <filename>  Adds a JSON-formatted key to the server's keystore.
-                    Can be specified many times.
-  --save-jwk        Saves all the keys in the keystore as "{kid}.json".
+  -h, --help                   Shows this help information.
+  -a <address>                 Address on which the server will listen for connections.
+                               If omitted, the server will accept connections on [::]
+                               if IPv6 is available, or 0.0.0.0 otherwise.
+  -p <port>                    TCP port on which the server will listen for connections.
+                               If omitted, 8080 will be used.
+                               If 0 is provided, the operating system will assign
+                               an arbitrary unused port.
+  --issuer-url-trailing-slash  Adds a trailing slash to the issuer url.
+  -c <cert>                    Optional file path to an SSL cert. Both cert and key need
+                               to be supplied to enable SSL.
+  -k <key>                     Optional file path to an SSL key. Both key and cert need
+                               to be supplied to enable SSL.
+  --jwk <filename>             Adds a JSON-formatted key to the server's keystore.
+                               Can be specified many times.
+  --save-jwk                   Saves all the keys in the keystore as "{kid}.json".
 
 If no keys are added via the --jwk option, a new random RSA key
 will be generated. This key can then be saved to disk with the --save-jwk
@@ -135,7 +140,9 @@ async function saveJWK(keys: JWK[]) {
 }
 
 async function startServer(opts: Options) {
-  const server = new OAuth2Server(opts.key, opts.cert);
+  const server = new OAuth2Server(opts.key, opts.cert, {
+    shouldIssuerUrlBeSuffixedWithATralingSlash: opts.issuerUrlTrailingSlash,
+  });
 
   await Promise.all(
     opts.keys.map(async (key) => {

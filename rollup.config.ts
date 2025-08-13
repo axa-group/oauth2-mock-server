@@ -1,4 +1,4 @@
-import { rmSync, readFileSync } from 'fs';
+import { rmSync, readFileSync } from 'node:fs';
 
 import typescript from '@rollup/plugin-typescript';
 import { dts } from 'rollup-plugin-dts';
