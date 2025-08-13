@@ -162,15 +162,15 @@ export class OAuth2Service extends EventEmitter {
   private openidConfigurationHandler: RequestHandler = (_req, res) => {
     assertIsString(this.issuer.url, 'Unknown issuer url.');
 
-    const normalizedIssuerUrl = trimPotentialTrailingSlash(this.issuer.url);
+    const issuer = this.issuer.url;
 
     const openidConfig = {
-      issuer: this.issuer.url,
-      token_endpoint: `${normalizedIssuerUrl}${this.#endpoints.token}`,
-      authorization_endpoint: `${normalizedIssuerUrl}${this.#endpoints.authorize}`,
-      userinfo_endpoint: `${normalizedIssuerUrl}${this.#endpoints.userinfo}`,
+      issuer,
+      token_endpoint: urlCombine(issuer, this.#endpoints.token),
+      authorization_endpoint: urlCombine(issuer, this.#endpoints.authorize),
+      userinfo_endpoint: urlCombine(issuer, this.#endpoints.userinfo),
       token_endpoint_auth_methods_supported: ['none'],
-      jwks_uri: `${normalizedIssuerUrl}${this.#endpoints.jwks}`,
+      jwks_uri: urlCombine(issuer, this.#endpoints.jwks),
       response_types_supported: ['code'],
       grant_types_supported: [
         'client_credentials',
@@ -180,10 +180,10 @@ export class OAuth2Service extends EventEmitter {
       token_endpoint_auth_signing_alg_values_supported: ['RS256'],
       response_modes_supported: ['query'],
       id_token_signing_alg_values_supported: ['RS256'],
-      revocation_endpoint: `${normalizedIssuerUrl}${this.#endpoints.revoke}`,
+      revocation_endpoint: urlCombine(issuer, this.#endpoints.revoke),
       subject_types_supported: ['public'],
-      end_session_endpoint: `${normalizedIssuerUrl}${this.#endpoints.endSession}`,
-      introspection_endpoint: `${normalizedIssuerUrl}${this.#endpoints.introspect}`,
+      end_session_endpoint: urlCombine(issuer, this.#endpoints.endSession),
+      introspection_endpoint: urlCombine(issuer, this.#endpoints.introspect),
       code_challenge_methods_supported: supportedPkceAlgorithms,
     };
 
@@ -473,10 +473,6 @@ export class OAuth2Service extends EventEmitter {
   };
 }
 
-const trimPotentialTrailingSlash = (url: string): string => {
-  return url.endsWith('/') ? url.slice(0, -1) : url;
-};
-
 const assertEndpointsStartWithAForwardSlash = (
   endpoints: Partial<OAuth2Endpoints> | undefined,
 ): void => {
@@ -495,4 +491,12 @@ const assertEndpointsStartWithAForwardSlash = (
       )}`,
     });
   }
+};
+
+const urlCombine = (base: string, path: string): string => {
+  if (!base.endsWith('/')) {
+    return `${base}${path}`;
+  }
+
+  return `${base.slice(0, -1)}${path}`;
 };
