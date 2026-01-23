@@ -155,7 +155,7 @@ export class OAuth2Issuer extends EventEmitter {
     const privateKey = await importJWK(key);
 
     const jwt = await new SignJWT(token.payload)
-      .setProtectedHeader({ ...token.header, typ: 'JWT', alg: key.alg })
+      .setProtectedHeader({ typ: 'JWT', ...token.header, alg: key.alg })
       .sign(privateKey);
 
     return jwt;
