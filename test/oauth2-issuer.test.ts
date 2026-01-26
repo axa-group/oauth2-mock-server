@@ -136,8 +136,10 @@ describe('OAuth 2 issuer', () => {
     });
   });
 
-  it('should be able to modify the header and the payload through a beforeSigning event', async () => {
+  it('should be able to modify the headers except \'alg\' and the payload through a beforeSigning event', async () => {
     issuer.once('beforeSigning', (token: MutableToken) => {
+      token.header['alg'] = 'an-algorithm'; //should be ignored
+      token.header['typ'] = 'at+jwt';
       token.header['x5t'] = 'a-new-value';
       token.payload['sub'] = 'the-subject';
     });
@@ -146,10 +148,11 @@ describe('OAuth 2 issuer', () => {
     const decoded = await verifyTokenWithKey(issuer, token, 'test-rs256-key');
 
     expect(decoded).toMatchObject({
-      protectedHeader: { x5t: 'a-new-value' },
+      protectedHeader: { x5t: 'a-new-value', typ: 'at+jwt', alg: issuer.keys.get('test-rs256-key')?.alg },
       payload: {
         sub: 'the-subject'
       },
     });
   });
+
 });
