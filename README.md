@@ -256,7 +256,7 @@ Simulates a token revocation. This endpoint should always return 200 as stated b
 
 ### GET `/endsession`
 
-Simulates the end session endpoint. It will automatically redirect to the post_logout_redirect_uri sent as parameter.
+Simulates the end session endpoint. It will automatically redirect to the `post_logout_redirect_uri` sent as parameter, and if `state` is provided, it is returned in the redirect URI.
 
 ### POST `/introspect`
 
