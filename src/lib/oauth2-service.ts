@@ -438,9 +438,16 @@ export class OAuth2Service extends EventEmitter {
       req.query['post_logout_redirect_uri'],
       'Invalid post_logout_redirect_uri type',
     );
+    assertIsStringOrUndefined(req.query['state'], 'Invalid state type');
+
+    const redirectUrl = new URL(req.query['post_logout_redirect_uri']);
+
+    if (req.query['state']) {
+      redirectUrl.searchParams.set('state', req.query['state']);
+    }
 
     const postLogoutRedirectUri: MutableRedirectUri = {
-      url: new URL(req.query['post_logout_redirect_uri']),
+      url: redirectUrl,
     };
 
     /**

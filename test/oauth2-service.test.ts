@@ -795,6 +795,23 @@ describe.each([
     expect(res.headers['location']).toBe(postLogoutRedirectUri);
   });
 
+  it('should keep state when redirecting from end_session_endpoint', async () => {
+    const postLogoutRedirectUri = 'http://example.com/signin?param=test';
+
+    const res = await request(service.requestHandler)
+      .get('/endsession')
+      .query({
+        post_logout_redirect_uri: postLogoutRedirectUri,
+        state: 'state-123',
+      })
+      .redirects(0)
+      .expect(302);
+
+    expect(res.headers['location']).toBe(
+      'http://example.com/signin?param=test&state=state-123',
+    );
+  });
+
   it('should be able to manipulate url and query params when redirecting within post_logout_redirect_uri', async () => {
     const postLogoutRedirectUri = 'http://example.com/signin?param=test';
 
