@@ -11,6 +11,21 @@ updates:
       prefix: "chore"
       include: "scope"
 
+    groups:
+      eslint:
+        patterns:
+          - "eslint"
+          - "@eslint/js"
+      typescript-eslint:
+        patterns:
+          - "@typescript-eslint/eslint-plugin"
+          - "@typescript-eslint/parser"
+          - "typescript-eslint"
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/coverage-v8"
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
