@@ -184,7 +184,7 @@ describe('helpers', () => {
 
       it('should throw on an unsupported method', async () => {
         const verifier = createPKCEVerifier();
-        await expect(createPKCECodeChallenge(verifier, 'BAD-METHOD' as PKCEAlgorithm)).rejects.toThrowError('Unsupported PKCE method ("BAD-METHOD")');
+        await expect(createPKCECodeChallenge(verifier, 'BAD-METHOD' as PKCEAlgorithm)).rejects.toThrow('Unsupported PKCE method ("BAD-METHOD")');
       });
     });
   });
