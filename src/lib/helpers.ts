@@ -64,7 +64,7 @@ export function assertIsPlainObject(
 export async function pkceVerifierMatchesChallenge(
   verifier: string,
   challenge: CodeChallenge,
-) {
+): Promise<boolean> {
   const generatedChallenge = await createPKCECodeChallenge(
     verifier,
     challenge.method,
@@ -126,12 +126,12 @@ export const readJsonFromFile = (filepath: string): Record<string, unknown> => {
   return maybeJson;
 };
 
-export const isValidPkceCodeVerifier = (verifier: string) => {
+export const isValidPkceCodeVerifier = (verifier: string): boolean => {
   const PKCE_CHALLENGE_REGEX = /^[A-Za-z0-9\-._~]{43,128}$/;
   return PKCE_CHALLENGE_REGEX.test(verifier);
 };
 
-export const createPKCEVerifier = () => {
+export const createPKCEVerifier = (): string => {
   const randomBytes = crypto.getRandomValues(new Uint8Array(32));
   return Buffer.from(randomBytes).toString('base64url');
 };
@@ -141,7 +141,7 @@ export const supportedPkceAlgorithms = ['plain', 'S256'] as const;
 export const createPKCECodeChallenge = async (
   verifier: string = createPKCEVerifier(),
   algorithm: PKCEAlgorithm = 'plain',
-) => {
+): Promise<string> => {
   let challenge: string;
 
   switch (algorithm) {
@@ -214,7 +214,9 @@ const privateToPublicTransformerMap: Record<string, JwkTransformer> = {
   EdDSA: EddsaPrivateFieldsRemover,
 };
 
-export const supportedAlgs = Object.keys(privateToPublicTransformerMap);
+export const supportedAlgs: string[] = Object.keys(
+  privateToPublicTransformerMap,
+);
 
 export const privateToPublicKeyTransformer = (privateKey: JWK): JWK => {
   const transformer = privateToPublicTransformerMap[privateKey.alg];

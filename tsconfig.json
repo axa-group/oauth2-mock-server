@@ -1,7 +1,7 @@
 {
   "include": [
     "src/",
-    "rollup.config.ts"
+    "tsdown.config.ts"
   ],
   "compilerOptions": {
     /* https://www.npmjs.com/package/@tsconfig/node20 */
@@ -25,6 +25,8 @@
     "noPropertyAccessFromIndexSignature": true,
     "noUncheckedIndexedAccess": true,
     "removeComments": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    "declaration": true,
+    "isolatedDeclarations": true
   },
 }
