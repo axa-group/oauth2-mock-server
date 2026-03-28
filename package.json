@@ -61,7 +61,7 @@
     "cors": "^2.8.6",
     "express": "^5.2.1",
     "is-plain-obj": "^4.1.0",
-    "jose": "^6.2.1"
+    "jose": "^6.2.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -72,20 +72,20 @@
     "@types/supertest": "^7.2.0",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
-    "@vitest/coverage-v8": "^4.1.0",
-    "@vitest/eslint-plugin": "^1.6.11",
-    "eslint": "^10.0.3",
+    "@vitest/coverage-v8": "^4.1.2",
+    "@vitest/eslint-plugin": "^1.6.13",
+    "eslint": "^10.1.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.4",
     "eslint-plugin-import-x": "^4.16.2",
-    "eslint-plugin-jsdoc": "^62.8.0",
+    "eslint-plugin-jsdoc": "^62.8.1",
     "eslint-plugin-prettier": "^5.5.5",
     "prettier": "^3.8.1",
     "supertest": "^7.2.2",
     "tsdown": "^0.21.6",
     "typescript": "^5.9.3",
-    "typescript-eslint": "^8.57.0",
-    "vitest": "^4.0.18"
+    "typescript-eslint": "^8.57.2",
+    "vitest": "^4.1.2"
   },
   "overrides": {
     "@types/node": "$@types/node"
