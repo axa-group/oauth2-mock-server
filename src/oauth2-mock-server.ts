@@ -190,4 +190,6 @@ async function startServer(opts: Options) {
   return server;
 }
 
-export default cli(process.argv.slice(2));
+const _default: Promise<OAuth2Server | null> = cli(process.argv.slice(2));
+
+export default _default;

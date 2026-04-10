@@ -1,12 +1,13 @@
+import { defineConfig } from 'eslint/config';
 import eslint from '@eslint/js';
-import jsdoc from 'eslint-plugin-jsdoc';
+import { jsdoc } from 'eslint-plugin-jsdoc';
 import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
 import eslintPluginPrettierRecommendedConfig from 'eslint-plugin-prettier/recommended';
 import importPlugin from 'eslint-plugin-import-x';
 import vitest from '@vitest/eslint-plugin';
 
-export default tseslint.config(
+export default defineConfig(
   eslint.configs.recommended,
   tseslint.configs.strictTypeChecked,
   tseslint.configs.stylisticTypeChecked,
@@ -14,7 +15,9 @@ export default tseslint.config(
   eslintPluginPrettierRecommendedConfig,
   importPlugin.flatConfigs.recommended,
   importPlugin.flatConfigs.typescript,
-  jsdoc.configs['flat/recommended-typescript'],
+  jsdoc({
+    config: 'flat/recommended-typescript',
+  }),
   {
     languageOptions: {
       parserOptions: {
