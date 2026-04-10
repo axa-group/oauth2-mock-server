@@ -26,7 +26,13 @@ export default defineConfig(
     },
   },
   {
-    ignores: ['node_modules/*', 'dist/*', 'coverage/*', '.vscode/*'],
+    ignores: [
+      'node_modules/*',
+      'dist/*',
+      'coverage/*',
+      '.vscode/*',
+      'test/integration/**',
+    ],
   },
   {
     rules: {

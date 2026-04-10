@@ -1,0 +1,40 @@
+name: Integration
+
+on:
+  pull_request:
+
+jobs:
+  runtime:
+    name: Integration tests (${{ matrix.node-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [^20.19, ^22.12, ^24]
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: ./.github/actions/node-bootstrap
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Pack
+        ## --ignore-scripts is required to prevent the prepack script from running
+        run: echo "PACK_FILE=$GITHUB_WORKSPACE/$(npm pack --ignore-scripts)" >> $GITHUB_ENV
+
+      - name: Test CJS require
+        working-directory: test/integration/cjs
+        run: |
+          npm install "${{ env.PACK_FILE }}"
+          node index.js
+
+      - name: Test ESM import
+        working-directory: test/integration/esm
+        run: |
+          npm install "${{ env.PACK_FILE }}"
+          node index.js
+
+      - name: Check types
+        working-directory: test/integration/types
+        run: |
+          npm install "${{ env.PACK_FILE }}"
+          npx tsc --build --verbose
