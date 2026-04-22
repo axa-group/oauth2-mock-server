@@ -1,6 +1,9 @@
+*.tgz
 /node_modules/
 /coverage/
 /.vscode/
 /.cache/
 /.rollup.cache/
 /dist/
+/test/integration/*/node_modules/
+/test/integration/*/package-lock.json
