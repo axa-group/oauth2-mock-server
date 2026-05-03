@@ -4,6 +4,10 @@
     "tsdown.config.ts"
   ],
   "compilerOptions": {
+    "types": [
+      "node"
+    ],
+    "rootDir": ".",
     /* https://www.npmjs.com/package/@tsconfig/node20 */
     "target": "ES2022",
     "module": "preserve",
