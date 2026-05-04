@@ -18,29 +18,33 @@
  * @module lib/oauth2-service
  */
 
-import type { RequestListener } from 'node:http';
+import type {
+  IncomingMessage,
+  ServerResponse,
+  RequestListener,
+} from 'node:http';
 import { URL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { AssertionError } from 'node:assert';
 
-import express, {
-  type ErrorRequestHandler,
-  json,
-  urlencoded,
-  type RequestHandler,
-} from 'express';
-import cors from 'cors';
 import basicAuth from 'basic-auth';
 
 import type { OAuth2Issuer } from './oauth2-issuer';
 import {
+  applyCorsHeaders,
   assertIsString,
   assertIsStringOrUndefined,
   assertIsValidTokenRequest,
   defaultTokenTtl,
   isValidPkceCodeVerifier,
+  normalizePath,
+  parseBody,
+  parseQuery,
   pkceVerifierMatchesChallenge,
+  sendEmpty,
+  sendJson,
+  sendRedirect,
   supportedPkceAlgorithms,
 } from './helpers';
 import type {
@@ -54,11 +58,14 @@ import type {
   PKCEAlgorithm,
   ScopesOrTransform,
   StatusCodeMutableResponse,
-  TokenRequest,
   TokenRequestIncomingMessage,
 } from './types';
 import { Events } from './types';
-import { InternalEvents } from './types-internals';
+import {
+  type AugmentedRequest,
+  InternalEvents,
+  type RouteHandler,
+} from './types-internals';
 
 const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
   wellKnownDocument: '/.well-known/openid-configuration',
@@ -145,39 +152,28 @@ export class OAuth2Service extends EventEmitter {
   }
 
   private buildRequestHandler = (): RequestListener => {
-    const app = express();
+    const routes = new Map<string, RouteHandler>([
+      [
+        `GET:${this.#endpoints.wellKnownDocument}`,
+        this.openidConfigurationHandler,
+      ],
+      [`GET:${this.#endpoints.jwks}`, this.jwksHandler],
+      [`POST:${this.#endpoints.token}`, this.tokenHandler],
+      [`GET:${this.#endpoints.authorize}`, this.authorizeHandler],
+      [`GET:${this.#endpoints.userinfo}`, this.userInfoHandler],
+      [`POST:${this.#endpoints.revoke}`, this.revokeHandler],
+      [`GET:${this.#endpoints.endSession}`, this.endSessionHandler],
+      [`POST:${this.#endpoints.introspect}`, this.introspectHandler],
+    ]);
 
-    // Default Express configuration.
-    // Explicitly set it here to put under the light the current behavior
-    // of the server
-    app.set('strict routing', false);
-
-    app.disable('x-powered-by');
-    app.use(json({ strict: true }));
-    app.use(jsonParseErrorHandler);
-    app.use(cors());
-    app.get(this.#endpoints.wellKnownDocument, this.openidConfigurationHandler);
-    app.get(this.#endpoints.jwks, this.jwksHandler);
-    app.post(
-      this.#endpoints.token,
-      urlencoded({ extended: false }),
-      this.tokenHandler,
-    );
-    app.get(this.#endpoints.authorize, this.authorizeHandler);
-    app.get(this.#endpoints.userinfo, this.userInfoHandler);
-    app.post(this.#endpoints.revoke, this.revokeHandler);
-    app.get(this.#endpoints.endSession, this.endSessionHandler);
-    app.post(this.#endpoints.introspect, this.introspectHandler);
-
-    app.use((_req, res) => {
-      res.status(404).send();
-    });
-    app.use(errorHandler);
-
-    return app as RequestListener;
+    return (req, res) => {
+      dispatch(routes, req, res).catch((err: unknown) => {
+        errorHandler(err, res);
+      });
+    };
   };
 
-  private openidConfigurationHandler: RequestHandler = (_req, res) => {
+  private openidConfigurationHandler: RouteHandler = (_req, res) => {
     assertIsString(this.issuer.url, 'Unknown issuer url.');
 
     const issuer = this.issuer.url;
@@ -205,20 +201,23 @@ export class OAuth2Service extends EventEmitter {
       code_challenge_methods_supported: supportedPkceAlgorithms,
     };
 
-    res.json(openidConfig);
+    sendJson(res, openidConfig);
   };
 
-  private jwksHandler: RequestHandler = (_req, res) => {
-    res.json({ keys: this.issuer.keys.toJSON() });
+  private jwksHandler: RouteHandler = (_req, res) => {
+    sendJson(res, { keys: this.issuer.keys.toJSON() });
   };
 
-  private tokenHandler: RequestHandler = async (req, res) => {
-    assertIsValidTokenRequest(req.body);
-    const reqBody = req.body as Record<string, unknown> & TokenRequest;
+  private tokenHandler: RouteHandler = async (req, res) => {
+    const reqBody = await parseBody(req);
+    assertIsValidTokenRequest(reqBody);
+
+    req.body = reqBody;
 
     const tokenTtl = defaultTokenTtl;
 
-    res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
 
     let xfn: ScopesOrTransform | undefined;
 
@@ -278,12 +277,15 @@ export class OAuth2Service extends EventEmitter {
         };
         break;
       default:
-        res.status(400);
-        res.json({ error: 'invalid_grant' });
+        sendJson(res, { error: 'invalid_grant' }, 400);
         return;
     }
 
-    const token = await this.buildToken(req, tokenTtl, xfn);
+    const token = await this.buildToken(
+      req as unknown as TokenRequestIncomingMessage,
+      tokenTtl,
+      xfn,
+    );
     const resBody: Record<string, unknown> = {
       access_token: token,
       token_type: 'Bearer',
@@ -304,7 +306,11 @@ export class OAuth2Service extends EventEmitter {
         }
       };
 
-      resBody['id_token'] = await this.buildToken(req, tokenTtl, xfn);
+      resBody['id_token'] = await this.buildToken(
+        req as unknown as TokenRequestIncomingMessage,
+        tokenTtl,
+        xfn,
+      );
       resBody['refresh_token'] = randomUUID();
     }
 
@@ -321,11 +327,12 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
 
-    res.status(tokenEndpointResponse.statusCode);
-    res.json(tokenEndpointResponse.body);
+    sendJson(res, tokenEndpointResponse.body, tokenEndpointResponse.statusCode);
   };
 
-  private authorizeHandler: RequestHandler = (req, res) => {
+  private authorizeHandler: RouteHandler = (req, res) => {
+    req.query = parseQuery(req);
+
     const code = randomUUID();
     const {
       nonce,
@@ -361,13 +368,16 @@ export class OAuth2Service extends EventEmitter {
             codeChallengeMethod as PKCEAlgorithm,
           )
         ) {
-          res.status(400);
-          res.json({
-            error: 'invalid_request',
-            error_description: `Unsupported code_challenge method ${codeChallengeMethod}. The following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
-              ', ',
-            )}`,
-          });
+          sendJson(
+            res,
+            {
+              error: 'invalid_request',
+              error_description: `Unsupported code_challenge method ${codeChallengeMethod}. The following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
+                ', ',
+              )}`,
+            },
+            400,
+          );
           return;
         }
         this.#codeChallenges.set(code, {
@@ -410,10 +420,10 @@ export class OAuth2Service extends EventEmitter {
     // for the sake of security.
     //
     // This is *not* a real oAuth2 server. This is *not* to be run in production.
-    res.redirect(url.href);
+    sendRedirect(res, url.href);
   };
 
-  private userInfoHandler: RequestHandler = (req, res) => {
+  private userInfoHandler: RouteHandler = (req, res) => {
     const userInfoResponse: MutableResponse = {
       body: { sub: 'johndoe' },
       statusCode: 200,
@@ -427,10 +437,10 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeUserinfo, userInfoResponse, req);
 
-    res.status(userInfoResponse.statusCode).json(userInfoResponse.body);
+    sendJson(res, userInfoResponse.body, userInfoResponse.statusCode);
   };
 
-  private revokeHandler: RequestHandler = (req, res) => {
+  private revokeHandler: RouteHandler = (req, res) => {
     const revokeResponse: StatusCodeMutableResponse = { statusCode: 200 };
 
     /**
@@ -441,10 +451,12 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeRevoke, revokeResponse, req);
 
-    res.status(revokeResponse.statusCode).send('');
+    sendEmpty(res, revokeResponse.statusCode);
   };
 
-  private endSessionHandler: RequestHandler = (req, res) => {
+  private endSessionHandler: RouteHandler = (req, res) => {
+    req.query = parseQuery(req);
+
     assertIsString(
       req.query['post_logout_redirect_uri'],
       'Invalid post_logout_redirect_uri type',
@@ -469,10 +481,10 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforePostLogoutRedirect, postLogoutRedirectUri, req);
 
-    res.redirect(postLogoutRedirectUri.url.href);
+    sendRedirect(res, postLogoutRedirectUri.url.href);
   };
 
-  private introspectHandler: RequestHandler = (req, res) => {
+  private introspectHandler: RouteHandler = (req, res) => {
     const introspectResponse: MutableResponse = {
       body: { active: true },
       statusCode: 200,
@@ -486,8 +498,7 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeIntrospect, introspectResponse, req);
 
-    res.status(introspectResponse.statusCode);
-    res.json(introspectResponse.body);
+    sendJson(res, introspectResponse.body, introspectResponse.statusCode);
   };
 }
 
@@ -519,19 +530,7 @@ const urlCombine = (base: string, path: string): string => {
   return `${base.slice(0, -1)}${path}`;
 };
 
-const jsonParseErrorHandler: ErrorRequestHandler = (err, _req, _res, next) => {
-  if (
-    'type' in err &&
-    (err as { type: string }).type === 'entity.parse.failed'
-  ) {
-    next(new AssertionError({ message: 'Malformed JSON payload' }));
-  } else {
-    next(err);
-  }
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+const errorHandler = (err: unknown, res: ServerResponse) => {
   let status = 400;
   const errorBody: Record<string, unknown> = {};
 
@@ -547,5 +546,32 @@ const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
       'Check the logs for more details and report this to the maintainers.';
   }
 
-  res.status(status).send(errorBody);
+  sendJson(res, errorBody, status);
+};
+
+const dispatch = async (
+  routes: Map<string, RouteHandler>,
+  req: IncomingMessage,
+  res: ServerResponse,
+): Promise<void> => {
+  applyCorsHeaders(res);
+
+  assertIsString(req.method, 'Invalid HTTP method');
+
+  if (req.method === 'OPTIONS') {
+    sendEmpty(res, 204);
+    return;
+  }
+
+  // Mimics Express default lenient routing behavior (trailing slashes are ignored)
+  const pathname = normalizePath(req.url ?? '/');
+
+  const handler = routes.get(`${req.method}:${pathname}`);
+
+  if (handler === undefined) {
+    sendEmpty(res, 404);
+    return;
+  }
+
+  await handler(req as AugmentedRequest, res);
 };
