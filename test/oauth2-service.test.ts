@@ -701,6 +701,23 @@ describe.each([
     });
   });
 
+  it('should expose req.body to the beforeTokenSigning handler', async () => {
+    service.once('beforeTokenSigning', (token, req) => {
+      token.payload.client_id_from_request_body = req.body?.client_id;
+    });
+
+    const res = await tokenRequest(service.requestHandler)
+      .send({ grant_type: 'client_credentials', client_id: 'a-body-client-id' })
+      .expect(200);
+
+    const resBody = res.body as { access_token: string };
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+
+    expect(decoded.payload).toMatchObject({
+      client_id_from_request_body: 'a-body-client-id',
+    });
+  });
+
   it('should expose the userinfo endpoint', async () => {
     const res = await request(service.requestHandler)
       .get('/userinfo')
