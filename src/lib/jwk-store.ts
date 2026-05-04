@@ -94,11 +94,10 @@ export class JWKStore {
     }
 
     const pair = await generateKeyPair(alg, generateOpts);
-    const joseJwk = await exportJWK(pair.privateKey);
-    normalizeKeyKid(joseJwk, opts);
-    joseJwk.alg = alg;
+    const jwk = await exportJWK(pair.privateKey);
+    normalizeKeyKid(jwk, opts);
+    jwk.alg = alg;
 
-    const jwk = joseJwk as JWK;
     this.#keyRotator.add(jwk);
     return jwk;
   }
@@ -109,19 +108,17 @@ export class JWKStore {
    * @returns The promise for the added key.
    */
   async add(maybeJwk: Record<string, unknown>): Promise<JWK> {
-    const tempJwk = { ...maybeJwk };
+    const jwk = { ...maybeJwk };
 
-    normalizeKeyKid(tempJwk);
+    normalizeKeyKid(jwk);
 
-    if (!('alg' in tempJwk)) {
+    if (!('alg' in jwk)) {
       throw new Error('Unspecified JWK "alg" property');
     }
 
-    if (!supportedAlgs.includes(tempJwk.alg)) {
-      throw new Error(`Unsupported JWK "alg" value ("${tempJwk.alg}")`);
+    if (!supportedAlgs.includes(jwk.alg)) {
+      throw new Error(`Unsupported JWK "alg" value ("${jwk.alg}")`);
     }
-
-    const jwk = tempJwk as JWK;
 
     const privateKey = await importJWK(jwk, jwk.alg, { extractable: false });
 
