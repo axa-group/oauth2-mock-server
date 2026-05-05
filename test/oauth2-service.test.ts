@@ -146,6 +146,13 @@ describe.each([
     expect(JSON.stringify(res.body)).not.toMatch(/(?<!https:|http:)\/\//);
   });
 
+  it('trailing slashes are silently ignored', async () => {
+    const res = await request(service.requestHandler)
+      .get('/.well-known/openid-configuration/');
+
+    expect(res.statusCode).toBe(200);
+  });
+
   it('should expose an JWKS endpoint', async () => {
     const res = await request(service.requestHandler)
       .get('/jwks')

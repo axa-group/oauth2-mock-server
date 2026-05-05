@@ -140,6 +140,12 @@ export class OAuth2Service extends EventEmitter {
 
   private buildRequestHandler = (): RequestListener => {
     const app = express();
+
+    // Default Express configuration.
+    // Explicitly set it here to put under the light the current behavior
+    // of the server
+    app.set('strict routing', false);
+
     app.disable('x-powered-by');
     app.use(json({ strict: true }));
     app.use(cors());
