@@ -19,7 +19,6 @@
  */
 
 import { randomBytes } from 'node:crypto';
-import { AssertionError } from 'node:assert';
 
 import type { GenerateKeyPairOptions } from 'jose';
 import { exportJWK, importJWK, generateKeyPair } from 'jose';
@@ -209,9 +208,7 @@ class KeyRotator {
     const [key] = this.#keys.splice(i, 1);
 
     if (key === undefined) {
-      throw new AssertionError({
-        message: 'Unexpected error. key is supposed to exist',
-      });
+      throw new Error('Unexpected error. key is supposed to exist');
     }
 
     this.#keys.push(key);

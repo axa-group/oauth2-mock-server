@@ -52,7 +52,13 @@ describe('OAuth 2 Server', () => {
     const host = `http://127.0.0.1:${server.address().port.toString()}`;
     const res = await configure(request(host));
 
-    expect(res.text).toContain("[ERR_ASSERTION]: Invalid token request body");
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toMatchInlineSnapshot(`
+      {
+        "error": "invalid_request",
+        "error_description": "Invalid token request body",
+      }
+    `);
 
     await expect(server.stop()).resolves.not.toThrow();
   };

@@ -96,7 +96,7 @@ describe.each([
     }
 
     const postTestCases: [string, number][] = [
-      ['/custom-token', 500], // 500 implies it was routed successfully
+      ['/custom-token', 400], // 400 implies it was routed successfully (invalid body)
       ['/token', 404],
       ['/revoke', 200],
       ['/custom-introspect', 200],

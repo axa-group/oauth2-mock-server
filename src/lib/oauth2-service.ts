@@ -24,7 +24,12 @@ import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { AssertionError } from 'node:assert';
 
-import express, { json, urlencoded, type RequestHandler } from 'express';
+import express, {
+  type ErrorRequestHandler,
+  json,
+  urlencoded,
+  type RequestHandler,
+} from 'express';
 import cors from 'cors';
 import basicAuth from 'basic-auth';
 
@@ -163,6 +168,11 @@ export class OAuth2Service extends EventEmitter {
     app.get(this.#endpoints.endSession, this.endSessionHandler);
     app.post(this.#endpoints.introspect, this.introspectHandler);
 
+    app.use((_req, res) => {
+      res.status(404).send();
+    });
+    app.use(errorHandler);
+
     return app as RequestListener;
   };
 
@@ -212,31 +222,26 @@ export class OAuth2Service extends EventEmitter {
     let xfn: ScopesOrTransform | undefined;
 
     if ('code_verifier' in reqBody && 'code' in reqBody) {
-      try {
-        const code = reqBody.code;
-        const verifier = reqBody.code_verifier;
-        const savedCodeChallenge = this.#codeChallenges.get(code);
-        if (savedCodeChallenge === undefined) {
-          throw new AssertionError({ message: 'code_challenge required' });
-        }
-        this.#codeChallenges.delete(code);
-        if (!isValidPkceCodeVerifier(verifier)) {
-          throw new AssertionError({
-            message:
-              "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
-          });
-        }
-        const doesVerifierMatchCodeChallenge =
-          await pkceVerifierMatchesChallenge(verifier, savedCodeChallenge);
-        if (!doesVerifierMatchCodeChallenge) {
-          throw new AssertionError({
-            message: 'code_verifier provided does not match code_challenge',
-          });
-        }
-      } catch (e) {
-        res.status(400).json({
-          error: 'invalid_request',
-          error_description: (e as AssertionError).message,
+      const code = reqBody.code;
+      const verifier = reqBody.code_verifier;
+      const savedCodeChallenge = this.#codeChallenges.get(code);
+      if (savedCodeChallenge === undefined) {
+        throw new AssertionError({ message: 'code_challenge required' });
+      }
+      this.#codeChallenges.delete(code);
+      if (!isValidPkceCodeVerifier(verifier)) {
+        throw new AssertionError({
+          message:
+            "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
+        });
+      }
+      const doesVerifierMatchCodeChallenge = await pkceVerifierMatchesChallenge(
+        verifier,
+        savedCodeChallenge,
+      );
+      if (!doesVerifierMatchCodeChallenge) {
+        throw new AssertionError({
+          message: 'code_verifier provided does not match code_challenge',
         });
       }
     }
@@ -511,4 +516,24 @@ const urlCombine = (base: string, path: string): string => {
   }
 
   return `${base.slice(0, -1)}${path}`;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  let status = 400;
+  const errorBody: Record<string, unknown> = {};
+
+  if (err instanceof AssertionError) {
+    errorBody['error'] = 'invalid_request';
+    errorBody['error_description'] = err.message;
+  } else {
+    console.error('Unexpected error:', err);
+
+    status = 500;
+    errorBody['error'] =
+      'Most certainly a bug in the library code. ' +
+      'Check the logs for more details and report this to the maintainers.';
+  }
+
+  res.status(status).send(errorBody);
 };
