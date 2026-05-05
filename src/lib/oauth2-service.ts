@@ -49,6 +49,7 @@ import type {
   PKCEAlgorithm,
   ScopesOrTransform,
   StatusCodeMutableResponse,
+  TokenRequest,
   TokenRequestIncomingMessage,
 } from './types';
 import { Events } from './types';
@@ -202,18 +203,19 @@ export class OAuth2Service extends EventEmitter {
 
   private tokenHandler: RequestHandler = async (req, res, next) => {
     try {
+      assertIsValidTokenRequest(req.body);
+      const reqBody = req.body as Record<string, unknown> & TokenRequest;
+
       const tokenTtl = defaultTokenTtl;
 
       res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
 
       let xfn: ScopesOrTransform | undefined;
 
-      assertIsValidTokenRequest(req.body);
-
-      if ('code_verifier' in req.body && 'code' in req.body) {
+      if ('code_verifier' in reqBody && 'code' in reqBody) {
         try {
-          const code = req.body.code;
-          const verifier = req.body.code_verifier;
+          const code = reqBody.code;
+          const verifier = reqBody.code_verifier;
           const savedCodeChallenge = this.#codeChallenges.get(code);
           if (savedCodeChallenge === undefined) {
             throw new AssertionError({ message: 'code_challenge required' });
@@ -240,12 +242,10 @@ export class OAuth2Service extends EventEmitter {
         }
       }
 
-      const reqBody = req.body;
-
       let { scope } = reqBody;
       const { aud } = reqBody;
 
-      switch (req.body.grant_type) {
+      switch (reqBody.grant_type) {
         case 'client_credentials':
           xfn = (_header, payload) => {
             Object.assign(payload, { scope, aud });
@@ -279,16 +279,16 @@ export class OAuth2Service extends EventEmitter {
       }
 
       const token = await this.buildToken(req, tokenTtl, xfn);
-      const body: Record<string, unknown> = {
+      const resBody: Record<string, unknown> = {
         access_token: token,
         token_type: 'Bearer',
         expires_in: tokenTtl,
         scope,
       };
 
-      if (req.body.grant_type !== 'client_credentials') {
+      if (reqBody.grant_type !== 'client_credentials') {
         const credentials = basicAuth(req);
-        const clientId = credentials ? credentials.name : req.body.client_id;
+        const clientId = credentials ? credentials.name : reqBody.client_id;
 
         const xfn: JwtTransform = (_header, payload) => {
           Object.assign(payload, { sub: 'johndoe', aud: clientId });
@@ -299,11 +299,14 @@ export class OAuth2Service extends EventEmitter {
           }
         };
 
-        body['id_token'] = await this.buildToken(req, tokenTtl, xfn);
-        body['refresh_token'] = randomUUID();
+        resBody['id_token'] = await this.buildToken(req, tokenTtl, xfn);
+        resBody['refresh_token'] = randomUUID();
       }
 
-      const tokenEndpointResponse: MutableResponse = { body, statusCode: 200 };
+      const tokenEndpointResponse: MutableResponse = {
+        body: resBody,
+        statusCode: 200,
+      };
 
       /**
        * Before token response event.
