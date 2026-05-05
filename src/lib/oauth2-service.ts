@@ -201,126 +201,122 @@ export class OAuth2Service extends EventEmitter {
     res.json({ keys: this.issuer.keys.toJSON() });
   };
 
-  private tokenHandler: RequestHandler = async (req, res, next) => {
-    try {
-      assertIsValidTokenRequest(req.body);
-      const reqBody = req.body as Record<string, unknown> & TokenRequest;
+  private tokenHandler: RequestHandler = async (req, res) => {
+    assertIsValidTokenRequest(req.body);
+    const reqBody = req.body as Record<string, unknown> & TokenRequest;
 
-      const tokenTtl = defaultTokenTtl;
+    const tokenTtl = defaultTokenTtl;
 
-      res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
+    res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
 
-      let xfn: ScopesOrTransform | undefined;
+    let xfn: ScopesOrTransform | undefined;
 
-      if ('code_verifier' in reqBody && 'code' in reqBody) {
-        try {
-          const code = reqBody.code;
-          const verifier = reqBody.code_verifier;
-          const savedCodeChallenge = this.#codeChallenges.get(code);
-          if (savedCodeChallenge === undefined) {
-            throw new AssertionError({ message: 'code_challenge required' });
-          }
-          this.#codeChallenges.delete(code);
-          if (!isValidPkceCodeVerifier(verifier)) {
-            throw new AssertionError({
-              message:
-                "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
-            });
-          }
-          const doesVerifierMatchCodeChallenge =
-            await pkceVerifierMatchesChallenge(verifier, savedCodeChallenge);
-          if (!doesVerifierMatchCodeChallenge) {
-            throw new AssertionError({
-              message: 'code_verifier provided does not match code_challenge',
-            });
-          }
-        } catch (e) {
-          res.status(400).json({
-            error: 'invalid_request',
-            error_description: (e as AssertionError).message,
+    if ('code_verifier' in reqBody && 'code' in reqBody) {
+      try {
+        const code = reqBody.code;
+        const verifier = reqBody.code_verifier;
+        const savedCodeChallenge = this.#codeChallenges.get(code);
+        if (savedCodeChallenge === undefined) {
+          throw new AssertionError({ message: 'code_challenge required' });
+        }
+        this.#codeChallenges.delete(code);
+        if (!isValidPkceCodeVerifier(verifier)) {
+          throw new AssertionError({
+            message:
+              "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
           });
         }
+        const doesVerifierMatchCodeChallenge =
+          await pkceVerifierMatchesChallenge(verifier, savedCodeChallenge);
+        if (!doesVerifierMatchCodeChallenge) {
+          throw new AssertionError({
+            message: 'code_verifier provided does not match code_challenge',
+          });
+        }
+      } catch (e) {
+        res.status(400).json({
+          error: 'invalid_request',
+          error_description: (e as AssertionError).message,
+        });
       }
-
-      let { scope } = reqBody;
-      const { aud } = reqBody;
-
-      switch (reqBody.grant_type) {
-        case 'client_credentials':
-          xfn = (_header, payload) => {
-            Object.assign(payload, { scope, aud });
-          };
-          break;
-        case 'password':
-          xfn = (_header, payload) => {
-            Object.assign(payload, {
-              sub: reqBody.username,
-              amr: ['pwd'],
-              scope,
-            });
-          };
-          break;
-        case 'authorization_code':
-          scope = scope ?? 'dummy';
-          xfn = (_header, payload) => {
-            Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
-          };
-          break;
-        case 'refresh_token':
-          scope = scope ?? 'dummy';
-          xfn = (_header, payload) => {
-            Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
-          };
-          break;
-        default:
-          res.status(400);
-          res.json({ error: 'invalid_grant' });
-          return;
-      }
-
-      const token = await this.buildToken(req, tokenTtl, xfn);
-      const resBody: Record<string, unknown> = {
-        access_token: token,
-        token_type: 'Bearer',
-        expires_in: tokenTtl,
-        scope,
-      };
-
-      if (reqBody.grant_type !== 'client_credentials') {
-        const credentials = basicAuth(req);
-        const clientId = credentials ? credentials.name : reqBody.client_id;
-
-        const xfn: JwtTransform = (_header, payload) => {
-          Object.assign(payload, { sub: 'johndoe', aud: clientId });
-          if (reqBody.code !== undefined && reqBody.code in this.#nonce) {
-            Object.assign(payload, { nonce: this.#nonce[reqBody.code] });
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-            delete this.#nonce[reqBody.code];
-          }
-        };
-
-        resBody['id_token'] = await this.buildToken(req, tokenTtl, xfn);
-        resBody['refresh_token'] = randomUUID();
-      }
-
-      const tokenEndpointResponse: MutableResponse = {
-        body: resBody,
-        statusCode: 200,
-      };
-
-      /**
-       * Before token response event.
-       * @event OAuth2Service#beforeResponse
-       * @param {MutableResponse} response The response body and status code.
-       * @param {TokenRequestIncomingMessage} req The incoming HTTP request.
-       */
-      this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
-
-      res.status(tokenEndpointResponse.statusCode);
-      res.json(tokenEndpointResponse.body);
-    } catch (e) {
-      next(e);
     }
+
+    let { scope } = reqBody;
+    const { aud } = reqBody;
+
+    switch (reqBody.grant_type) {
+      case 'client_credentials':
+        xfn = (_header, payload) => {
+          Object.assign(payload, { scope, aud });
+        };
+        break;
+      case 'password':
+        xfn = (_header, payload) => {
+          Object.assign(payload, {
+            sub: reqBody.username,
+            amr: ['pwd'],
+            scope,
+          });
+        };
+        break;
+      case 'authorization_code':
+        scope = scope ?? 'dummy';
+        xfn = (_header, payload) => {
+          Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
+        };
+        break;
+      case 'refresh_token':
+        scope = scope ?? 'dummy';
+        xfn = (_header, payload) => {
+          Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
+        };
+        break;
+      default:
+        res.status(400);
+        res.json({ error: 'invalid_grant' });
+        return;
+    }
+
+    const token = await this.buildToken(req, tokenTtl, xfn);
+    const resBody: Record<string, unknown> = {
+      access_token: token,
+      token_type: 'Bearer',
+      expires_in: tokenTtl,
+      scope,
+    };
+
+    if (reqBody.grant_type !== 'client_credentials') {
+      const credentials = basicAuth(req);
+      const clientId = credentials ? credentials.name : reqBody.client_id;
+
+      const xfn: JwtTransform = (_header, payload) => {
+        Object.assign(payload, { sub: 'johndoe', aud: clientId });
+        if (reqBody.code !== undefined && reqBody.code in this.#nonce) {
+          Object.assign(payload, { nonce: this.#nonce[reqBody.code] });
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+          delete this.#nonce[reqBody.code];
+        }
+      };
+
+      resBody['id_token'] = await this.buildToken(req, tokenTtl, xfn);
+      resBody['refresh_token'] = randomUUID();
+    }
+
+    const tokenEndpointResponse: MutableResponse = {
+      body: resBody,
+      statusCode: 200,
+    };
+
+    /**
+     * Before token response event.
+     * @event OAuth2Service#beforeResponse
+     * @param {MutableResponse} response The response body and status code.
+     * @param {TokenRequestIncomingMessage} req The incoming HTTP request.
+     */
+    this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
+
+    res.status(tokenEndpointResponse.statusCode);
+    res.json(tokenEndpointResponse.body);
   };
 
   private authorizeHandler: RequestHandler = (req, res) => {
