@@ -39,7 +39,7 @@ describe('OAuth 2 issuer', () => {
         value: 'https://issuer.example.com/',
         expected: 'https://issuer.example.com/'
       },
-    ])('$value / $isIssuerUrlSuffixedWithATralingSlash => $expected', ({
+    ])('$value / $shouldIssuerUrlBeSuffixedWithATralingSlash => $expected', ({
       shouldIssuerUrlBeSuffixedWithATralingSlash,
       value,
       expected
