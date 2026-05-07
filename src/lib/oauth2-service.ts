@@ -154,6 +154,7 @@ export class OAuth2Service extends EventEmitter {
 
     app.disable('x-powered-by');
     app.use(json({ strict: true }));
+    app.use(jsonParseErrorHandler);
     app.use(cors());
     app.get(this.#endpoints.wellKnownDocument, this.openidConfigurationHandler);
     app.get(this.#endpoints.jwks, this.jwksHandler);
@@ -516,6 +517,17 @@ const urlCombine = (base: string, path: string): string => {
   }
 
   return `${base.slice(0, -1)}${path}`;
+};
+
+const jsonParseErrorHandler: ErrorRequestHandler = (err, _req, _res, next) => {
+  if (
+    'type' in err &&
+    (err as { type: string }).type === 'entity.parse.failed'
+  ) {
+    next(new AssertionError({ message: 'Malformed JSON payload' }));
+  } else {
+    next(err);
+  }
 };
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars

@@ -44,7 +44,7 @@ describe.each([
   beforeAll(async () => {
     issuer = new OAuth2Issuer();
     issuer.url = issuerUrl;
-    await issuer.keys.add(testKeys.getParsed('test-rs256-key.json'));
+    await issuer.keys.add(testKeys.getParsedKey('test-rs256-key.json'));
 
     service = new OAuth2Service(issuer);
   });
@@ -1068,6 +1068,116 @@ describe.each([
       });
       expect(res.statusCode).toBe(200);
     });
+  });
+
+  it('should return 400 for a token request with an unsupported content-type', async () => {
+    const res = await request(service.requestHandler)
+      .post('/token')
+      .type('text/plain')
+      .send('grant_type=client_credentials')
+      .expect(400);
+
+    expect(res.body).toMatchObject({
+      error: 'invalid_request',
+      error_description: 'Invalid token request body',
+    });
+  });
+
+  it('should return 400 for a token request with malformed JSON body', async () => {
+    const res = await request(service.requestHandler)
+      .post('/token')
+      .set('Content-Type', 'application/json')
+      .send('{bad json}')
+      .expect(400);
+
+    expect(res.body).toMatchObject({
+      error: 'invalid_request',
+      error_description: 'Malformed JSON payload',
+    });
+  });
+
+  it('should return 400 when the authorize endpoint is called without redirect_uri', async () => {
+    const res = await request(service.requestHandler)
+      .get('/authorize')
+      .query('response_type=code&scope=dummy_scope')
+      .expect(400);
+
+    expect(res.body).toMatchObject({
+      error: 'invalid_request',
+      error_description: 'Invalid redirectUri type',
+    });
+  });
+
+  it('should return 400 when the end_session_endpoint is called without post_logout_redirect_uri', async () => {
+    const res = await request(service.requestHandler)
+      .get('/endsession')
+      .expect(400);
+
+    expect(res.body).toMatchObject({
+      error: 'invalid_request',
+      error_description: 'Invalid post_logout_redirect_uri type',
+    });
+  });
+
+  it('should return 400 from the OpenID configuration endpoint when issuer url is not set', async () => {
+    const issuerWithoutUrl = new OAuth2Issuer();
+    const serviceWithoutUrl = new OAuth2Service(issuerWithoutUrl);
+
+    const res = await request(serviceWithoutUrl.requestHandler)
+      .get('/.well-known/openid-configuration')
+      .expect(400);
+
+    expect(res.body).toMatchObject({
+      error: 'invalid_request',
+      error_description: 'Unknown issuer url.',
+    });
+  });
+
+  it('should produce an id_token without aud when authorization_code grant provides no client identity', async () => {
+    const res = await request(service.requestHandler)
+      .post('/token')
+      .type('form')
+      .send({
+        grant_type: 'authorization_code',
+        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+        redirect_uri: 'https://example.com/callback',
+      })
+      .expect(200);
+
+    const resBody = res.body as { id_token: string };
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
+
+    expect(decoded.payload).not.toHaveProperty('aud');
+  });
+
+  it('should produce an id_token with aud from Basic auth on refresh_token grants', async () => {
+    const res = await request(service.requestHandler)
+      .post('/token')
+      .type('form')
+      .set('authorization', `Basic ${Buffer.from('the-client:secret').toString('base64')}`)
+      .send({
+        grant_type: 'refresh_token',
+        refresh_token: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+      })
+      .expect(200);
+
+    const resBody = res.body as { id_token: string };
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
+
+    expect(decoded.payload).toMatchObject({ aud: 'the-client' });
+  });
+
+  it('should handle client_credentials grant with no scope', async () => {
+    const res = await tokenRequest(service.requestHandler)
+      .send({ grant_type: 'client_credentials' })
+      .expect(200);
+
+    expect(res.body).not.toHaveProperty('scope');
+
+    const resBody = res.body as { access_token: string };
+    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+
+    expect(decoded.payload).not.toHaveProperty('scope');
   });
 });
 
