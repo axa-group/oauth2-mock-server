@@ -24,7 +24,12 @@ import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { AssertionError } from 'node:assert';
 
-import express, { json, urlencoded, type RequestHandler } from 'express';
+import express, {
+  type ErrorRequestHandler,
+  json,
+  urlencoded,
+  type RequestHandler,
+} from 'express';
 import cors from 'cors';
 import basicAuth from 'basic-auth';
 
@@ -49,6 +54,7 @@ import type {
   PKCEAlgorithm,
   ScopesOrTransform,
   StatusCodeMutableResponse,
+  TokenRequest,
   TokenRequestIncomingMessage,
 } from './types';
 import { Events } from './types';
@@ -140,8 +146,15 @@ export class OAuth2Service extends EventEmitter {
 
   private buildRequestHandler = (): RequestListener => {
     const app = express();
+
+    // Default Express configuration.
+    // Explicitly set it here to put under the light the current behavior
+    // of the server
+    app.set('strict routing', false);
+
     app.disable('x-powered-by');
     app.use(json({ strict: true }));
+    app.use(jsonParseErrorHandler);
     app.use(cors());
     app.get(this.#endpoints.wellKnownDocument, this.openidConfigurationHandler);
     app.get(this.#endpoints.jwks, this.jwksHandler);
@@ -155,6 +168,11 @@ export class OAuth2Service extends EventEmitter {
     app.post(this.#endpoints.revoke, this.revokeHandler);
     app.get(this.#endpoints.endSession, this.endSessionHandler);
     app.post(this.#endpoints.introspect, this.introspectHandler);
+
+    app.use((_req, res) => {
+      res.status(404).send();
+    });
+    app.use(errorHandler);
 
     return app as RequestListener;
   };
@@ -194,124 +212,117 @@ export class OAuth2Service extends EventEmitter {
     res.json({ keys: this.issuer.keys.toJSON() });
   };
 
-  private tokenHandler: RequestHandler = async (req, res, next) => {
-    try {
-      const tokenTtl = defaultTokenTtl;
+  private tokenHandler: RequestHandler = async (req, res) => {
+    assertIsValidTokenRequest(req.body);
+    const reqBody = req.body as Record<string, unknown> & TokenRequest;
 
-      res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
+    const tokenTtl = defaultTokenTtl;
 
-      let xfn: ScopesOrTransform | undefined;
+    res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
 
-      assertIsValidTokenRequest(req.body);
+    let xfn: ScopesOrTransform | undefined;
 
-      if ('code_verifier' in req.body && 'code' in req.body) {
-        try {
-          const code = req.body.code;
-          const verifier = req.body.code_verifier;
-          const savedCodeChallenge = this.#codeChallenges.get(code);
-          if (savedCodeChallenge === undefined) {
-            throw new AssertionError({ message: 'code_challenge required' });
-          }
-          this.#codeChallenges.delete(code);
-          if (!isValidPkceCodeVerifier(verifier)) {
-            throw new AssertionError({
-              message:
-                "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
-            });
-          }
-          const doesVerifierMatchCodeChallenge =
-            await pkceVerifierMatchesChallenge(verifier, savedCodeChallenge);
-          if (!doesVerifierMatchCodeChallenge) {
-            throw new AssertionError({
-              message: 'code_verifier provided does not match code_challenge',
-            });
-          }
-        } catch (e) {
-          res.status(400).json({
-            error: 'invalid_request',
-            error_description: (e as AssertionError).message,
+    if ('code_verifier' in reqBody && 'code' in reqBody) {
+      const code = reqBody.code;
+      const verifier = reqBody.code_verifier;
+      const savedCodeChallenge = this.#codeChallenges.get(code);
+      if (savedCodeChallenge === undefined) {
+        throw new AssertionError({ message: 'code_challenge required' });
+      }
+      this.#codeChallenges.delete(code);
+      if (!isValidPkceCodeVerifier(verifier)) {
+        throw new AssertionError({
+          message:
+            "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
+        });
+      }
+      const doesVerifierMatchCodeChallenge = await pkceVerifierMatchesChallenge(
+        verifier,
+        savedCodeChallenge,
+      );
+      if (!doesVerifierMatchCodeChallenge) {
+        throw new AssertionError({
+          message: 'code_verifier provided does not match code_challenge',
+        });
+      }
+    }
+
+    let { scope } = reqBody;
+    const { aud } = reqBody;
+
+    switch (reqBody.grant_type) {
+      case 'client_credentials':
+        xfn = (_header, payload) => {
+          Object.assign(payload, { scope, aud });
+        };
+        break;
+      case 'password':
+        xfn = (_header, payload) => {
+          Object.assign(payload, {
+            sub: reqBody.username,
+            amr: ['pwd'],
+            scope,
           });
+        };
+        break;
+      case 'authorization_code':
+        scope = scope ?? 'dummy';
+        xfn = (_header, payload) => {
+          Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
+        };
+        break;
+      case 'refresh_token':
+        scope = scope ?? 'dummy';
+        xfn = (_header, payload) => {
+          Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
+        };
+        break;
+      default:
+        res.status(400);
+        res.json({ error: 'invalid_grant' });
+        return;
+    }
+
+    const token = await this.buildToken(req, tokenTtl, xfn);
+    const resBody: Record<string, unknown> = {
+      access_token: token,
+      token_type: 'Bearer',
+      expires_in: tokenTtl,
+      scope,
+    };
+
+    if (reqBody.grant_type !== 'client_credentials') {
+      const credentials = basicAuth(req);
+      const clientId = credentials ? credentials.name : reqBody.client_id;
+
+      const xfn: JwtTransform = (_header, payload) => {
+        Object.assign(payload, { sub: 'johndoe', aud: clientId });
+        if (reqBody.code !== undefined && reqBody.code in this.#nonce) {
+          Object.assign(payload, { nonce: this.#nonce[reqBody.code] });
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+          delete this.#nonce[reqBody.code];
         }
-      }
-
-      const reqBody = req.body;
-
-      let { scope } = reqBody;
-      const { aud } = reqBody;
-
-      switch (req.body.grant_type) {
-        case 'client_credentials':
-          xfn = (_header, payload) => {
-            Object.assign(payload, { scope, aud });
-          };
-          break;
-        case 'password':
-          xfn = (_header, payload) => {
-            Object.assign(payload, {
-              sub: reqBody.username,
-              amr: ['pwd'],
-              scope,
-            });
-          };
-          break;
-        case 'authorization_code':
-          scope = scope ?? 'dummy';
-          xfn = (_header, payload) => {
-            Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
-          };
-          break;
-        case 'refresh_token':
-          scope = scope ?? 'dummy';
-          xfn = (_header, payload) => {
-            Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
-          };
-          break;
-        default:
-          res.status(400);
-          res.json({ error: 'invalid_grant' });
-          return;
-      }
-
-      const token = await this.buildToken(req, tokenTtl, xfn);
-      const body: Record<string, unknown> = {
-        access_token: token,
-        token_type: 'Bearer',
-        expires_in: tokenTtl,
-        scope,
       };
 
-      if (req.body.grant_type !== 'client_credentials') {
-        const credentials = basicAuth(req);
-        const clientId = credentials ? credentials.name : req.body.client_id;
-
-        const xfn: JwtTransform = (_header, payload) => {
-          Object.assign(payload, { sub: 'johndoe', aud: clientId });
-          if (reqBody.code !== undefined && reqBody.code in this.#nonce) {
-            Object.assign(payload, { nonce: this.#nonce[reqBody.code] });
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-            delete this.#nonce[reqBody.code];
-          }
-        };
-
-        body['id_token'] = await this.buildToken(req, tokenTtl, xfn);
-        body['refresh_token'] = randomUUID();
-      }
-
-      const tokenEndpointResponse: MutableResponse = { body, statusCode: 200 };
-
-      /**
-       * Before token response event.
-       * @event OAuth2Service#beforeResponse
-       * @param {MutableResponse} response The response body and status code.
-       * @param {TokenRequestIncomingMessage} req The incoming HTTP request.
-       */
-      this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
-
-      res.status(tokenEndpointResponse.statusCode);
-      res.json(tokenEndpointResponse.body);
-    } catch (e) {
-      next(e);
+      resBody['id_token'] = await this.buildToken(req, tokenTtl, xfn);
+      resBody['refresh_token'] = randomUUID();
     }
+
+    const tokenEndpointResponse: MutableResponse = {
+      body: resBody,
+      statusCode: 200,
+    };
+
+    /**
+     * Before token response event.
+     * @event OAuth2Service#beforeResponse
+     * @param {MutableResponse} response The response body and status code.
+     * @param {TokenRequestIncomingMessage} req The incoming HTTP request.
+     */
+    this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
+
+    res.status(tokenEndpointResponse.statusCode);
+    res.json(tokenEndpointResponse.body);
   };
 
   private authorizeHandler: RequestHandler = (req, res) => {
@@ -506,4 +517,35 @@ const urlCombine = (base: string, path: string): string => {
   }
 
   return `${base.slice(0, -1)}${path}`;
+};
+
+const jsonParseErrorHandler: ErrorRequestHandler = (err, _req, _res, next) => {
+  if (
+    'type' in err &&
+    (err as { type: string }).type === 'entity.parse.failed'
+  ) {
+    next(new AssertionError({ message: 'Malformed JSON payload' }));
+  } else {
+    next(err);
+  }
+};
+
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+  let status = 400;
+  const errorBody: Record<string, unknown> = {};
+
+  if (err instanceof AssertionError) {
+    errorBody['error'] = 'invalid_request';
+    errorBody['error_description'] = err.message;
+  } else {
+    console.error('Unexpected error:', err);
+
+    status = 500;
+    errorBody['error'] =
+      'Most certainly a bug in the library code. ' +
+      'Check the logs for more details and report this to the maintainers.';
+  }
+
+  res.status(status).send(errorBody);
 };

@@ -42,19 +42,54 @@ describe('OAuth 2 Server', () => {
     }).toThrow();
   });
 
-  it('should not raise an UnhandledPromiseRejectionWarning when wrongly invoking the /token endpoint', async () => {
+  type reqConfigurator = (agent: request.Agent) => Promise<request.Response>;
+
+  const testInvalidTokenRequest = async (configure: reqConfigurator) => {
     const server = new OAuth2Server();
 
     await expect(server.start()).resolves.not.toThrow();
 
     const host = `http://127.0.0.1:${server.address().port.toString()}`;
-    const res = await request(host)
-      .post('/token')
-      .set('Content-Type', 'multipart/form-data;');
+    const res = await configure(request(host));
 
-    expect(res.text).toContain("[ERR_ASSERTION]: Invalid token request body");
+    expect(res.statusCode).toBe(400);
+    expect(res.body).toMatchInlineSnapshot(`
+      {
+        "error": "invalid_request",
+        "error_description": "Invalid token request body",
+      }
+    `);
 
     await expect(server.stop()).resolves.not.toThrow();
+  };
+
+  it('should not raise an UnhandledPromiseRejectionWarning when wrongly invoking the /token endpoint (multipart body)', async () => {
+    const configure: reqConfigurator = async (agent) => {
+      return await agent
+        .post('/token')
+        .set('Content-Type', 'multipart/form-data;');
+    };
+
+    await expect(testInvalidTokenRequest(configure)).resolves.not.toThrow();
+  });
+
+  it('should not raise an UnhandledPromiseRejectionWarning when wrongly invoking the /token endpoint (unknown body)', async () => {
+    const configure: reqConfigurator = async (agent) => {
+      return await agent
+        .post('/token')
+        .set('Content-Type', 'application/unknown;');
+    };
+
+    await expect(testInvalidTokenRequest(configure)).resolves.not.toThrow();
+  });
+
+  it('should not raise an UnhandledPromiseRejectionWarning when wrongly invoking the /token endpoint (unspecified content-type)', async () => {
+    const configure: reqConfigurator = async (agent) => {
+      return await agent
+        .post('/token');
+    };
+
+    await expect(testInvalidTokenRequest(configure)).resolves.not.toThrow();
   });
 
   it('should override custom endpoint pathnames', async () => {
