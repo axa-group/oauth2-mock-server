@@ -13,7 +13,7 @@ export interface Output {
   stderr: string;
 }
 
-export async function exec(args: string[]): Promise<Output> {
+export const exec = async (args: string[]): Promise<Output> => {
   const logSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
   const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
@@ -39,4 +39,4 @@ export async function exec(args: string[]): Promise<Output> {
   }
 
   return res;
-}
+};

@@ -117,7 +117,7 @@ describe('CLI', () => {
   });
 });
 
-async function executeCli(...args: string[]) {
+const executeCli = async (...args: string[]) => {
   const res = await exec(args);
 
   if (res.result) {
@@ -125,9 +125,9 @@ async function executeCli(...args: string[]) {
   }
 
   return res;
-}
+};
 
-function errorResponse(message: string) {
+const errorResponse = (message: string) => {
   return {
     err: expect.any(Error),
     result: null,
@@ -135,4 +135,4 @@ function errorResponse(message: string) {
     stdout: '',
     stderr: `${message}\n`,
   };
-}
+};

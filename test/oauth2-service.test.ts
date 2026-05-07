@@ -1181,19 +1181,19 @@ describe.each([
   });
 });
 
-function getCode(response: request.Response) {
+const getCode = (response: request.Response) => {
   expect(response).toMatchObject({
     header: { location: expect.any(String) },
   });
   const parsed = response as unknown as { header: { location: string } };
   const url = new URL(parsed.header.location);
   return url.searchParams.get('code');
-}
+};
 
-function tokenRequest(app: RequestListener) {
+const tokenRequest = (app: RequestListener) => {
   return request(app)
     .post('/token')
     .type('form')
     .expect('Cache-Control', 'no-store')
     .expect('Pragma', 'no-cache');
-}
+};

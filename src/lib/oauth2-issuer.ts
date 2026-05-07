@@ -23,7 +23,8 @@ import { EventEmitter } from 'node:events';
 import { importJWK, SignJWT } from 'jose';
 
 import { JWKStore } from './jwk-store';
-import { assertIsString, defaultTokenTtl } from './helpers';
+import { assertIsString } from './assertions';
+import { defaultTokenTtl } from './helpers';
 import type { Header, MutableToken, Payload, TokenBuildOptions } from './types';
 import { InternalEvents } from './types-internals';
 

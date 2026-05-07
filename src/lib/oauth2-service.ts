@@ -32,10 +32,12 @@ import basicAuth from 'basic-auth';
 
 import type { OAuth2Issuer } from './oauth2-issuer';
 import {
-  applyCorsHeaders,
   assertIsString,
   assertIsStringOrUndefined,
   assertIsValidTokenRequest,
+} from './assertions';
+import {
+  applyCorsHeaders,
   defaultTokenTtl,
   isValidPkceCodeVerifier,
   normalizePath,

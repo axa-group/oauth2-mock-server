@@ -39,6 +39,7 @@ export default defineConfig(
       curly: 'warn',
       eqeqeq: 'warn',
       semi: 'warn',
+      'func-style': ['warn', 'expression'],
       '@typescript-eslint/consistent-type-imports': 'warn',
       'jsdoc/require-jsdoc': [
         'warn',

@@ -17,7 +17,8 @@
 
 import { writeFile } from 'node:fs/promises';
 
-import { assertIsString, readJsonFromFile, shift } from './lib/helpers';
+import { assertIsString } from './lib/assertions';
+import { readJsonFromFile, shift } from './lib/helpers';
 import type { JWK, Options } from './lib/types';
 import { OAuth2Server } from './lib/oauth2-server';
 
@@ -38,7 +39,7 @@ const defaultOptions: Options = {
  * @param args - Command-line arguments to parse.
  * @returns The started server, or null if help was requested.
  */
-export async function cli(args: string[]): Promise<OAuth2Server | null> {
+export const cli = async (args: string[]): Promise<OAuth2Server | null> => {
   let options;
 
   try {
@@ -55,9 +56,9 @@ export async function cli(args: string[]): Promise<OAuth2Server | null> {
   }
 
   return await startServer(options);
-}
+};
 
-function parseCliArgs(args: string[]): Options | null {
+const parseCliArgs = (args: string[]): Options | null => {
   const opts: Options = { ...defaultOptions, keys: [] };
 
   while (args.length > 0) {
@@ -94,9 +95,9 @@ function parseCliArgs(args: string[]): Options | null {
   }
 
   return opts;
-}
+};
 
-function showHelp(scriptName: string): void {
+const showHelp = (scriptName: string): void => {
   console.log(`Usage: ${scriptName} [options]
        ${scriptName} -a localhost -p 8080
 
@@ -121,9 +122,9 @@ Options:
 If no keys are added via the --jwk option, a new random RSA key
 will be generated. This key can then be saved to disk with the --save-jwk
 for later reuse.`);
-}
+};
 
-function parsePort(portStr: string): number {
+const parsePort = (portStr: string): number => {
   const port = parseInt(portStr, 10);
 
   if (Number.isNaN(port) || port < 0 || port > 65535) {
@@ -131,17 +132,17 @@ function parsePort(portStr: string): number {
   }
 
   return port;
-}
+};
 
-async function saveJWK(keys: JWK[]): Promise<void> {
+const saveJWK = async (keys: JWK[]): Promise<void> => {
   for (const key of keys) {
     const filename = `${key.kid}.json`;
     await writeFile(filename, JSON.stringify(key, null, 2));
     console.log(`JSON web key written to file "${filename}".`);
   }
-}
+};
 
-async function startServer(opts: Options): Promise<OAuth2Server> {
+const startServer = async (opts: Options): Promise<OAuth2Server> => {
   const server = new OAuth2Server(opts.key, opts.cert, {
     shouldIssuerUrlBeSuffixedWithATralingSlash: opts.issuerUrlTrailingSlash,
   });
@@ -190,4 +191,4 @@ async function startServer(opts: Options): Promise<OAuth2Server> {
   });
 
   return server;
-}
+};

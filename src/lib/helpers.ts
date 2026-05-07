@@ -13,99 +13,31 @@
  * limitations under the License.
  */
 
-/* eslint-disable jsdoc/require-jsdoc */
-
 import { Buffer } from 'node:buffer';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { AssertionError } from 'node:assert';
-import type { AddressInfo } from 'node:net';
 import { readFileSync } from 'node:fs';
 import { webcrypto as crypto } from 'node:crypto';
 
 import isPlainObject from 'is-plain-obj';
 
-import type { CodeChallenge, JWK, PKCEAlgorithm, TokenRequest } from './types';
+import type { CodeChallenge, JWK, PKCEAlgorithm } from './types';
+import { assertIsPlainObject } from './assertions';
 
 export const defaultTokenTtl = 3600;
 
-export function assertIsString(
-  input: unknown,
-  errorMessage: string,
-): asserts input is string {
-  if (typeof input !== 'string') {
-    throw new AssertionError({ message: errorMessage });
-  }
-}
-
-export function assertIsStringOrUndefined(
-  input: unknown,
-  errorMessage: string,
-): asserts input is string | undefined {
-  if (typeof input !== 'string' && input !== undefined) {
-    throw new AssertionError({ message: errorMessage });
-  }
-}
-
-export function assertIsAddressInfo(
-  input: string | null | AddressInfo,
-): asserts input is AddressInfo {
-  if (input === null || typeof input === 'string') {
-    throw new AssertionError({ message: 'Unexpected address type' });
-  }
-}
-
-export function assertIsPlainObject(
-  obj: unknown,
-  errMessage: string,
-): asserts obj is Record<string, unknown> {
-  if (!isPlainObject(obj)) {
-    throw new AssertionError({ message: errMessage });
-  }
-}
-
-export async function pkceVerifierMatchesChallenge(
+export const pkceVerifierMatchesChallenge = async (
   verifier: string,
   challenge: CodeChallenge,
-): Promise<boolean> {
+): Promise<boolean> => {
   const generatedChallenge = await createPKCECodeChallenge(
     verifier,
     challenge.method,
   );
   return generatedChallenge === challenge.challenge;
-}
-
-const validateAudField = (aud: unknown): void => {
-  if (!Array.isArray(aud)) {
-    assertIsString(aud, "Invalid 'aud' type");
-    return;
-  }
-
-  aud.forEach((a) => {
-    assertIsString(a, "Invalid 'aud' type");
-  });
 };
 
-export function assertIsValidTokenRequest(
-  body: unknown,
-): asserts body is TokenRequest {
-  assertIsPlainObject(body, 'Invalid token request body');
-
-  assertIsString(body['grant_type'], "Invalid 'grant_type' type");
-
-  if ('scope' in body) {
-    assertIsString(body['scope'], "Invalid 'scope' type");
-  }
-
-  if ('code' in body) {
-    assertIsString(body['code'], "Invalid 'code' type");
-  }
-
-  if ('aud' in body) {
-    validateAudField(body['aud']);
-  }
-}
-
-export function shift(arr: (string | undefined)[]): string {
+export const shift = (arr: (string | undefined)[]): string => {
   if (arr.length === 0) {
     throw new AssertionError({ message: 'Empty array' });
   }
@@ -117,7 +49,7 @@ export function shift(arr: (string | undefined)[]): string {
   }
 
   return val;
-}
+};
 
 export const readJsonFromFile = (filepath: string): Record<string, unknown> => {
   const content = readFileSync(filepath, 'utf8');
