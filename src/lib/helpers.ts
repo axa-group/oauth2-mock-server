@@ -15,6 +15,8 @@
 
 /* eslint-disable jsdoc/require-jsdoc */
 
+import { Buffer } from 'node:buffer';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 import { AssertionError } from 'node:assert';
 import type { AddressInfo } from 'node:net';
 import { readFileSync } from 'node:fs';
@@ -72,30 +74,34 @@ export async function pkceVerifierMatchesChallenge(
   return generatedChallenge === challenge.challenge;
 }
 
+const validateAudField = (aud: unknown): void => {
+  if (!Array.isArray(aud)) {
+    assertIsString(aud, "Invalid 'aud' type");
+    return;
+  }
+
+  aud.forEach((a) => {
+    assertIsString(a, "Invalid 'aud' type");
+  });
+};
+
 export function assertIsValidTokenRequest(
   body: unknown,
 ): asserts body is TokenRequest {
   assertIsPlainObject(body, 'Invalid token request body');
 
+  assertIsString(body['grant_type'], "Invalid 'grant_type' type");
+
   if ('scope' in body) {
     assertIsString(body['scope'], "Invalid 'scope' type");
   }
-
-  assertIsString(body['grant_type'], "Invalid 'grant_type' type");
 
   if ('code' in body) {
     assertIsString(body['code'], "Invalid 'code' type");
   }
 
   if ('aud' in body) {
-    const aud = body['aud'];
-    if (Array.isArray(aud)) {
-      aud.forEach((a) => {
-        assertIsString(a, "Invalid 'aud' type");
-      });
-    } else {
-      assertIsString(aud, "Invalid 'aud' type");
-    }
+    validateAudField(body['aud']);
   }
 }
 
@@ -226,4 +232,143 @@ export const privateToPublicKeyTransformer = (privateKey: JWK): JWK => {
   }
 
   return transformer(privateKey);
+};
+
+export const readRawBody = (req: IncomingMessage): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    req.on('data', (chunk: Buffer) => {
+      chunks.push(chunk);
+    });
+    req.on('end', () => {
+      resolve(Buffer.concat(chunks).toString('utf8'));
+    });
+    req.on('error', reject);
+  });
+};
+
+const urlSearchParamsToRecord = (
+  params: URLSearchParams,
+): Record<string, string | string[] | undefined> => {
+  if (params.size === 0) {
+    return {};
+  }
+
+  const result: Record<string, string | string[]> = {};
+
+  for (const [key, value] of params) {
+    const existing = result[key];
+    if (existing === undefined) {
+      result[key] = value;
+      continue;
+    }
+
+    if (Array.isArray(existing)) {
+      existing.push(value);
+      continue;
+    }
+
+    result[key] = [existing, value];
+  }
+
+  return result;
+};
+
+const parseUrlEncodedBody = (
+  raw: string,
+): Record<string, string | string[] | undefined> => {
+  return urlSearchParamsToRecord(new URLSearchParams(raw));
+};
+
+const parseJsonBody = (raw: string): Record<string, unknown> => {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw) as unknown;
+  } catch {
+    throw new AssertionError({
+      message: 'Malformed JSON payload',
+    });
+  }
+
+  if (!isPlainObject(parsed) && !Array.isArray(parsed)) {
+    throw new AssertionError({
+      message: 'Invalid JSON body: expected an object or array',
+    });
+  }
+
+  return parsed as Record<string, unknown>;
+};
+
+export const parseBody = async (
+  req: IncomingMessage,
+): Promise<Record<string, unknown> | undefined> => {
+  const contentType = req.headers['content-type'] ?? '';
+  const raw = await readRawBody(req);
+
+  if (contentType.includes('application/x-www-form-urlencoded')) {
+    return parseUrlEncodedBody(raw);
+  }
+
+  if (contentType.includes('application/json')) {
+    return parseJsonBody(raw);
+  }
+
+  return undefined;
+};
+
+export const parseQuery = (
+  req: IncomingMessage,
+): Record<string, string | string[] | undefined> => {
+  const url = new URL(req.url ?? '/', 'http://localhost');
+  return urlSearchParamsToRecord(url.searchParams);
+};
+
+export const applyCorsHeaders = (res: ServerResponse): void => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+};
+
+export const sendJson = (
+  res: ServerResponse,
+  body: unknown,
+  status = 200,
+): void => {
+  ensureWriteable(res);
+
+  const content = JSON.stringify(body);
+  res.statusCode = status;
+  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Length', Buffer.byteLength(content));
+  res.end(content);
+};
+
+export const sendRedirect = (res: ServerResponse, url: string): void => {
+  ensureWriteable(res);
+
+  res.statusCode = 302;
+  res.setHeader('Location', url);
+  res.end();
+};
+
+export const sendEmpty = (res: ServerResponse, status = 200): void => {
+  ensureWriteable(res);
+
+  res.statusCode = status;
+  res.end();
+};
+
+export const normalizePath = (path: string): string => {
+  const pathname = new URL(path, 'http://localhost').pathname;
+  return pathname.length > 1 && pathname.endsWith('/')
+    ? pathname.slice(0, -1)
+    : pathname;
+};
+
+const ensureWriteable = (res: ServerResponse) => {
+  if (!res.writableEnded) {
+    return;
+  }
+
+  throw new Error('Invalid response state: response already sent');
 };
