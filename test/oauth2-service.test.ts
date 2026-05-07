@@ -110,12 +110,12 @@ describe.each([
     }
   });
 
-  const wellKnownEndpointsPrefixFrom = (issuer: OAuth2Issuer) => {
+  function wellKnownEndpointsPrefixFrom(issuer: OAuth2Issuer): string {
     const { url } = issuer;
     expect(url).not.toBeUndefined();
 
     return url!.endsWith('/') ? url!.slice(0, -1) : url!;
-  };
+  }
 
   it('should expose an OpenID configuration endpoint', async () => {
     const res = await request(service.requestHandler)
@@ -1181,14 +1181,14 @@ describe.each([
   });
 });
 
-function getCode(response: request.Response) {
+function getCode(response: request.Response): string | null {
   expect(response).toMatchObject({
     header: { location: expect.any(String) },
   });
   const parsed = response as unknown as { header: { location: string } };
   const url = new URL(parsed.header.location);
   return url.searchParams.get('code');
-}
+};
 
 function tokenRequest(app: RequestListener) {
   return request(app)
@@ -1196,4 +1196,4 @@ function tokenRequest(app: RequestListener) {
     .type('form')
     .expect('Cache-Control', 'no-store')
     .expect('Pragma', 'no-cache');
-}
+};

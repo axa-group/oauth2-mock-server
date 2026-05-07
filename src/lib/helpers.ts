@@ -13,54 +13,21 @@
  * limitations under the License.
  */
 
-/* eslint-disable jsdoc/require-jsdoc */
-
 import { AssertionError } from 'node:assert';
-import type { AddressInfo } from 'node:net';
 import { readFileSync } from 'node:fs';
 import { webcrypto as crypto } from 'node:crypto';
 
-import isPlainObject from 'is-plain-obj';
-
-import type { CodeChallenge, JWK, PKCEAlgorithm, TokenRequest } from './types';
+import type { CodeChallenge, JWK, PKCEAlgorithm } from './types';
+import { assertIsPlainObject } from './assertions';
 
 export const defaultTokenTtl = 3600;
 
-export function assertIsString(
-  input: unknown,
-  errorMessage: string,
-): asserts input is string {
-  if (typeof input !== 'string') {
-    throw new AssertionError({ message: errorMessage });
-  }
-}
-
-export function assertIsStringOrUndefined(
-  input: unknown,
-  errorMessage: string,
-): asserts input is string | undefined {
-  if (typeof input !== 'string' && input !== undefined) {
-    throw new AssertionError({ message: errorMessage });
-  }
-}
-
-export function assertIsAddressInfo(
-  input: string | null | AddressInfo,
-): asserts input is AddressInfo {
-  if (input === null || typeof input === 'string') {
-    throw new AssertionError({ message: 'Unexpected address type' });
-  }
-}
-
-export function assertIsPlainObject(
-  obj: unknown,
-  errMessage: string,
-): asserts obj is Record<string, unknown> {
-  if (!isPlainObject(obj)) {
-    throw new AssertionError({ message: errMessage });
-  }
-}
-
+/**
+ * Checks whether a code_verifier produces the expected code_challenge.
+ * @param verifier The code_verifier provided by the client.
+ * @param challenge The stored code_challenge to verify against.
+ * @returns `true` if the verifier produces the expected challenge, `false` otherwise.
+ */
 export async function pkceVerifierMatchesChallenge(
   verifier: string,
   challenge: CodeChallenge,
@@ -72,33 +39,12 @@ export async function pkceVerifierMatchesChallenge(
   return generatedChallenge === challenge.challenge;
 }
 
-export function assertIsValidTokenRequest(
-  body: unknown,
-): asserts body is TokenRequest {
-  assertIsPlainObject(body, 'Invalid token request body');
-
-  if ('scope' in body) {
-    assertIsString(body['scope'], "Invalid 'scope' type");
-  }
-
-  assertIsString(body['grant_type'], "Invalid 'grant_type' type");
-
-  if ('code' in body) {
-    assertIsString(body['code'], "Invalid 'code' type");
-  }
-
-  if ('aud' in body) {
-    const aud = body['aud'];
-    if (Array.isArray(aud)) {
-      aud.forEach((a) => {
-        assertIsString(a, "Invalid 'aud' type");
-      });
-    } else {
-      assertIsString(aud, "Invalid 'aud' type");
-    }
-  }
-}
-
+/**
+ * Shifts a value from the given array, throwing an error
+ * if the array is empty or the value is undefined.
+ * @param arr - The array to shift a value from.
+ * @returns The shifted value.
+ */
 export function shift(arr: (string | undefined)[]): string {
   if (arr.length === 0) {
     throw new AssertionError({ message: 'Empty array' });
@@ -113,7 +59,12 @@ export function shift(arr: (string | undefined)[]): string {
   return val;
 }
 
-export const readJsonFromFile = (filepath: string): Record<string, unknown> => {
+/**
+ * Reads a JSON file and parses its content.
+ * @param filepath - The path to the JSON file.
+ * @returns The parsed JSON object.
+ */
+export function readJsonFromFile(filepath: string): Record<string, unknown> {
   const content = readFileSync(filepath, 'utf8');
 
   const maybeJson = JSON.parse(content) as unknown;
@@ -124,24 +75,39 @@ export const readJsonFromFile = (filepath: string): Record<string, unknown> => {
   );
 
   return maybeJson;
-};
+}
 
-export const isValidPkceCodeVerifier = (verifier: string): boolean => {
+/**
+ * Validates whether a string conforms to the PKCE code_verifier format defined in RFC 7636.
+ * @param verifier The code_verifier string to validate.
+ * @returns `true` if the verifier is valid, `false` otherwise.
+ */
+export function isValidPkceCodeVerifier(verifier: string): boolean {
   const PKCE_CHALLENGE_REGEX = /^[A-Za-z0-9\-._~]{43,128}$/;
   return PKCE_CHALLENGE_REGEX.test(verifier);
-};
+}
 
-export const createPKCEVerifier = (): string => {
+/**
+ * Generates a cryptographically random PKCE code_verifier.
+ * @returns A base64url-encoded random string suitable for use as a code_verifier.
+ */
+export function createPKCEVerifier(): string {
   const randomBytes = crypto.getRandomValues(new Uint8Array(32));
   return Buffer.from(randomBytes).toString('base64url');
-};
+}
 
 export const supportedPkceAlgorithms = ['plain', 'S256'] as const;
 
-export const createPKCECodeChallenge = async (
+/**
+ * Derives a PKCE code_challenge from a code_verifier and algorithm.
+ * @param verifier The code_verifier to derive the challenge from. Defaults to a newly generated verifier.
+ * @param algorithm The PKCE algorithm to use. Defaults to `'plain'`.
+ * @returns The derived code_challenge string.
+ */
+export async function createPKCECodeChallenge(
   verifier: string = createPKCEVerifier(),
   algorithm: PKCEAlgorithm = 'plain',
-): Promise<string> => {
+): Promise<string> {
   let challenge: string;
 
   switch (algorithm) {
@@ -161,10 +127,11 @@ export const createPKCECodeChallenge = async (
       throw new Error(`Unsupported PKCE method ("${algorithm as string}")`);
   }
   return challenge;
-};
+}
 
 type JwkTransformer = (jwk: JWK) => JWK;
 
+// eslint-disable-next-line func-style
 const RsaPrivateFieldsRemover: JwkTransformer = (jwk) => {
   const x = { ...jwk };
 
@@ -178,6 +145,7 @@ const RsaPrivateFieldsRemover: JwkTransformer = (jwk) => {
   return x;
 };
 
+// eslint-disable-next-line func-style
 const EcdsaPrivateFieldsRemover: JwkTransformer = (jwk) => {
   const x = { ...jwk };
 
@@ -186,6 +154,7 @@ const EcdsaPrivateFieldsRemover: JwkTransformer = (jwk) => {
   return x;
 };
 
+// eslint-disable-next-line func-style
 const EddsaPrivateFieldsRemover: JwkTransformer = (jwk) => {
   const x = { ...jwk };
 
@@ -218,7 +187,13 @@ export const supportedAlgs: string[] = Object.keys(
   privateToPublicTransformerMap,
 );
 
-export const privateToPublicKeyTransformer = (privateKey: JWK): JWK => {
+/**
+ * Transforms a private JSON web key into a public one by removing the private fields.
+ * @param privateKey The private JSON web key to transform.
+ * @returns The public JSON web key.
+ */
+// eslint-disable-next-line func-style
+export const privateToPublicKeyTransformer: JwkTransformer = (privateKey) => {
   const transformer = privateToPublicTransformerMap[privateKey.alg];
 
   if (transformer === undefined) {

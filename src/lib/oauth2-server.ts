@@ -24,7 +24,7 @@ import type { AddressInfo } from 'node:net';
 import { HttpServer } from './http-server';
 import { OAuth2Issuer } from './oauth2-issuer';
 import { OAuth2Service } from './oauth2-service';
-import { assertIsAddressInfo } from './helpers';
+import { assertIsAddressInfo } from './assertions';
 import type { HttpServerOptions, OAuth2Options } from './types';
 
 /**

@@ -17,7 +17,8 @@
 
 import { writeFile } from 'node:fs/promises';
 
-import { assertIsString, readJsonFromFile, shift } from './lib/helpers';
+import { assertIsString } from './lib/assertions';
+import { readJsonFromFile, shift } from './lib/helpers';
 import type { JWK, Options } from './lib/types';
 import { OAuth2Server } from './lib/oauth2-server';
 
@@ -178,9 +179,9 @@ async function startServer(opts: Options): Promise<OAuth2Server> {
   process.once('SIGINT', () => {
     console.log('OAuth 2 server is stopping...');
 
-    const handler = async (): Promise<void> => {
+    async function handler(): Promise<void> {
       await server.stop();
-    };
+    }
 
     handler().catch((e: unknown) => {
       throw e;

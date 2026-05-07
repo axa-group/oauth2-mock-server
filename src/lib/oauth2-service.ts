@@ -38,6 +38,8 @@ import {
   assertIsString,
   assertIsStringOrUndefined,
   assertIsValidTokenRequest,
+} from './assertions';
+import {
   defaultTokenTtl,
   isValidPkceCodeVerifier,
   pkceVerifierMatchesChallenge,
@@ -154,7 +156,7 @@ export class OAuth2Service extends EventEmitter {
 
     app.disable('x-powered-by');
     app.use(json({ strict: true }));
-    app.use(jsonParseErrorHandler);
+    app.use(this.jsonParseErrorHandler);
     app.use(cors());
     app.get(this.#endpoints.wellKnownDocument, this.openidConfigurationHandler);
     app.get(this.#endpoints.jwks, this.jwksHandler);
@@ -172,7 +174,7 @@ export class OAuth2Service extends EventEmitter {
     app.use((_req, res) => {
       res.status(404).send();
     });
-    app.use(errorHandler);
+    app.use(this.errorHandler);
 
     return app as RequestListener;
   };
@@ -489,11 +491,47 @@ export class OAuth2Service extends EventEmitter {
     res.status(introspectResponse.statusCode);
     res.json(introspectResponse.body);
   };
+
+  private jsonParseErrorHandler: ErrorRequestHandler = (
+    err,
+    _req,
+    _res,
+    next,
+  ) => {
+    if (
+      'type' in err &&
+      (err as { type: string }).type === 'entity.parse.failed'
+    ) {
+      next(new AssertionError({ message: 'Malformed JSON payload' }));
+    } else {
+      next(err);
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+    let status = 400;
+    const errorBody: Record<string, unknown> = {};
+
+    if (err instanceof AssertionError) {
+      errorBody['error'] = 'invalid_request';
+      errorBody['error_description'] = err.message;
+    } else {
+      console.error('Unexpected error:', err);
+
+      status = 500;
+      errorBody['error'] =
+        'Most certainly a bug in the library code. ' +
+        'Check the logs for more details and report this to the maintainers.';
+    }
+
+    res.status(status).send(errorBody);
+  };
 }
 
-const assertEndpointsStartWithAForwardSlash = (
+function assertEndpointsStartWithAForwardSlash(
   endpoints: Partial<OAuth2Endpoints> | undefined,
-): void => {
+): void {
   if (endpoints === undefined) {
     return;
   }
@@ -509,43 +547,12 @@ const assertEndpointsStartWithAForwardSlash = (
       )}`,
     });
   }
-};
+}
 
-const urlCombine = (base: string, path: string): string => {
+function urlCombine(base: string, path: string): string {
   if (!base.endsWith('/')) {
     return `${base}${path}`;
   }
 
   return `${base.slice(0, -1)}${path}`;
-};
-
-const jsonParseErrorHandler: ErrorRequestHandler = (err, _req, _res, next) => {
-  if (
-    'type' in err &&
-    (err as { type: string }).type === 'entity.parse.failed'
-  ) {
-    next(new AssertionError({ message: 'Malformed JSON payload' }));
-  } else {
-    next(err);
-  }
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
-  let status = 400;
-  const errorBody: Record<string, unknown> = {};
-
-  if (err instanceof AssertionError) {
-    errorBody['error'] = 'invalid_request';
-    errorBody['error_description'] = err.message;
-  } else {
-    console.error('Unexpected error:', err);
-
-    status = 500;
-    errorBody['error'] =
-      'Most certainly a bug in the library code. ' +
-      'Check the logs for more details and report this to the maintainers.';
-  }
-
-  res.status(status).send(errorBody);
-};
+}

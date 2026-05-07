@@ -2,7 +2,7 @@ import { writeFile } from 'node:fs/promises';
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { exec } from './lib/cli-fake-runner';
+import { exec, type Output} from './lib/cli-fake-runner';
 
 vi.mock('fs/promises', () => ({
   writeFile: vi.fn().mockImplementation(() => ''),
@@ -117,7 +117,7 @@ describe('CLI', () => {
   });
 });
 
-async function executeCli(...args: string[]) {
+async function executeCli(...args: string[]): Promise<Output> {
   const res = await exec(args);
 
   if (res.result) {
@@ -125,7 +125,7 @@ async function executeCli(...args: string[]) {
   }
 
   return res;
-}
+};
 
 function errorResponse(message: string) {
   return {

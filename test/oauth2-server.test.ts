@@ -44,7 +44,7 @@ describe('OAuth 2 Server', () => {
 
   type reqConfigurator = (agent: request.Agent) => Promise<request.Response>;
 
-  const testInvalidTokenRequest = async (configure: reqConfigurator) => {
+  async function testInvalidTokenRequest(configure: reqConfigurator): Promise<void> {
     const server = new OAuth2Server();
 
     await expect(server.start()).resolves.not.toThrow();
@@ -61,9 +61,10 @@ describe('OAuth 2 Server', () => {
     `);
 
     await expect(server.stop()).resolves.not.toThrow();
-  };
+  }
 
   it('should not raise an UnhandledPromiseRejectionWarning when wrongly invoking the /token endpoint (multipart body)', async () => {
+    // eslint-disable-next-line func-style
     const configure: reqConfigurator = async (agent) => {
       return await agent
         .post('/token')
@@ -74,6 +75,7 @@ describe('OAuth 2 Server', () => {
   });
 
   it('should not raise an UnhandledPromiseRejectionWarning when wrongly invoking the /token endpoint (unknown body)', async () => {
+    // eslint-disable-next-line func-style
     const configure: reqConfigurator = async (agent) => {
       return await agent
         .post('/token')
@@ -84,6 +86,7 @@ describe('OAuth 2 Server', () => {
   });
 
   it('should not raise an UnhandledPromiseRejectionWarning when wrongly invoking the /token endpoint (unspecified content-type)', async () => {
+    // eslint-disable-next-line func-style
     const configure: reqConfigurator = async (agent) => {
       return await agent
         .post('/token');
