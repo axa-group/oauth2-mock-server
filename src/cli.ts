@@ -16,11 +16,50 @@
 /** @module cli */
 
 import { writeFile } from 'node:fs/promises';
+import { AssertionError } from 'node:assert';
+import { readFileSync } from 'node:fs';
 
-import { assertIsString } from './lib/assertions';
-import { readJsonFromFile, shift } from './lib/helpers';
+import { assertIsString, assertIsPlainObject } from './lib/assertions';
 import type { JWK, Options } from './lib/types';
 import { OAuth2Server } from './lib/oauth2-server';
+
+/**
+ * Shifts a value from the given array, throwing an error
+ * if the array is empty or the value is undefined.
+ * @param arr - The array to shift a value from.
+ * @returns The shifted value.
+ */
+export function shift(arr: (string | undefined)[]): string {
+  if (arr.length === 0) {
+    throw new AssertionError({ message: 'Empty array' });
+  }
+
+  const val = arr.shift();
+
+  if (val === undefined) {
+    throw new AssertionError({ message: 'Empty value' });
+  }
+
+  return val;
+}
+
+/**
+ * Reads a JSON file and parses its content.
+ * @param filepath - The path to the JSON file.
+ * @returns The parsed JSON object.
+ */
+export function readJsonFromFile(filepath: string): Record<string, unknown> {
+  const content = readFileSync(filepath, 'utf8');
+
+  const maybeJson = JSON.parse(content) as unknown;
+
+  assertIsPlainObject(
+    maybeJson,
+    `File "${filepath}" doesn't contain a properly JSON serialized object.`,
+  );
+
+  return maybeJson;
+}
 
 /* eslint no-console: off */
 

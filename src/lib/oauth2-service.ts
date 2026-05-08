@@ -33,18 +33,12 @@ import express, {
 import cors from 'cors';
 import basicAuth from 'basic-auth';
 
-import type { OAuth2Issuer } from './oauth2-issuer';
+import { defaultTokenTtl, type OAuth2Issuer } from './oauth2-issuer';
 import {
   assertIsString,
   assertIsStringOrUndefined,
   assertIsValidTokenRequest,
 } from './assertions';
-import {
-  defaultTokenTtl,
-  isValidPkceCodeVerifier,
-  pkceVerifierMatchesChallenge,
-  supportedPkceAlgorithms,
-} from './helpers';
 import type {
   CodeChallenge,
   JwtTransform,
@@ -60,7 +54,15 @@ import type {
   TokenRequestIncomingMessage,
 } from './types';
 import { Events } from './types';
-import { InternalEvents } from './types-internals';
+import { InternalEvents, supportedPkceAlgorithms } from './types-internals';
+import {
+  assertEndpointsStartWithAForwardSlash,
+  urlCombine,
+} from './oauth2-service.http';
+import {
+  isValidPkceCodeVerifier,
+  pkceVerifierMatchesChallenge,
+} from './oauth2-service.pkce';
 
 const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
   wellKnownDocument: '/.well-known/openid-configuration',
@@ -527,32 +529,4 @@ export class OAuth2Service extends EventEmitter {
 
     res.status(status).send(errorBody);
   };
-}
-
-function assertEndpointsStartWithAForwardSlash(
-  endpoints: Partial<OAuth2Endpoints> | undefined,
-): void {
-  if (endpoints === undefined) {
-    return;
-  }
-
-  const invalidEndpoints = Object.entries(endpoints)
-    .filter(([, path]) => !path.startsWith('/'))
-    .map(([name, path]) => `"${name}": "${path}"`);
-
-  if (invalidEndpoints.length > 0) {
-    throw new AssertionError({
-      message: `All endpoint paths must start with a forward slash. Invalid endpoints: ${invalidEndpoints.join(
-        ', ',
-      )}`,
-    });
-  }
-}
-
-function urlCombine(base: string, path: string): string {
-  if (!base.endsWith('/')) {
-    return `${base}${path}`;
-  }
-
-  return `${base.slice(0, -1)}${path}`;
 }

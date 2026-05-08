@@ -2,7 +2,7 @@ import type { JWTVerifyResult } from "jose";
 import { importJWK, jwtVerify } from "jose";
 
 import type { OAuth2Issuer } from "../../src/lib/oauth2-issuer";
-import { privateToPublicKeyTransformer } from "../../src/lib/helpers";
+import { privateToPublicKeyTransformer } from "../../src/lib/jwk-store.keys";
 
 export async function verifyTokenWithKey(
   issuer: OAuth2Issuer,

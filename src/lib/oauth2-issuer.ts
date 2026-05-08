@@ -24,9 +24,10 @@ import { importJWK, SignJWT } from 'jose';
 
 import { JWKStore } from './jwk-store';
 import { assertIsString } from './assertions';
-import { defaultTokenTtl } from './helpers';
 import type { Header, MutableToken, Payload, TokenBuildOptions } from './types';
 import { InternalEvents } from './types-internals';
+
+export const defaultTokenTtl = 3600;
 
 /**
  * Represents an OAuth 2 issuer.
