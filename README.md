@@ -21,7 +21,7 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 Add it to your Node.js project as a development dependency:
 
-```shell
+```sh
 npm install --save-dev oauth2-mock-server
 ```
 
@@ -266,7 +266,7 @@ Simulates the [token introspection endpoint](https://www.oauth.com/oauth2-server
 
 The server can be run from the command line.
 
-```shell
+```sh
 npx oauth2-mock-server --help
 ```
 

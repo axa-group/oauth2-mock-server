@@ -17,19 +17,40 @@ Generally we like to see pull requests that
 - Maintain the existing code style
 - Are focused on a single change (i.e. avoid large refactoring or style adjustments in untouched code if not the primary goal of the pull request)
 - Have [good commit messages](https://chris.beams.io/posts/git-commit/)
-- Have tests
-- Don't decrease the current code coverage (see `TestResults/coverage/index.html`)
+- Have tests that cover the new or modified behaviour
+- Don't decrease the current code coverage
 
-## Running tests
+## Development setup
 
-To run tests locally, first install all dependencies.
+Install all dependencies:
 
-```shell
+```sh
 npm install
 ```
 
-From the root directory, run the tests.
+## Checking your work
 
-```shell
-npm run test
+In order to locally validate your changes, run the following
+
+```sh
+npm test
 ```
+
+This will perform these checks:
+
+- TypeScript type validation
+- Eslint
+- Tests execution (with text based coverage reporting)
+
+To get a prettier detailed view on the current coverage
+
+```sh
+npx vitest --run --coverage --coverage.reporter=html
+```
+
+The html based coverage will be available under the `coverage/` directory.
+
+## AI coding agents
+
+If you are an AI coding agent working in this repository, read [AGENTS.md](./AGENTS.md) in full before making any changes.
+It contains mandatory rules and machine-oriented conventions for TypeScript, testing, and the checks required before marking any task as done.

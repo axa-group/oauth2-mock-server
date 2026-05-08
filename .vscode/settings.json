@@ -3,5 +3,8 @@
     "source.fixAll": "explicit"
   },
   "editor.formatOnSave": true,
-  "js/ts.tsdk.path": "./node_modules/typescript/lib"
+  "js/ts.tsdk.path": "./node_modules/typescript/lib",
+  "chat.tools.terminal.autoApprove": {
+    "npx vitest": true
+  }
 }
