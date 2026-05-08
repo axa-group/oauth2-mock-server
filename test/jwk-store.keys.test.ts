@@ -62,4 +62,20 @@ describe('privateToPublicKeyTransformer', () => {
       kid: privateKey.kid,
     });
   });
+
+  it('strips private fields from an Ed25519 (OKP) key', () => {
+    const privateKey = getParsedKey('test-ed25519-key.json') as JWK;
+
+    expect(privateKey).toHaveProperty('d');
+
+    const publicKey = privateToPublicKeyTransformer(privateKey);
+
+    expect(publicKey).not.toHaveProperty('d');
+
+    expect(publicKey).toMatchObject({
+      kty: 'OKP',
+      alg: 'Ed25519',
+      kid: privateKey.kid,
+    });
+  });
 });
