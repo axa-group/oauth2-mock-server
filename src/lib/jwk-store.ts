@@ -92,6 +92,12 @@ export class JWKStore {
       throw new Error(`Unsupported JWK "alg" value ("${jwk.alg}")`);
     }
 
+    if (jwk.alg === 'EdDSA' && 'crv' in jwk && jwk.crv !== 'Ed25519') {
+      throw new Error(
+        'Invalid or unsupported crv option provided, supported values are: Ed25519',
+      );
+    }
+
     const privateKey = await importJWK(jwk, jwk.alg, { extractable: false });
 
     if (privateKey instanceof Uint8Array || privateKey.type !== 'private') {

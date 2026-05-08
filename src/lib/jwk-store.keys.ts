@@ -64,6 +64,7 @@ const privateToPublicTransformerMap: Record<string, JwkTransformer> = {
 
   // Edwards-curve DSA
   EdDSA: EddsaPrivateFieldsRemover,
+  Ed25519: EddsaPrivateFieldsRemover,
 };
 
 export const supportedAlgs: string[] = Object.keys(

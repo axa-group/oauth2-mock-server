@@ -17,6 +17,7 @@ describe('JWK Store', () => {
       ["ECDSA", "ES256", "EC"],
       ["ECDSA", "ES384", "EC"],
       ["ECDSA", "ES512", "EC"],
+      ["EdDSA", "Ed25519", "OKP"],
     ])('should be able to generate a new %s based key (alg = %s)', async (_kind: string, alg: string, expectedKty: string) => {
       const store = new JWKStore();
       const key = await store.generate(alg);
@@ -75,6 +76,7 @@ describe('JWK Store', () => {
       ['RSA', getParsedKey('test-rs256-key.json')],
       ['EC', getParsedKey('test-es256-key.json')],
       ['OKP', getParsedKey('test-eddsa-key.json')],
+      ['OKP', getParsedKey('test-ed25519-key.json')],
     ])('should be able to add a JWK key to the store (kty = %s)', async (keyType, testKey) => {
       const store = new JWKStore();
       const key = await store.add(testKey);
@@ -88,7 +90,8 @@ describe('JWK Store', () => {
     it.each([
       ['RSA', getParsedKey('test-rs256-key.json')],
       ['EC', getParsedKey('test-es256-key.json')],
-      ['OKP', getParsedKey('test-eddsa-key.json')]
+      ['OKP', getParsedKey('test-eddsa-key.json')],
+      ['OKP', getParsedKey('test-ed25519-key.json')],
     ])('throws when serialized key lacks the "alg" property (kty = %s)', async (_keyType, testKey) => {
       const store = new JWKStore();
 
@@ -100,7 +103,8 @@ describe('JWK Store', () => {
     it.each([
       ['RSA', getParsedKey('test-rs256-key.json')],
       ['EC', getParsedKey('test-es256-key.json')],
-      ['OKP', getParsedKey('test-eddsa-key.json')]
+      ['OKP', getParsedKey('test-eddsa-key.json')],
+      ['OKP', getParsedKey('test-ed25519-key.json')],
     ])('throws when serialized key contains an unsupported "alg" value (kty = %s)', async (_keyType, testKey) => {
       const store = new JWKStore();
 
@@ -138,6 +142,17 @@ describe('JWK Store', () => {
       delete testKey.d;
 
       await expect(() => store.add(testKey)).rejects.toThrow('Invalid JWK type. No "private" key related data has been found.');
+    });
+
+    it('throws when adding an EdDSA key with an unsupported crv', async () => {
+      const store = new JWKStore();
+
+      const testKey = getParsedKey('test-eddsa-key.json');
+      testKey.crv = 'Ed448';
+
+      await expect(() => store.add(testKey)).rejects.toThrow(
+        'Invalid or unsupported crv option provided, supported values are: Ed25519',
+      );
     });
 
     it('adding a key will overwrite an existing key in the store bearing the same "kid"', async () => {
@@ -259,7 +274,8 @@ describe('JWK Store', () => {
     it.each([
       ['RSA', getParsedKey('test-rs256-key.json'), ['d', 'p', 'q', 'dp', 'dq', 'qi']],
       ['EC', getParsedKey('test-es256-key.json'), ['d']],
-      ['OKP', getParsedKey('test-eddsa-key.json'), ['d']]
+      ['OKP', getParsedKey('test-eddsa-key.json'), ['d']],
+      ['OKP (Ed25519 alg)', getParsedKey('test-ed25519-key.json'), ['d']],
     ])('properly removes private fields from key when requesting it (kty = %s)', async (_keyType, testKey, fields) => {
       const store = new JWKStore();
 
