@@ -4,12 +4,12 @@ import qs from 'node:querystring';
 import { describe, it, expect, beforeAll } from 'vitest';
 import request from 'supertest';
 
-import { OAuth2Issuer, OAuth2Service  } from '../src';
-import type { MutableRedirectUri } from '../src/lib/types';
+import { OAuth2Issuer, OAuth2Service } from '../src';
+import type { MutableRedirectUri } from '../src';
 import {
   createPKCECodeChallenge,
   createPKCEVerifier,
-} from '../src/lib/helpers';
+} from '../src/lib/oauth2-service.pkce';
 
 import * as testKeys from './keys';
 import { verifyTokenWithKey } from './lib/test_helpers';
@@ -1197,3 +1197,5 @@ const tokenRequest = (app: RequestListener) => {
     .expect('Cache-Control', 'no-store')
     .expect('Pragma', 'no-cache');
 };
+
+

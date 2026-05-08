@@ -21,3 +21,5 @@ export type RouteHandler = (
   req: AugmentedRequest,
   res: ServerResponse,
 ) => Promise<void> | void;
+
+export const supportedPkceAlgorithms = ['plain', 'S256'] as const;

@@ -18,11 +18,7 @@
  * @module lib/oauth2-service
  */
 
-import type {
-  IncomingMessage,
-  ServerResponse,
-  RequestListener,
-} from 'node:http';
+import type { RequestListener } from 'node:http';
 import { URL } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
@@ -30,25 +26,12 @@ import { AssertionError } from 'node:assert';
 
 import basicAuth from 'basic-auth';
 
-import type { OAuth2Issuer } from './oauth2-issuer';
+import { defaultTokenTtl, type OAuth2Issuer } from './oauth2-issuer';
 import {
   assertIsString,
   assertIsStringOrUndefined,
   assertIsValidTokenRequest,
 } from './assertions';
-import {
-  applyCorsHeaders,
-  defaultTokenTtl,
-  isValidPkceCodeVerifier,
-  normalizePath,
-  parseBody,
-  parseQuery,
-  pkceVerifierMatchesChallenge,
-  sendEmpty,
-  sendJson,
-  sendRedirect,
-  supportedPkceAlgorithms,
-} from './helpers';
 import type {
   CodeChallenge,
   JwtTransform,
@@ -64,10 +47,25 @@ import type {
 } from './types';
 import { Events } from './types';
 import {
-  type AugmentedRequest,
   InternalEvents,
   type RouteHandler,
+  supportedPkceAlgorithms,
 } from './types-internals';
+import {
+  assertEndpointsStartWithAForwardSlash,
+  dispatch,
+  errorHandler,
+  parseBody,
+  parseQuery,
+  sendEmpty,
+  sendJson,
+  sendRedirect,
+  urlCombine,
+} from './oauth2-service.http';
+import {
+  isValidPkceCodeVerifier,
+  pkceVerifierMatchesChallenge,
+} from './oauth2-service.pkce';
 
 const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
   wellKnownDocument: '/.well-known/openid-configuration',
@@ -503,77 +501,3 @@ export class OAuth2Service extends EventEmitter {
     sendJson(res, introspectResponse.body, introspectResponse.statusCode);
   };
 }
-
-const assertEndpointsStartWithAForwardSlash = (
-  endpoints: Partial<OAuth2Endpoints> | undefined,
-): void => {
-  if (endpoints === undefined) {
-    return;
-  }
-
-  const invalidEndpoints = Object.entries(endpoints)
-    .filter(([, path]) => !path.startsWith('/'))
-    .map(([name, path]) => `"${name}": "${path}"`);
-
-  if (invalidEndpoints.length > 0) {
-    throw new AssertionError({
-      message: `All endpoint paths must start with a forward slash. Invalid endpoints: ${invalidEndpoints.join(
-        ', ',
-      )}`,
-    });
-  }
-};
-
-const urlCombine = (base: string, path: string): string => {
-  if (!base.endsWith('/')) {
-    return `${base}${path}`;
-  }
-
-  return `${base.slice(0, -1)}${path}`;
-};
-
-const errorHandler = (err: unknown, res: ServerResponse) => {
-  let status = 400;
-  const errorBody: Record<string, unknown> = {};
-
-  if (err instanceof AssertionError) {
-    errorBody['error'] = 'invalid_request';
-    errorBody['error_description'] = err.message;
-  } else {
-    console.error('Unexpected error:', err);
-
-    status = 500;
-    errorBody['error'] =
-      'Most certainly a bug in the library code. ' +
-      'Check the logs for more details and report this to the maintainers.';
-  }
-
-  sendJson(res, errorBody, status);
-};
-
-const dispatch = async (
-  routes: Map<string, RouteHandler>,
-  req: IncomingMessage,
-  res: ServerResponse,
-): Promise<void> => {
-  applyCorsHeaders(res);
-
-  assertIsString(req.method, 'Invalid HTTP method');
-
-  if (req.method === 'OPTIONS') {
-    sendEmpty(res, 204);
-    return;
-  }
-
-  // Mimics Express default lenient routing behavior (trailing slashes are ignored)
-  const pathname = normalizePath(req.url ?? '/');
-
-  const handler = routes.get(`${req.method}:${pathname}`);
-
-  if (handler === undefined) {
-    sendEmpty(res, 404);
-    return;
-  }
-
-  await handler(req as AugmentedRequest, res);
-};

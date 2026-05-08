@@ -22,7 +22,7 @@ import type { GenerateKeyPairOptions } from 'jose';
 import { exportJWK, importJWK, generateKeyPair } from 'jose';
 
 import type { JWK } from './types';
-import { privateToPublicKeyTransformer, supportedAlgs } from './helpers';
+import { privateToPublicKeyTransformer, supportedAlgs } from './jwk-store.keys';
 import { assertIsJwtWithKid } from './assertions';
 
 /**

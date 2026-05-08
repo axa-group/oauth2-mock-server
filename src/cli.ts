@@ -16,11 +16,39 @@
 /** @module cli */
 
 import { writeFile } from 'node:fs/promises';
+import { AssertionError } from 'node:assert';
+import { readFileSync } from 'node:fs';
 
-import { assertIsString } from './lib/assertions';
-import { readJsonFromFile, shift } from './lib/helpers';
+import { assertIsString, assertIsPlainObject } from './lib/assertions';
 import type { JWK, Options } from './lib/types';
 import { OAuth2Server } from './lib/oauth2-server';
+
+export const shift = (arr: (string | undefined)[]): string => {
+  if (arr.length === 0) {
+    throw new AssertionError({ message: 'Empty array' });
+  }
+
+  const val = arr.shift();
+
+  if (val === undefined) {
+    throw new AssertionError({ message: 'Empty value' });
+  }
+
+  return val;
+};
+
+export const readJsonFromFile = (filepath: string): Record<string, unknown> => {
+  const content = readFileSync(filepath, 'utf8');
+
+  const maybeJson = JSON.parse(content) as unknown;
+
+  assertIsPlainObject(
+    maybeJson,
+    `File "${filepath}" doesn't contain a properly JSON serialized object.`,
+  );
+
+  return maybeJson;
+};
 
 /* eslint no-console: off */
 
