@@ -8,6 +8,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ### Changed
 
+- Removed Express as a dependency. Request handlers are now implemented directly on top of Node.js's built-in `http`/`https` modules. No impact on the documented API.
 - Update dependencies
 
 ## [8.2.2](https://github.com/axa-group/oauth2-mock-server/compare/v8.2.1...v8.2.2) — 2026-02-26

@@ -18,40 +18,12 @@
  * @module lib/jwk-store
  */
 
-import { randomBytes } from 'node:crypto';
-import { AssertionError } from 'node:assert';
-
 import type { GenerateKeyPairOptions } from 'jose';
 import { exportJWK, importJWK, generateKeyPair } from 'jose';
 
 import type { JWK } from './types';
-import type { JWKWithKid } from './types-internals';
-import {
-  assertIsPlainObject,
-  privateToPublicKeyTransformer,
-  supportedAlgs,
-} from './helpers';
-
-const generateRandomKid = () => {
-  return randomBytes(40).toString('hex');
-};
-
-function normalizeKeyKid(
-  jwk: unknown,
-  opts?: { kid?: string },
-): asserts jwk is JWKWithKid {
-  assertIsPlainObject(jwk, 'Invalid jwk format');
-
-  if (jwk['kid'] !== undefined) {
-    return;
-  }
-
-  if (opts?.kid !== undefined) {
-    jwk['kid'] = opts.kid;
-  } else {
-    jwk['kid'] = generateRandomKid();
-  }
-}
+import { privateToPublicKeyTransformer, supportedAlgs } from './jwk-store.keys';
+import { assertIsJwtWithKid } from './assertions';
 
 /**
  * Simple JWK store
@@ -95,7 +67,7 @@ export class JWKStore {
 
     const pair = await generateKeyPair(alg, generateOpts);
     const jwk = await exportJWK(pair.privateKey);
-    normalizeKeyKid(jwk, opts);
+    assertIsJwtWithKid(jwk, opts);
     jwk.alg = alg;
 
     this.#keyRotator.add(jwk);
@@ -110,7 +82,7 @@ export class JWKStore {
   async add(maybeJwk: Record<string, unknown>): Promise<JWK> {
     const jwk = { ...maybeJwk };
 
-    normalizeKeyKid(jwk);
+    assertIsJwtWithKid(jwk);
 
     if (!('alg' in jwk)) {
       throw new Error('Unspecified JWK "alg" property');
@@ -118,6 +90,12 @@ export class JWKStore {
 
     if (!supportedAlgs.includes(jwk.alg)) {
       throw new Error(`Unsupported JWK "alg" value ("${jwk.alg}")`);
+    }
+
+    if (jwk.alg === 'EdDSA' && 'crv' in jwk && jwk.crv !== 'Ed25519') {
+      throw new Error(
+        'Invalid or unsupported crv option provided, supported values are: Ed25519',
+      );
     }
 
     const privateKey = await importJWK(jwk, jwk.alg, { extractable: false });
@@ -209,9 +187,7 @@ class KeyRotator {
     const [key] = this.#keys.splice(i, 1);
 
     if (key === undefined) {
-      throw new AssertionError({
-        message: 'Unexpected error. key is supposed to exist',
-      });
+      throw new Error('Unexpected error. key is supposed to exist');
     }
 
     this.#keys.push(key);

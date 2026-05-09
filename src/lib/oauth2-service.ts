@@ -24,20 +24,14 @@ import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { AssertionError } from 'node:assert';
 
-import express, { json, urlencoded, type RequestHandler } from 'express';
-import cors from 'cors';
 import basicAuth from 'basic-auth';
 
-import type { OAuth2Issuer } from './oauth2-issuer';
+import { defaultTokenTtl, type OAuth2Issuer } from './oauth2-issuer';
 import {
   assertIsString,
   assertIsStringOrUndefined,
   assertIsValidTokenRequest,
-  defaultTokenTtl,
-  isValidPkceCodeVerifier,
-  pkceVerifierMatchesChallenge,
-  supportedPkceAlgorithms,
-} from './helpers';
+} from './assertions';
 import type {
   CodeChallenge,
   JwtTransform,
@@ -52,7 +46,26 @@ import type {
   TokenRequestIncomingMessage,
 } from './types';
 import { Events } from './types';
-import { InternalEvents } from './types-internals';
+import {
+  InternalEvents,
+  type RouteHandler,
+  supportedPkceAlgorithms,
+} from './types-internals';
+import {
+  assertEndpointsStartWithAForwardSlash,
+  dispatch,
+  errorHandler,
+  parseBody,
+  parseQuery,
+  sendEmpty,
+  sendJson,
+  sendRedirect,
+  urlCombine,
+} from './oauth2-service.http';
+import {
+  isValidPkceCodeVerifier,
+  pkceVerifierMatchesChallenge,
+} from './oauth2-service.pkce';
 
 const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
   wellKnownDocument: '/.well-known/openid-configuration',
@@ -139,27 +152,28 @@ export class OAuth2Service extends EventEmitter {
   }
 
   private buildRequestHandler = (): RequestListener => {
-    const app = express();
-    app.disable('x-powered-by');
-    app.use(json({ strict: true }));
-    app.use(cors());
-    app.get(this.#endpoints.wellKnownDocument, this.openidConfigurationHandler);
-    app.get(this.#endpoints.jwks, this.jwksHandler);
-    app.post(
-      this.#endpoints.token,
-      urlencoded({ extended: false }),
-      this.tokenHandler,
-    );
-    app.get(this.#endpoints.authorize, this.authorizeHandler);
-    app.get(this.#endpoints.userinfo, this.userInfoHandler);
-    app.post(this.#endpoints.revoke, this.revokeHandler);
-    app.get(this.#endpoints.endSession, this.endSessionHandler);
-    app.post(this.#endpoints.introspect, this.introspectHandler);
+    const routes = new Map<string, RouteHandler>([
+      [
+        `GET:${this.#endpoints.wellKnownDocument}`,
+        this.openidConfigurationHandler,
+      ],
+      [`GET:${this.#endpoints.jwks}`, this.jwksHandler],
+      [`POST:${this.#endpoints.token}`, this.tokenHandler],
+      [`GET:${this.#endpoints.authorize}`, this.authorizeHandler],
+      [`GET:${this.#endpoints.userinfo}`, this.userInfoHandler],
+      [`POST:${this.#endpoints.revoke}`, this.revokeHandler],
+      [`GET:${this.#endpoints.endSession}`, this.endSessionHandler],
+      [`POST:${this.#endpoints.introspect}`, this.introspectHandler],
+    ]);
 
-    return app as RequestListener;
+    return (req, res) => {
+      dispatch(routes, req, res).catch((err: unknown) => {
+        errorHandler(err, res);
+      });
+    };
   };
 
-  private openidConfigurationHandler: RequestHandler = (_req, res) => {
+  private openidConfigurationHandler: RouteHandler = (_req, res) => {
     assertIsString(this.issuer.url, 'Unknown issuer url.');
 
     const issuer = this.issuer.url;
@@ -187,134 +201,138 @@ export class OAuth2Service extends EventEmitter {
       code_challenge_methods_supported: supportedPkceAlgorithms,
     };
 
-    res.json(openidConfig);
+    sendJson(res, openidConfig);
   };
 
-  private jwksHandler: RequestHandler = (_req, res) => {
-    res.json({ keys: this.issuer.keys.toJSON() });
+  private jwksHandler: RouteHandler = (_req, res) => {
+    sendJson(res, { keys: this.issuer.keys.toJSON() });
   };
 
-  private tokenHandler: RequestHandler = async (req, res, next) => {
-    try {
-      const tokenTtl = defaultTokenTtl;
+  private tokenHandler: RouteHandler = async (req, res) => {
+    const reqBody = await parseBody(req);
+    assertIsValidTokenRequest(reqBody);
 
-      res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
+    req.body = reqBody;
 
-      let xfn: ScopesOrTransform | undefined;
+    const tokenTtl = defaultTokenTtl;
 
-      assertIsValidTokenRequest(req.body);
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
 
-      if ('code_verifier' in req.body && 'code' in req.body) {
-        try {
-          const code = req.body.code;
-          const verifier = req.body.code_verifier;
-          const savedCodeChallenge = this.#codeChallenges.get(code);
-          if (savedCodeChallenge === undefined) {
-            throw new AssertionError({ message: 'code_challenge required' });
-          }
-          this.#codeChallenges.delete(code);
-          if (!isValidPkceCodeVerifier(verifier)) {
-            throw new AssertionError({
-              message:
-                "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
-            });
-          }
-          const doesVerifierMatchCodeChallenge =
-            await pkceVerifierMatchesChallenge(verifier, savedCodeChallenge);
-          if (!doesVerifierMatchCodeChallenge) {
-            throw new AssertionError({
-              message: 'code_verifier provided does not match code_challenge',
-            });
-          }
-        } catch (e) {
-          res.status(400).json({
-            error: 'invalid_request',
-            error_description: (e as AssertionError).message,
+    let xfn: ScopesOrTransform | undefined;
+
+    if ('code_verifier' in reqBody && 'code' in reqBody) {
+      const code = reqBody.code;
+      const verifier = reqBody.code_verifier;
+      const savedCodeChallenge = this.#codeChallenges.get(code);
+      if (savedCodeChallenge === undefined) {
+        throw new AssertionError({ message: 'code_challenge required' });
+      }
+      this.#codeChallenges.delete(code);
+      if (!isValidPkceCodeVerifier(verifier)) {
+        throw new AssertionError({
+          message:
+            "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
+        });
+      }
+      const doesVerifierMatchCodeChallenge = await pkceVerifierMatchesChallenge(
+        verifier,
+        savedCodeChallenge,
+      );
+      if (!doesVerifierMatchCodeChallenge) {
+        throw new AssertionError({
+          message: 'code_verifier provided does not match code_challenge',
+        });
+      }
+    }
+
+    let { scope } = reqBody;
+    const { aud } = reqBody;
+
+    switch (reqBody.grant_type) {
+      case 'client_credentials':
+        xfn = (_header, payload) => {
+          Object.assign(payload, { scope, aud });
+        };
+        break;
+      case 'password':
+        xfn = (_header, payload) => {
+          Object.assign(payload, {
+            sub: reqBody.username,
+            amr: ['pwd'],
+            scope,
           });
+        };
+        break;
+      case 'authorization_code':
+        scope = scope ?? 'dummy';
+        xfn = (_header, payload) => {
+          Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
+        };
+        break;
+      case 'refresh_token':
+        scope = scope ?? 'dummy';
+        xfn = (_header, payload) => {
+          Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
+        };
+        break;
+      default:
+        sendJson(res, { error: 'invalid_grant' }, 400);
+        return;
+    }
+
+    const token = await this.buildToken(
+      req as unknown as TokenRequestIncomingMessage,
+      tokenTtl,
+      xfn,
+    );
+    const resBody: Record<string, unknown> = {
+      access_token: token,
+      token_type: 'Bearer',
+      expires_in: tokenTtl,
+      scope,
+    };
+
+    if (reqBody.grant_type !== 'client_credentials') {
+      const credentials = basicAuth(req);
+      const clientId = credentials ? credentials.name : reqBody.client_id;
+
+      const xfn: JwtTransform = (_header, payload) => {
+        Object.assign(payload, { sub: 'johndoe', aud: clientId });
+        if (reqBody.code !== undefined && reqBody.code in this.#nonce) {
+          Object.assign(payload, { nonce: this.#nonce[reqBody.code] });
+          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+          delete this.#nonce[reqBody.code];
         }
-      }
-
-      const reqBody = req.body;
-
-      let { scope } = reqBody;
-      const { aud } = reqBody;
-
-      switch (req.body.grant_type) {
-        case 'client_credentials':
-          xfn = (_header, payload) => {
-            Object.assign(payload, { scope, aud });
-          };
-          break;
-        case 'password':
-          xfn = (_header, payload) => {
-            Object.assign(payload, {
-              sub: reqBody.username,
-              amr: ['pwd'],
-              scope,
-            });
-          };
-          break;
-        case 'authorization_code':
-          scope = scope ?? 'dummy';
-          xfn = (_header, payload) => {
-            Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
-          };
-          break;
-        case 'refresh_token':
-          scope = scope ?? 'dummy';
-          xfn = (_header, payload) => {
-            Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
-          };
-          break;
-        default:
-          res.status(400);
-          res.json({ error: 'invalid_grant' });
-          return;
-      }
-
-      const token = await this.buildToken(req, tokenTtl, xfn);
-      const body: Record<string, unknown> = {
-        access_token: token,
-        token_type: 'Bearer',
-        expires_in: tokenTtl,
-        scope,
       };
 
-      if (req.body.grant_type !== 'client_credentials') {
-        const credentials = basicAuth(req);
-        const clientId = credentials ? credentials.name : req.body.client_id;
-
-        const xfn: JwtTransform = (_header, payload) => {
-          Object.assign(payload, { sub: 'johndoe', aud: clientId });
-          if (reqBody.code !== undefined && reqBody.code in this.#nonce) {
-            Object.assign(payload, { nonce: this.#nonce[reqBody.code] });
-            // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-            delete this.#nonce[reqBody.code];
-          }
-        };
-
-        body['id_token'] = await this.buildToken(req, tokenTtl, xfn);
-        body['refresh_token'] = randomUUID();
-      }
-
-      const tokenEndpointResponse: MutableResponse = { body, statusCode: 200 };
-
-      /**
-       * Before token response event.
-       * @event OAuth2Service#beforeResponse
-       * @param {MutableResponse} response The response body and status code.
-       * @param {TokenRequestIncomingMessage} req The incoming HTTP request.
-       */
-      this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
-
-      res.status(tokenEndpointResponse.statusCode);
-      res.json(tokenEndpointResponse.body);
-    } catch (e) {
-      next(e);
+      resBody['id_token'] = await this.buildToken(
+        req as unknown as TokenRequestIncomingMessage,
+        tokenTtl,
+        xfn,
+      );
+      resBody['refresh_token'] = randomUUID();
     }
+
+    const tokenEndpointResponse: MutableResponse = {
+      body: resBody,
+      statusCode: 200,
+    };
+
+    /**
+     * Before token response event.
+     * @event OAuth2Service#beforeResponse
+     * @param {MutableResponse} response The response body and status code.
+     * @param {TokenRequestIncomingMessage} req The incoming HTTP request.
+     */
+    this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
+
+    sendJson(res, tokenEndpointResponse.body, tokenEndpointResponse.statusCode);
   };
 
-  private authorizeHandler: RequestHandler = (req, res) => {
+  private authorizeHandler: RouteHandler = (req, res) => {
+    req.query = parseQuery(req);
+
     const code = randomUUID();
     const {
       nonce,
@@ -350,13 +368,16 @@ export class OAuth2Service extends EventEmitter {
             codeChallengeMethod as PKCEAlgorithm,
           )
         ) {
-          res.status(400);
-          res.json({
-            error: 'invalid_request',
-            error_description: `Unsupported code_challenge method ${codeChallengeMethod}. The following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
-              ', ',
-            )}`,
-          });
+          sendJson(
+            res,
+            {
+              error: 'invalid_request',
+              error_description: `Unsupported code_challenge method ${codeChallengeMethod}. The following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
+                ', ',
+              )}`,
+            },
+            400,
+          );
           return;
         }
         this.#codeChallenges.set(code, {
@@ -399,10 +420,10 @@ export class OAuth2Service extends EventEmitter {
     // for the sake of security.
     //
     // This is *not* a real oAuth2 server. This is *not* to be run in production.
-    res.redirect(url.href);
+    sendRedirect(res, url.href);
   };
 
-  private userInfoHandler: RequestHandler = (req, res) => {
+  private userInfoHandler: RouteHandler = (req, res) => {
     const userInfoResponse: MutableResponse = {
       body: { sub: 'johndoe' },
       statusCode: 200,
@@ -416,10 +437,10 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeUserinfo, userInfoResponse, req);
 
-    res.status(userInfoResponse.statusCode).json(userInfoResponse.body);
+    sendJson(res, userInfoResponse.body, userInfoResponse.statusCode);
   };
 
-  private revokeHandler: RequestHandler = (req, res) => {
+  private revokeHandler: RouteHandler = (req, res) => {
     const revokeResponse: StatusCodeMutableResponse = { statusCode: 200 };
 
     /**
@@ -430,10 +451,12 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeRevoke, revokeResponse, req);
 
-    res.status(revokeResponse.statusCode).send('');
+    sendEmpty(res, revokeResponse.statusCode);
   };
 
-  private endSessionHandler: RequestHandler = (req, res) => {
+  private endSessionHandler: RouteHandler = (req, res) => {
+    req.query = parseQuery(req);
+
     assertIsString(
       req.query['post_logout_redirect_uri'],
       'Invalid post_logout_redirect_uri type',
@@ -458,10 +481,10 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforePostLogoutRedirect, postLogoutRedirectUri, req);
 
-    res.redirect(postLogoutRedirectUri.url.href);
+    sendRedirect(res, postLogoutRedirectUri.url.href);
   };
 
-  private introspectHandler: RequestHandler = (req, res) => {
+  private introspectHandler: RouteHandler = (req, res) => {
     const introspectResponse: MutableResponse = {
       body: { active: true },
       statusCode: 200,
@@ -475,35 +498,6 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeIntrospect, introspectResponse, req);
 
-    res.status(introspectResponse.statusCode);
-    res.json(introspectResponse.body);
+    sendJson(res, introspectResponse.body, introspectResponse.statusCode);
   };
 }
-
-const assertEndpointsStartWithAForwardSlash = (
-  endpoints: Partial<OAuth2Endpoints> | undefined,
-): void => {
-  if (endpoints === undefined) {
-    return;
-  }
-
-  const invalidEndpoints = Object.entries(endpoints)
-    .filter(([, path]) => !path.startsWith('/'))
-    .map(([name, path]) => `"${name}": "${path}"`);
-
-  if (invalidEndpoints.length > 0) {
-    throw new AssertionError({
-      message: `All endpoint paths must start with a forward slash. Invalid endpoints: ${invalidEndpoints.join(
-        ', ',
-      )}`,
-    });
-  }
-};
-
-const urlCombine = (base: string, path: string): string => {
-  if (!base.endsWith('/')) {
-    return `${base}${path}`;
-  }
-
-  return `${base.slice(0, -1)}${path}`;
-};

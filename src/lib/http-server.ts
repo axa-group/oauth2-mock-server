@@ -25,7 +25,7 @@ import type { AddressInfo } from 'node:net';
 import { isIP } from 'node:net';
 import { URL } from 'node:url';
 
-import { assertIsAddressInfo } from './helpers';
+import { assertIsAddressInfo } from './assertions';
 import type { HttpServerOptions } from './types';
 
 /**

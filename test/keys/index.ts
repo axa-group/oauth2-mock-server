@@ -1,8 +1,8 @@
 import path from 'node:path';
 
-import { readJsonFromFile } from '../../src/lib/helpers';
+import { readJsonFromFile } from '../../src/cli';
 
-export function getParsed(filename: string): Record<string, unknown> {
+export const getParsedKey = (filename: string): Record<string, unknown> => {
   const filepath = path.join(__dirname, filename);
   return readJsonFromFile(filepath);
-}
+};

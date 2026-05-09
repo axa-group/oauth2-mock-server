@@ -1,27 +1,27 @@
 import { defineConfig } from 'eslint/config';
 import eslint from '@eslint/js';
 import { jsdoc } from 'eslint-plugin-jsdoc';
-import tseslint from 'typescript-eslint';
+import { configs as tseslintConfigs } from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
 import eslintPluginPrettierRecommendedConfig from 'eslint-plugin-prettier/recommended';
-import importPlugin from 'eslint-plugin-import-x';
+import { flatConfigs as importPluginFlatConfigs } from 'eslint-plugin-import-x';
 import vitest from '@vitest/eslint-plugin';
 
 export default defineConfig(
   eslint.configs.recommended,
-  tseslint.configs.strictTypeChecked,
-  tseslint.configs.stylisticTypeChecked,
+  tseslintConfigs.strictTypeChecked,
+  tseslintConfigs.stylisticTypeChecked,
   prettierConfig,
   eslintPluginPrettierRecommendedConfig,
-  importPlugin.flatConfigs.recommended,
-  importPlugin.flatConfigs.typescript,
+  importPluginFlatConfigs.recommended,
+  importPluginFlatConfigs.typescript,
   jsdoc({
     config: 'flat/recommended-typescript',
   }),
   {
     languageOptions: {
       parserOptions: {
-        project: './tsconfig.eslint.json',
+        project: ['./tsconfig.eslint.json', './examples/tsconfig.eslint.json'],
       },
     },
   },
@@ -39,6 +39,7 @@ export default defineConfig(
       curly: 'warn',
       eqeqeq: 'warn',
       semi: 'warn',
+      'func-style': ['warn', 'expression'],
       '@typescript-eslint/consistent-type-imports': 'warn',
       'jsdoc/require-jsdoc': [
         'warn',
@@ -88,6 +89,13 @@ export default defineConfig(
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       'jsdoc/require-jsdoc': 'off',
+    },
+  },
+  {
+    files: ['examples/**/*.ts'],
+    rules: {
+      'jsdoc/require-jsdoc': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
 );
