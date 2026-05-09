@@ -10,22 +10,23 @@ This file contains instructions for AI coding agents working in this repository.
 
 ### Module map
 
-| File                             | Role                                                                                                                                            |
+| File                             | Role                                                                                                                                                                                                                    |
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/index.ts`                   | Public barrel — all library exports originate here                                                                                              |
-| `src/oauth2-mock-server.ts`      | Binary shim — calls `cli()` from `src/cli.ts` with `process.argv.slice(2)`; contains no logic                                                   |
-| `src/cli.ts`                     | CLI logic — `cli(args)` parses argv and starts the server; also exports `readJsonFromFile()` and `shift()`; not part of the public API          |
-| `src/lib/http-server.ts`         | `HttpServer` — restartable wrapper around `node:http`/`node:https`                                                                              |
-| `src/lib/jwk-store.ts`           | `JWKStore` — manages JWK key pairs; uses `jose` for key generation/export                                                                       |
-| `src/lib/jwk-store.keys.ts`      | JWK algorithm registry: `supportedAlgs` list and `privateToPublicKeyTransformer`; used by `JWKStore` and test helpers — not exported publicly   |
-| `src/lib/oauth2-issuer.ts`       | `OAuth2Issuer` — holds the issuer URL + key store; signs JWTs with `jose` (`SignJWT`)                                                           |
-| `src/lib/oauth2-service.ts`      | `OAuth2Service` — HTTP request handler; owns all OAuth2/OIDC endpoint logic; composes `OAuth2Issuer`                                            |
-| `src/lib/oauth2-service.http.ts` | HTTP plumbing for `OAuth2Service`: body/query-param parsing, route matching — not exported publicly                                             |
-| `src/lib/oauth2-service.pkce.ts` | PKCE utilities: `isValidPkceCodeVerifier`, `createPKCEVerifier`, `createPKCECodeChallenge` — not exported publicly                              |
-| `src/lib/oauth2-server.ts`       | `OAuth2Server` — convenience façade; combines `HttpServer` + `OAuth2Service` + `OAuth2Issuer`                                                   |
-| `src/lib/assertions.ts`          | Internal assertion helpers: `assertIsString`, `assertIsStringOrUndefined`, `assertIsAddressInfo`, `assertIsPlainObject` — not exported publicly |
-| `src/lib/types.ts`               | Public types and interfaces (exported via barrel)                                                                                               |
-| `src/lib/types-internals.ts`     | Internal types (`JWKWithKid`, `AugmentedRequest`, `RouteHandler`, `InternalEvents`, `supportedPkceAlgorithms`) — **not** re-exported            |
+| `src/index.ts`                   | Public barrel — all library exports originate here                                                                                                                                                                      |
+| `src/oauth2-mock-server.ts`      | Binary shim — calls `cli()` from `src/cli.ts` with `process.argv.slice(2)`; contains no logic                                                                                                                           |
+| `src/cli.ts`                     | CLI logic — `cli(args)` parses argv and starts the server; also exports `readJsonFromFile()` and `shift()`; not part of the public API                                                                                  |
+| `src/lib/http-server.ts`         | `HttpServer` — restartable wrapper around `node:http`/`node:https`                                                                                                                                                      |
+| `src/lib/jwk-store.ts`           | `JWKStore` — manages JWK key pairs; uses `jose` for key generation/export                                                                                                                                               |
+| `src/lib/jwk-store.keys.ts`      | JWK algorithm registry: `supportedAlgs` list and `privateToPublicKeyTransformer`; used by `JWKStore` and test helpers — not exported publicly                                                                           |
+| `src/lib/oauth2-issuer.ts`       | `OAuth2Issuer` — holds the issuer URL + key store; signs JWTs with `jose` (`SignJWT`)                                                                                                                                   |
+| `src/lib/oauth2-service.ts`      | `OAuth2Service` — HTTP request handler; owns all OAuth2/OIDC endpoint logic; composes `OAuth2Issuer`                                                                                                                    |
+| `src/lib/oauth2-service.http.ts` | HTTP plumbing for `OAuth2Service`: body/query-param parsing, route matching — not exported publicly                                                                                                                     |
+| `src/lib/oauth2-service.pkce.ts` | PKCE utilities: `isValidPkceCodeVerifier`, `createPKCEVerifier`, `createPKCECodeChallenge` — not exported publicly                                                                                                      |
+| `src/lib/oauth2-server.ts`       | `OAuth2Server` — convenience façade; combines `HttpServer` + `OAuth2Service` + `OAuth2Issuer`                                                                                                                           |
+| `src/lib/assertions.ts`          | Internal assertion helpers: `assertIsString`, `assertIsStringOrUndefined`, `assertIsAddressInfo`, `assertIsPlainObject` — not exported publicly                                                                         |
+| `src/lib/types.ts`               | Public types and interfaces (exported via barrel)                                                                                                                                                                       |
+| `src/lib/types-internals.ts`     | Internal types (`JWKWithKid`, `AugmentedRequest`, `RouteHandler`, `InternalEvents`, `supportedPkceAlgorithms`) — **not** re-exported                                                                                    |
+| `examples/*.ts`                  | Runnable example scripts — each demonstrates one real-world usage pattern; imports via `'oauth2-mock-server'` alias, no Vitest dependency, structured with `startMockServer()` + client function + `run()` orchestrator |
 
 **Key dependency**: `jose` (async, Promise-based API) is used for all JWK generation, JWT signing, and key import/export.
 
@@ -33,7 +34,7 @@ This file contains instructions for AI coding agents working in this repository.
 
 ## Mandatory checks before finishing any task
 
-Every change **must** pass all three steps below. Do not mark a task done until all three succeed.
+Every change **must** pass all four steps below. Do not mark a task done until all four succeed.
 
 ### 1. Lint
 
@@ -64,14 +65,23 @@ Current baseline (`master`):
 
 > `npm run test` is equivalent but also triggers lint, which is slower when iterating. Use the `npx vitest ...` command during development and run `npm run test` as the final gate.
 
-### 3. Documentation
+### 3. Examples
+
+```sh
+npm run examples
+```
+
+All example scripts in `examples/` must exit 0 with no uncaught errors. Fix any script that crashes before marking a task done.
+
+### 4. Documentation
 
 Review whether the change requires documentation updates:
 
 - **`README.md`** — update when the public API surface, usage examples, CLI options, or any user-visible behaviour changes.
 - **`AGENTS.md`** — update when project structure, module map, test conventions, tooling, or agent-facing rules change.
+- **`examples/`** — consider whether the change introduces a use case not already covered by the existing examples. Add a new example when it demonstrates a meaningfully different way to use the library (e.g. a new grant type, a new customisation hook, a new deployment pattern). If no new example is needed, confirm that explicitly.
 
-If neither file needs updating, explicitly confirm that before marking the task done.
+If none of the above need updating, explicitly confirm that before marking the task done.
 
 ## TypeScript rules (strict — violations cause `npm run lint` to fail)
 
@@ -96,6 +106,8 @@ If neither file needs updating, explicitly confirm that before marking the task 
 - **Readability over brevity.** Prefer explicit variable names and intermediate variables over chained expressions. The reader should be able to follow the logic without tracing execution mentally.
 
 ## Adding new source files
+
+This section applies to files under `src/` only. Do **not** add a copyright header or `@module` JSDoc to files in `examples/`.
 
 1. Copy the copyright header from any existing `src/lib/*.ts` file.
 2. Add a `/** @module lib/your-module */` JSDoc comment below the header.

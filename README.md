@@ -14,6 +14,7 @@
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Quickstart](#quickstart)
+- [Examples](#examples)
 - [How to use](#how-to-use)
   - [Supported grant types](#supported-grant-types)
   - [Supported JWK formats](#supported-jwk-formats)
@@ -99,6 +100,24 @@ let token = await server.issuer.buildToken();
 axios.get('https://server.example.com/api/endpoint', {
   headers: { authorization: `Bearer ${token}` },
 });
+```
+
+## Examples
+
+The repository ships runnable TypeScript examples in the [`examples/`](examples/) directory. Each script is self-contained, type-checked in CI, and structured so you can clearly see which part belongs in your test setup and which part simulates your application.
+
+Requires [`tsx`](https://tsx.is) (included as a dev dependency):
+
+| Example                                                            | Covers                                                                                       |
+| ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |
+| [`examples/quickstart.ts`](examples/quickstart.ts)                 | Start a server and build a signed token directly                                             |
+| [`examples/client-credentials.ts`](examples/client-credentials.ts) | Client credentials grant via `POST /token`                                                   |
+| [`examples/custom-claims.ts`](examples/custom-claims.ts)           | Inject user identity claims with `beforeTokenSigning`                                        |
+| [`examples/e2e-setup.ts`](examples/e2e-setup.ts)                   | Long-running server with provider-shaped endpoints (Playwright / Vitest globalSetup pattern) |
+| [`examples/authorization-code.ts`](examples/authorization-code.ts) | Authorization code grant with PKCE                                                           |
+
+```sh
+npx tsx examples/quickstart.ts
 ```
 
 ## How to use
@@ -303,6 +322,12 @@ npx oauth2-mock-server [options]
 | `--save-jwk`                  | Save all keys in the keystore as `<kid>.json` files                                   |
 
 If no `--jwk` keys are provided, a random RSA key is generated automatically. Use `--save-jwk` to persist it for later reuse across runs.
+
+Example — start a server on a fixed address and port:
+
+```sh
+npx oauth2-mock-server -a localhost -p 8080
+```
 
 ## Architecture
 

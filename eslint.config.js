@@ -21,7 +21,7 @@ export default defineConfig(
   {
     languageOptions: {
       parserOptions: {
-        project: './tsconfig.eslint.json',
+        project: ['./tsconfig.eslint.json', './examples/tsconfig.eslint.json'],
       },
     },
   },
@@ -89,6 +89,13 @@ export default defineConfig(
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-unsafe-member-access': 'off',
       'jsdoc/require-jsdoc': 'off',
+    },
+  },
+  {
+    files: ['examples/**/*.ts'],
+    rules: {
+      'jsdoc/require-jsdoc': 'off',
+      '@typescript-eslint/no-non-null-assertion': 'off',
     },
   },
 );

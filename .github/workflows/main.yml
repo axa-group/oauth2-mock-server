@@ -26,6 +26,9 @@ jobs:
       - name: Lint and run tests
         run: npm run test
 
+      - name: Run examples
+        run: npm run examples
+
       - name: Pack
         run: npm pack
 

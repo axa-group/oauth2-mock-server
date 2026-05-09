@@ -1,6 +1,7 @@
 {
   "include": [
     "src/",
+    "examples/",
     "tsdown.config.ts"
   ],
   "compilerOptions": {
