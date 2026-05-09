@@ -51,7 +51,7 @@
     "build": "npx tsdown",
     "examples": "tsx examples/quickstart.ts && tsx examples/client-credentials.ts && tsx examples/custom-claims.ts && tsx examples/e2e-setup.ts && tsx examples/authorization-code.ts",
     "prelint": "tsc --noEmit",
-    "lint": "eslint --cache --cache-location .cache/ --ext=.ts src test examples --max-warnings 0",
+    "lint": "eslint --cache --cache-location .cache/ src test examples --max-warnings 0",
     "prepack": "npm run build",
     "pretest": "npm run lint",
     "test": "vitest --run --coverage",
