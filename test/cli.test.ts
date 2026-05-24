@@ -1,8 +1,8 @@
 import { writeFile } from 'node:fs/promises';
 
-import { afterEach, describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
-import { exec } from './lib/child-script';
+import { exec } from './lib/cli-fake-runner';
 
 vi.mock('fs/promises', () => ({
   writeFile: vi.fn().mockImplementation(() => ''),
@@ -11,10 +11,6 @@ vi.mock('fs/promises', () => ({
 const mockWriteFileAsync = vi.mocked(writeFile);
 
 describe('CLI', () => {
-  afterEach(() => {
-    vi.resetModules();
-  });
-
   it.each([
     ['-h'],
     ['--help'],

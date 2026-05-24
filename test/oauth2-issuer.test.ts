@@ -3,7 +3,7 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { OAuth2Issuer } from '../src';
 import type { JwtTransform, MutableToken } from '../src/lib/types';
 
-import * as testKeys from './keys';
+import { getParsedKey } from './keys';
 import { verifyTokenWithKey } from './lib/test_helpers';
 
 describe('OAuth 2 issuer', () => {
@@ -39,7 +39,7 @@ describe('OAuth 2 issuer', () => {
         value: 'https://issuer.example.com/',
         expected: 'https://issuer.example.com/'
       },
-    ])('$value / $isIssuerUrlSuffixedWithATralingSlash => $expected', ({
+    ])('$value / $shouldIssuerUrlBeSuffixedWithATralingSlash => $expected', ({
       shouldIssuerUrlBeSuffixedWithATralingSlash,
       value,
       expected
@@ -56,13 +56,20 @@ describe('OAuth 2 issuer', () => {
     issuer = new OAuth2Issuer();
     issuer.url = 'https://issuer.example.com';
 
-    await issuer.keys.add(testKeys.getParsed('test-rs256-key.json'));
-    await issuer.keys.add(testKeys.getParsed('test-es256-key.json'));
-    await issuer.keys.add(testKeys.getParsed('test-eddsa-key.json'));
+    await issuer.keys.add(getParsedKey('test-rs256-key.json'));
+    await issuer.keys.add(getParsedKey('test-es256-key.json'));
+    await issuer.keys.add(getParsedKey('test-eddsa-key.json'));
   });
 
   it('should not allow to build tokens for an unknown \'kid\'', async () => {
     await expect(() => issuer.buildToken({ kid: 'unknown-kid' })).rejects.toThrow('Cannot build token: Unknown key.');
+  });
+
+  it('should throw when building a token with no issuer url set', async () => {
+    const issuerWithoutUrl = new OAuth2Issuer();
+    await issuerWithoutUrl.keys.add(getParsedKey('test-rs256-key.json'));
+
+    await expect(issuerWithoutUrl.buildToken()).rejects.toThrow('Unknown issuer url');
   });
 
   it.each([
