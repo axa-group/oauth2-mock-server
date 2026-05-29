@@ -522,7 +522,8 @@ export class OAuth2Service extends EventEmitter {
       console.error('Unexpected error:', err);
 
       status = 500;
-      errorBody['error'] =
+      errorBody['error'] = 'server_error';
+      errorBody['error_description'] =
         'Most certainly a bug in the library code. ' +
         'Check the logs for more details and report this to the maintainers.';
     }
