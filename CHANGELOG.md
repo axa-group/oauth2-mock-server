@@ -6,6 +6,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
 ## Unreleased
 
+### Added
+
+- Introduce `OAuth2Service.addRoute()` to expose additional routes next to the OIDC standard ones. May be useful when willing to stub some vendor specific management routes for instance.
+
 ### Changed
 
 - Remove Express as a dependency. Request handlers are now implemented directly on top of Node.js's built-in `http`/`https` modules. No impact on the documented API.

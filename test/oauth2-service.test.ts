@@ -1,11 +1,12 @@
 import { IncomingMessage, type RequestListener } from 'node:http';
 import qs from 'node:querystring';
+import { AssertionError } from 'node:assert';
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import request from 'supertest';
 
 import { OAuth2Issuer, OAuth2Service } from '../src';
-import type { MutableRedirectUri } from '../src';
+import type { HttpMethod, MutableRedirectUri } from '../src';
 import {
   createPKCECodeChallenge,
   createPKCEVerifier,
@@ -38,19 +39,14 @@ describe.each([
 ])
   ('OAuth 2 service with issuer %s', (issuerUrl: string) => {
 
-  let issuer: OAuth2Issuer;
   let service: OAuth2Service;
 
   beforeAll(async () => {
-    issuer = new OAuth2Issuer();
-    issuer.url = issuerUrl;
-    await issuer.keys.add(testKeys.getParsedKey('test-rs256-key.json'));
-
-    service = new OAuth2Service(issuer);
+    service = await BuildSut(issuerUrl);
   });
 
   it('should use custom endpoint paths', async () => {
-    const customService = new OAuth2Service(issuer, {
+    const customService = new OAuth2Service(service.issuer, {
       wellKnownDocument: '/custom-well-known',
       jwks: '/custom-jwks',
       token: '/custom-token',
@@ -1179,7 +1175,218 @@ describe.each([
 
     expect(decoded.payload).not.toHaveProperty('scope');
   });
-});
+
+    describe('addRoute', () => {
+      let serv: OAuth2Service;
+      const bodyMethods = ['POST', 'PUT', 'PATCH'];
+      const queryMethods = ['GET', 'DELETE'];
+      const nonSupportedMethods = ['OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
+      const allSupportedMethods = [...bodyMethods, ...queryMethods];
+
+      beforeEach(async () => {
+        serv = await BuildSut('https://example.com');
+      });
+
+      describe.each(queryMethods)('with %s method', (method: string) => {
+
+        it('should allow adding a custom route', async () => {
+          serv.addRoute(method as HttpMethod, '/custom', (req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: 'Hello' }));
+          });
+
+          const req = endpoint(
+            request(serv.requestHandler),
+            method,
+            '/custom');
+
+          const res = await req.expect(200);
+
+          expect(res.body).toMatchObject({ message: 'Hello' });
+        });
+      });
+
+      describe.each(bodyMethods)('with %s method', (method: string) => {
+        it.each([
+          ['application/json', '{ "name": "World!" }', 'Hello World!'],
+          ['application/x-www-form-urlencoded', 'name=World!', 'Hello World!'],
+          ['text/plain', '{ "name": "World!" }', 'Hello Nope!'],
+          ['text/plain', 'name=World!', 'Hello Nope!'],
+        ])(
+          'should allow adding a custom route and parse the body (%s / %s)',
+          async (contentType: string, body: string, expectedMessage: string) => {
+            serv.addRoute(method as HttpMethod, '/custom', (req, res) => {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              let name = 'Nope!';
+              if (req.body !== undefined && typeof req.body.name === 'string') {
+                name = req.body.name;
+              }
+              res.end(JSON.stringify({ message: `Hello ${name}` }));
+            });
+
+            const req = endpoint(request(serv.requestHandler), method, '/custom');
+
+            const res = await req
+              .set('content-Type', contentType)
+              .send(body)
+              .expect(200);
+
+            expect(res.body).toMatchObject({ message: expectedMessage });
+          },
+        );
+      });
+
+      describe.each(allSupportedMethods)('with %s method', (method: string) => {
+        it.each([
+          [{}, 'Hello {}'],
+          [{ a: 'one' }, 'Hello {"a":"one"}'],
+          [{ a: ['one', 'two'] }, 'Hello {"a":["one","two"]}'],
+        ])(
+          'should allow adding a custom route and parse the query string (%o)',
+          async (query: Record<string, unknown>, expectedMessage: string) => {
+            serv.addRoute(method as HttpMethod, '/custom', (req, res) => {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(
+                JSON.stringify({
+                  message: `Hello ${JSON.stringify(req.query)}`,
+                }),
+              );
+            });
+
+            const req = endpoint(
+              request(serv.requestHandler),
+              method,
+              '/custom');
+
+            const res = await req.query(query).send().expect(200);
+
+            expect(res.body).toMatchObject({ message: expectedMessage });
+          },
+        );
+      });
+
+      it('should return 400 on AssertionError thrown in custom handler', async () => {
+        serv.addRoute('GET', '/custom', () => {
+          throw new AssertionError({ message: 'This is a bad request' });
+        });
+
+        const res = await request(serv.requestHandler)
+          .get('/custom')
+          .expect(400);
+
+        expect(res.body).toMatchObject({
+          error: 'invalid_request',
+          error_description: 'This is a bad request',
+        });
+      });
+
+      it('should return 500 on Error thrown in custom handler', async () => {
+        serv.addRoute('GET', '/custom', () => {
+          throw new Error(
+            'Error thrown on purpose for testing. Nothing to worry about :)',
+          );
+        });
+
+        const res = await request(serv.requestHandler)
+          .get('/custom')
+          .expect(500);
+
+        expect(res.body).toMatchObject({
+          error: 'server_error',
+          error_description:
+            'Most certainly a bug in the library code. Check the logs for more details and report this to the maintainers.',
+        });
+      });
+
+      it.each([nonSupportedMethods])(
+        'should throw an error when trying to add a route with an invalid method (%s)',
+        (method: string) => {
+          expect(() => {
+            serv.addRoute(method as HttpMethod, '/custom', (req, res) => {
+              res.end('');
+            });
+          }).toThrow(
+            expect.objectContaining({
+              message: `Invalid HTTP method: ${method}`,
+            }),
+          );
+        },
+      );
+
+      it('should throw an error when trying to add a route with a path not starting with /', () => {
+        expect(() => {
+          serv.addRoute('GET', 'custom', (req, res) => {
+            res.end('');
+          });
+        }).toThrow(
+          expect.objectContaining({
+            message:
+              "Invalid path: 'custom'. Path should start with a forward slash ('/').",
+          }),
+        );
+      });
+
+      it('should throw when colliding with a built-in route', () => {
+        expect(() => {
+          serv.addRoute('POST', '/token', (_req, res) => { res.end(''); });
+        }).toThrow(
+          expect.objectContaining({
+            message: "Route already exists: 'POST /token'",
+          }),
+        );
+      });
+
+      it('should throw when colliding with a previously-added custom route', () => {
+        serv.addRoute('GET', '/custom', (_req, res) => { res.end(''); });
+
+        expect(() => {
+          serv.addRoute('GET', '/custom', (_req, res) => { res.end(''); });
+        }).toThrow(
+          expect.objectContaining({
+            message: "Route already exists: 'GET /custom'",
+          }),
+        );
+      });
+
+      it('should throw when a trailing-slash variant collides with an existing route', () => {
+        serv.addRoute('GET', '/custom', (_req, res) => { res.end(''); });
+
+        expect(() => {
+          serv.addRoute('GET', '/custom/', (_req, res) => { res.end(''); });
+        }).toThrow(
+          expect.objectContaining({
+            message: "Route already exists: 'GET /custom'",
+          }),
+        );
+      });
+    });
+  });
+
+function endpoint(testAgent: request.Agent, method: string, path: string): request.Test {
+  switch (method.toUpperCase()) {
+    case 'GET':
+      return testAgent.get(path);
+    case 'POST':
+      return testAgent.post(path);
+    case 'PUT':
+      return testAgent.put(path);
+    case 'PATCH':
+      return testAgent.patch(path);
+    case 'DELETE':
+      return testAgent.delete(path);
+    default:
+      throw new Error(`Unsupported method: ${method}`);
+  }
+}
+
+async function BuildSut(issuerUrl: string) {
+  const issuer = new OAuth2Issuer();
+  issuer.url = issuerUrl;
+  await issuer.keys.add(testKeys.getParsedKey('test-rs256-key.json'));
+
+  const service = new OAuth2Service(issuer);
+  return service;
+}
 
 function getCode(response: request.Response): string | null {
   expect(response).toMatchObject({
@@ -1188,7 +1395,7 @@ function getCode(response: request.Response): string | null {
   const parsed = response as unknown as { header: { location: string } };
   const url = new URL(parsed.header.location);
   return url.searchParams.get('code');
-};
+}
 
 function tokenRequest(app: RequestListener) {
   return request(app)
@@ -1196,4 +1403,4 @@ function tokenRequest(app: RequestListener) {
     .type('form')
     .expect('Cache-Control', 'no-store')
     .expect('Pragma', 'no-cache');
-};
+}

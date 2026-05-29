@@ -44,14 +44,11 @@ import type {
   ScopesOrTransform,
   StatusCodeMutableResponse,
   TokenRequestIncomingMessage,
+  HttpMethod,
+  RouteHandler,
 } from './types';
-import { Events } from './types';
-import type { HttpMethod, RouteHandler } from './types-internals';
-import {
-  InternalEvents,
-  supportedHttpMethods,
-  supportedPkceAlgorithms,
-} from './types-internals';
+import { supportedHttpMethods, Events } from './types';
+import { InternalEvents, supportedPkceAlgorithms } from './types-internals';
 import {
   assertEndpointsStartWithAForwardSlash,
   dispatch,
@@ -155,6 +152,24 @@ export class OAuth2Service extends EventEmitter {
     return this.#requestHandler;
   }
 
+  /**
+   * Adds a custom route to the service.
+   * @param method The HTTP method for the route.
+   * @param path The path for the route.
+   * @param handler The handler function for the route.
+   */
+  addRoute(method: HttpMethod, path: string, handler: RouteHandler): void {
+    // eslint-disable-next-line func-style
+    const wrappedHandler: RouteHandler = async (req, res) => {
+      req.body = await parseBody(req);
+      req.query = parseQuery(req);
+
+      await handler(req, res);
+    };
+
+    this.addRouteInternal(method, path, wrappedHandler);
+  }
+
   private addRouteInternal(
     method: HttpMethod,
     path: string,
@@ -173,7 +188,9 @@ export class OAuth2Service extends EventEmitter {
     const key = `${method}:${normalizePath(path)}`;
 
     if (this.#routes.has(key)) {
-      throw new Error(`Route already exists: ${key}`);
+      throw new Error(
+        `Route already exists: '${method} ${normalizePath(path)}'`,
+      );
     }
 
     this.#routes.set(key, handler);

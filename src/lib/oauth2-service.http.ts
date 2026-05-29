@@ -21,8 +21,7 @@ import { AssertionError } from 'node:assert';
 import isPlainObject from 'is-plain-obj';
 
 import { assertIsString } from './assertions';
-import type { OAuth2Endpoints } from './types';
-import type { AugmentedRequest, RouteHandler } from './types-internals';
+import type { AugmentedRequest, OAuth2Endpoints, RouteHandler } from './types';
 
 /**
  * Normalises a URL path by stripping a trailing slash, unless the path is the root `/`.

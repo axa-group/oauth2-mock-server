@@ -186,6 +186,15 @@ export interface CodeChallenge {
   method: PKCEAlgorithm;
 }
 
+export const supportedHttpMethods = [
+  'GET',
+  'POST',
+  'PUT',
+  'DELETE',
+  'PATCH',
+] as const;
+export type HttpMethod = (typeof supportedHttpMethods)[number];
+
 export interface AugmentedRequest extends IncomingMessage {
   body: Record<string, unknown> | unknown[] | undefined;
   query: Record<string, string | string[] | undefined>;
