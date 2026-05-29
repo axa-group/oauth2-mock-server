@@ -1,3 +1,6 @@
+import { Readable } from 'node:stream';
+import type { IncomingMessage } from 'node:http';
+
 import type { JWTVerifyResult } from "jose";
 import { importJWK, jwtVerify } from "jose";
 
@@ -19,4 +22,21 @@ export async function verifyTokenWithKey(
 
   const verified = await jwtVerify(token, publicKey);
   return verified;
+}
+
+export function createMockRequest({
+  body = '', contentType, url = '/',
+}: {
+  body?: string;
+  contentType?: string;
+  url?: string;
+} = {}): IncomingMessage {
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  const readable = new Readable({ read() { } });
+  readable.push(body);
+  readable.push(null);
+  const req = readable as unknown as IncomingMessage;
+  req.headers = contentType ? { 'content-type': contentType } : {};
+  req.url = url;
+  return req;
 }

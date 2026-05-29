@@ -1,5 +1,5 @@
 import type { ServerOptions } from 'node:https';
-import type { IncomingMessage } from 'node:http';
+import type { IncomingMessage, ServerResponse } from 'node:http';
 
 import type { JWKWithKid, supportedPkceAlgorithms } from './types-internals';
 
@@ -185,3 +185,13 @@ export interface CodeChallenge {
   challenge: string;
   method: PKCEAlgorithm;
 }
+
+export interface AugmentedRequest extends IncomingMessage {
+  body: Record<string, unknown> | unknown[] | undefined;
+  query: Record<string, string | string[] | undefined>;
+}
+
+export type RouteHandler = (
+  req: AugmentedRequest,
+  res: ServerResponse,
+) => Promise<void> | void;
