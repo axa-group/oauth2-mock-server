@@ -19,7 +19,7 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 ## Requirements
 
-- [Node.js 20.19+](https://nodejs.org/)
+- [Node.js 22.12+](https://nodejs.org/)
 
 ## Installation
 

@@ -23,7 +23,7 @@
   },
   "license": "MIT",
   "engines": {
-    "node": "^20.19 || ^22.12 || ^24"
+    "node": "^22.12 || ^24"
   },
   "repository": {
     "type": "git",
@@ -64,7 +64,7 @@
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/basic-auth": "^1.1.8",
-    "@types/node": "^20.19.41",
+    "@types/node": "^22.19.19",
     "@types/supertest": "^7.2.0",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
