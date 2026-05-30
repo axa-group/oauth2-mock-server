@@ -23,7 +23,7 @@
   },
   "license": "MIT",
   "engines": {
-    "node": "^22.12 || ^24"
+    "node": "^22.12 || ^24 || ^26"
   },
   "repository": {
     "type": "git",

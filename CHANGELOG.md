@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 ### Added
 
 - Introduce `OAuth2Service.addRoute()` to expose additional routes next to the OIDC standard ones. May be useful when willing to stub some vendor specific management routes for instance.
+- Add support for Node.js 26
 
 ### Changed
 
