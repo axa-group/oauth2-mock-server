@@ -21,7 +21,7 @@ The purpose of this package is to provide an easily configurable OAuth 2 server,
 
 Add it to your Node.js project as a development dependency:
 
-```shell
+```sh
 npm install --save-dev oauth2-mock-server
 ```
 
@@ -95,12 +95,12 @@ axios
 
 ### Supported JWK formats
 
-| Algorithm         | kty | alg                 |
-| ----------------- | --- | ------------------- |
-| RSASSA-PKCS1-v1_5 | RSA | RS256, RS384, RS512 |
-| RSASSA-PSS        | RSA | PS256, PS384, PS512 |
-| ECDSA             | EC  | ES256, ES384, ES512 |
-| EdDSA             | OKP | Ed25519             |
+| Crypto scheme     | `kty` | `alg`               |
+| ----------------- | ----- | ------------------- |
+| RSASSA-PKCS1-v1_5 | RSA   | RS256, RS384, RS512 |
+| RSASSA-PSS        | RSA   | PS256, PS384, PS512 |
+| ECDSA             | EC    | ES256, ES384, ES512 |
+| EdDSA             | OKP   | EdDSA, Ed25519      |
 
 ### Customization hooks
 
@@ -266,7 +266,7 @@ Simulates the [token introspection endpoint](https://www.oauth.com/oauth2-server
 
 The server can be run from the command line.
 
-```shell
+```sh
 npx oauth2-mock-server --help
 ```
 

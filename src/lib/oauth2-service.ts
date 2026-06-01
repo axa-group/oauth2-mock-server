@@ -33,16 +33,12 @@ import express, {
 import cors from 'cors';
 import basicAuth from 'basic-auth';
 
-import type { OAuth2Issuer } from './oauth2-issuer';
+import { defaultTokenTtl, type OAuth2Issuer } from './oauth2-issuer';
 import {
   assertIsString,
   assertIsStringOrUndefined,
   assertIsValidTokenRequest,
-  defaultTokenTtl,
-  isValidPkceCodeVerifier,
-  pkceVerifierMatchesChallenge,
-  supportedPkceAlgorithms,
-} from './helpers';
+} from './assertions';
 import type {
   CodeChallenge,
   JwtTransform,
@@ -58,7 +54,15 @@ import type {
   TokenRequestIncomingMessage,
 } from './types';
 import { Events } from './types';
-import { InternalEvents } from './types-internals';
+import { InternalEvents, supportedPkceAlgorithms } from './types-internals';
+import {
+  assertEndpointsStartWithAForwardSlash,
+  urlCombine,
+} from './oauth2-service.http';
+import {
+  isValidPkceCodeVerifier,
+  pkceVerifierMatchesChallenge,
+} from './oauth2-service.pkce';
 
 const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
   wellKnownDocument: '/.well-known/openid-configuration',
@@ -154,7 +158,7 @@ export class OAuth2Service extends EventEmitter {
 
     app.disable('x-powered-by');
     app.use(json({ strict: true }));
-    app.use(jsonParseErrorHandler);
+    app.use(this.jsonParseErrorHandler);
     app.use(cors());
     app.get(this.#endpoints.wellKnownDocument, this.openidConfigurationHandler);
     app.get(this.#endpoints.jwks, this.jwksHandler);
@@ -172,7 +176,7 @@ export class OAuth2Service extends EventEmitter {
     app.use((_req, res) => {
       res.status(404).send();
     });
-    app.use(errorHandler);
+    app.use(this.errorHandler);
 
     return app as RequestListener;
   };
@@ -489,63 +493,41 @@ export class OAuth2Service extends EventEmitter {
     res.status(introspectResponse.statusCode);
     res.json(introspectResponse.body);
   };
+
+  private jsonParseErrorHandler: ErrorRequestHandler = (
+    err,
+    _req,
+    _res,
+    next,
+  ) => {
+    if (
+      'type' in err &&
+      (err as { type: string }).type === 'entity.parse.failed'
+    ) {
+      next(new AssertionError({ message: 'Malformed JSON payload' }));
+    } else {
+      next(err);
+    }
+  };
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  private errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
+    let status = 400;
+    const errorBody: Record<string, unknown> = {};
+
+    if (err instanceof AssertionError) {
+      errorBody['error'] = 'invalid_request';
+      errorBody['error_description'] = err.message;
+    } else {
+      console.error('Unexpected error:', err);
+
+      status = 500;
+      errorBody['error'] = 'server_error';
+      errorBody['error_description'] =
+        'Most certainly a bug in the library code. ' +
+        'Check the logs for more details and report this to the maintainers.';
+    }
+
+    res.status(status).send(errorBody);
+  };
 }
-
-const assertEndpointsStartWithAForwardSlash = (
-  endpoints: Partial<OAuth2Endpoints> | undefined,
-): void => {
-  if (endpoints === undefined) {
-    return;
-  }
-
-  const invalidEndpoints = Object.entries(endpoints)
-    .filter(([, path]) => !path.startsWith('/'))
-    .map(([name, path]) => `"${name}": "${path}"`);
-
-  if (invalidEndpoints.length > 0) {
-    throw new AssertionError({
-      message: `All endpoint paths must start with a forward slash. Invalid endpoints: ${invalidEndpoints.join(
-        ', ',
-      )}`,
-    });
-  }
-};
-
-const urlCombine = (base: string, path: string): string => {
-  if (!base.endsWith('/')) {
-    return `${base}${path}`;
-  }
-
-  return `${base.slice(0, -1)}${path}`;
-};
-
-const jsonParseErrorHandler: ErrorRequestHandler = (err, _req, _res, next) => {
-  if (
-    'type' in err &&
-    (err as { type: string }).type === 'entity.parse.failed'
-  ) {
-    next(new AssertionError({ message: 'Malformed JSON payload' }));
-  } else {
-    next(err);
-  }
-};
-
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
-  let status = 400;
-  const errorBody: Record<string, unknown> = {};
-
-  if (err instanceof AssertionError) {
-    errorBody['error'] = 'invalid_request';
-    errorBody['error_description'] = err.message;
-  } else {
-    console.error('Unexpected error:', err);
-
-    status = 500;
-    errorBody['error'] =
-      'Most certainly a bug in the library code. ' +
-      'Check the logs for more details and report this to the maintainers.';
-  }
-
-  res.status(status).send(errorBody);
-};

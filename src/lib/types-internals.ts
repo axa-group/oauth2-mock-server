@@ -9,3 +9,5 @@ export interface JWKWithKid extends JoseJWK {
 export enum InternalEvents {
   BeforeSigning = 'beforeSigning',
 }
+
+export const supportedPkceAlgorithms = ['plain', 'S256'] as const;

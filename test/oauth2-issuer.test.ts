@@ -107,6 +107,7 @@ describe('OAuth 2 issuer', () => {
     expect(parsedP.nbf).toBeLessThan(now);
   });
 
+  // eslint-disable-next-line func-style
   const scopeInjector: JwtTransform = (_header, payload) => {
     payload['scope'] = "urn:scope-1 urn:scope-2";
   };
@@ -126,6 +127,7 @@ describe('OAuth 2 issuer', () => {
   });
 
   it('should be able to build tokens and modify the header or the payload before signing', async () => {
+    // eslint-disable-next-line func-style
     const transform: JwtTransform = (header, payload) => {
       header['x5t'] = 'a-new-value';
       payload['sub'] = 'the-subject';

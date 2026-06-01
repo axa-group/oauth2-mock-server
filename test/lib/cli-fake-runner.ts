@@ -8,7 +8,7 @@ import { cli } from '../../src/cli';
 export interface Output {
   result: OAuth2Server | null;
   err?: unknown;
-  exitCode: string | number | undefined;
+  exitCode: string | number | null | undefined;
   stdout: string;
   stderr: string;
 }

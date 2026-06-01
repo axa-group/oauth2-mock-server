@@ -86,6 +86,7 @@ describe('HTTP Server', () => {
   });
 });
 
+// eslint-disable-next-line func-style
 const dummyHandler: RequestListener = (_req, res) => {
   res.statusCode = 200;
   res.setHeader('Content-Type', 'application/json');

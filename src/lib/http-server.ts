@@ -25,7 +25,7 @@ import type { AddressInfo } from 'node:net';
 import { isIP } from 'node:net';
 import { URL } from 'node:url';
 
-import { assertIsAddressInfo } from './helpers';
+import { assertIsAddressInfo } from './assertions';
 import type { HttpServerOptions } from './types';
 
 /**
@@ -129,7 +129,7 @@ export class HttpServer {
   }
 }
 
-const coversLocalhost = (address: string) => {
+function coversLocalhost(address: string): boolean {
   switch (isIP(address)) {
     case 4:
       return address === '0.0.0.0' || address.startsWith('127.');
@@ -138,4 +138,4 @@ const coversLocalhost = (address: string) => {
     default:
       return false;
   }
-};
+}

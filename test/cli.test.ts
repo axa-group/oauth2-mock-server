@@ -2,7 +2,9 @@ import { writeFile } from 'node:fs/promises';
 
 import { describe, it, expect, vi } from 'vitest';
 
-import { exec } from './lib/cli-fake-runner';
+import { shift } from '../src/cli';
+
+import { exec, type Output } from './lib/cli-fake-runner';
 
 vi.mock('fs/promises', () => ({
   writeFile: vi.fn().mockImplementation(() => ''),
@@ -115,9 +117,23 @@ describe('CLI', () => {
     expect(res.stdout).toMatch(/^OAuth 2 server listening on http:\/\/.+?:\d+$/m);
     expect(res.stdout).toMatch(/^OAuth 2 issuer is http:\/\/localhost:\d+\/$/m);
   });
+
+  describe('shift', () => {
+    it('throws on empty array', () => {
+      expect(() => shift([])).toThrow();
+    });
+
+    it('throws on array containing an undefined entry', () => {
+      expect(() => shift([undefined])).toThrow();
+    });
+
+    it('does not throw on valid input', () => {
+      expect(() => shift(['a'])).not.toThrow();
+    });
+  });
 });
 
-async function executeCli(...args: string[]) {
+async function executeCli(...args: string[]): Promise<Output> {
   const res = await exec(args);
 
   if (res.result) {
@@ -125,7 +141,7 @@ async function executeCli(...args: string[]) {
   }
 
   return res;
-}
+};
 
 function errorResponse(message: string) {
   return {

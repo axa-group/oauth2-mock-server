@@ -1,5 +1,6 @@
 import type { UserConfig } from 'tsdown';
 
+// eslint-disable-next-line func-style
 const _default: (options: UserConfig) => UserConfig = () => {
   return {
     entry: {
