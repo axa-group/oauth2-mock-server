@@ -9,7 +9,6 @@ const _default: (options: UserConfig) => UserConfig = () => {
     },
     format: 'esm',
     platform: 'node',
-    dts: true,
     clean: true,
     deps: {
       skipNodeModulesBundle: true,
