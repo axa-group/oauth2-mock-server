@@ -38,7 +38,7 @@
     }
   },
   "bin": {
-    "oauth2-mock-server": "./dist/oauth2-mock-server.mjs"
+    "oauth2-mock-server": "dist/oauth2-mock-server.mjs"
   },
   "files": [
     "CHANGELOG.md",
