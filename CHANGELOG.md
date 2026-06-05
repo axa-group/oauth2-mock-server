@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## [9.0.0](https://github.com/axa-group/oauth2-mock-server/compare/v8.2.3...v9.0.0) — 2026-06-05
 
 ### Added
 
