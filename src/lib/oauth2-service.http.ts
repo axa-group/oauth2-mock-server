@@ -22,6 +22,7 @@ import isPlainObject from 'is-plain-obj';
 
 import { assertIsString } from './assertions';
 import type { AugmentedRequest, OAuth2Endpoints, RouteHandler } from './types';
+import type { ProblemDetails } from './types-internals';
 
 /**
  * Normalises a URL path by stripping a trailing slash, unless the path is the root `/`.
@@ -199,17 +200,19 @@ function ensureWriteable(res: ServerResponse): void {
  * @param res The server response object.
  * @param body The value to serialise as JSON.
  * @param status The HTTP status code. Defaults to `200`.
+ * @param contentType The content type of the response. Defaults to `application/json; charset=utf-8`.
  */
 export function sendJson(
   res: ServerResponse,
   body: unknown,
   status = 200,
+  contentType = 'application/json; charset=utf-8',
 ): void {
   ensureWriteable(res);
 
   const content = JSON.stringify(body);
   res.statusCode = status;
-  res.setHeader('Content-Type', 'application/json; charset=utf-8');
+  res.setHeader('Content-Type', contentType);
   res.setHeader('Content-Length', Buffer.byteLength(content));
   res.end(content);
 }
@@ -246,23 +249,26 @@ export function sendEmpty(res: ServerResponse, status = 200): void {
  * @param res The server response object.
  */
 export function errorHandler(err: unknown, res: ServerResponse): void {
-  let status = 400;
-  const errorBody: Record<string, unknown> = {};
+  let status = 500;
+
+  const errorBody: ProblemDetails = {
+    type: 'https://tools.ietf.org/html/rfc9110#section-15.6.1',
+    title: 'Internal Server Error',
+    detail:
+      'Most certainly a bug in the library code. ' +
+      'Check the logs for more details and report this to the maintainers.',
+  };
 
   if (err instanceof AssertionError) {
-    errorBody['error'] = 'invalid_request';
-    errorBody['error_description'] = err.message;
+    status = 400;
+    errorBody.type = 'https://tools.ietf.org/html/rfc9110#section-15.5.1';
+    errorBody.title = 'Bad Request';
+    errorBody.detail = err.message;
   } else {
     console.error('Unexpected error:', err);
-
-    status = 500;
-    errorBody['error'] = 'server_error';
-    errorBody['error_description'] =
-      'Most certainly a bug in the library code. ' +
-      'Check the logs for more details and report this to the maintainers.';
   }
 
-  sendJson(res, errorBody, status);
+  sendJson(res, errorBody, status, 'application/problem+json; charset=utf-8');
 }
 
 /**

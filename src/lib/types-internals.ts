@@ -11,3 +11,9 @@ export enum InternalEvents {
 }
 
 export const supportedPkceAlgorithms = ['plain', 'S256'] as const;
+
+export interface ProblemDetails {
+  type: string;
+  title: string;
+  detail: string;
+}

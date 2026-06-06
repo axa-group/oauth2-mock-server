@@ -167,7 +167,7 @@ import { Events } from 'oauth2-mock-server';
   server.service.once(Events.BeforeUserinfo, (userInfoResponse, req) => {
     userInfoResponse.body = {
       error: 'invalid_token',
-      error_message: 'token is expired',
+      error_description: 'token is expired',
     };
     userInfoResponse.statusCode = 401;
   });

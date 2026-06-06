@@ -339,8 +339,7 @@ export class OAuth2Service extends EventEmitter {
         };
         break;
       default:
-        sendJson(res, { error: 'invalid_grant' }, 400);
-        return;
+        throw new AssertionError({ message: 'Invalid grant type' });
     }
 
     const token = await this.buildToken(
@@ -430,17 +429,11 @@ export class OAuth2Service extends EventEmitter {
             codeChallengeMethod as PKCEAlgorithm,
           )
         ) {
-          sendJson(
-            res,
-            {
-              error: 'invalid_request',
-              error_description: `Unsupported code_challenge method ${codeChallengeMethod}. The following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
-                ', ',
-              )}`,
-            },
-            400,
-          );
-          return;
+          throw new AssertionError({
+            message: `Unsupported code_challenge method ${codeChallengeMethod}. The following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
+              ', ',
+            )}`,
+          });
         }
         this.#codeChallenges.set(code, {
           challenge: code_challenge,
