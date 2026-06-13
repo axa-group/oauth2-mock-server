@@ -11,6 +11,7 @@ export interface TokenRequest {
   code?: string;
   aud?: string[] | string;
   code_verifier?: string;
+  assertion?: string;
 }
 
 export interface TokenRequestIncomingMessage extends IncomingMessage {

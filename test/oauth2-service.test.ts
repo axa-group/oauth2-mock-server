@@ -14,7 +14,7 @@ import {
 } from '../src/lib/oauth2-service.pkce';
 
 import * as testKeys from './keys';
-import { assert400ProblemDetails, verifyTokenWithKey } from './lib/test_helpers';
+import { assert400ProblemDetails, createJwtAssertion, verifyTokenWithKey } from './lib/test_helpers';
 
 describe('OAuth2Service endpoint validation', () => {
   it('should accept undefined endpoints', () => {
@@ -129,7 +129,12 @@ describe.each([
         token_endpoint_auth_methods_supported: ['none'],
         jwks_uri: `${endpointsPrefix}/jwks`,
         response_types_supported: ['code'],
-        grant_types_supported: ['client_credentials', 'authorization_code', 'password'],
+        grant_types_supported: [
+          'client_credentials',
+          'authorization_code',
+          'password',
+          'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        ],
         token_endpoint_auth_signing_alg_values_supported: ['RS256'],
         response_modes_supported: ['query'],
         id_token_signing_alg_values_supported: ['RS256'],
@@ -431,6 +436,116 @@ describe.each([
         sub: 'johndoe',
         amr: ['pwd'],
       });
+    });
+
+    it('should expose a token endpoint that handles jwt-bearer grants', async () => {
+      const assertion = createJwtAssertion({
+        sub: 'service-account@example.com',
+      });
+
+      const res = await tokenRequest(service.requestHandler)
+        .send({
+          grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+          assertion,
+          scope: 'urn:first-scope urn:second-scope',
+        })
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        access_token: expect.any(String),
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope: 'urn:first-scope urn:second-scope',
+      });
+      expect(res.body).not.toHaveProperty('id_token');
+      expect(res.body).not.toHaveProperty('refresh_token');
+
+      const resBody = res.body as { access_token: string; scope: string };
+      const decoded = await verifyTokenWithKey(
+        service.issuer,
+        resBody.access_token,
+        'test-rs256-key',
+      );
+
+      expect(decoded.payload).toMatchObject({
+        iss: service.issuer.url,
+        sub: 'service-account@example.com',
+        client_id: 'service-account@example.com',
+        scope: resBody.scope,
+      });
+    });
+
+    it('should expose a token endpoint that handles jwt-bearer grants with no scope', async () => {
+      const assertion = createJwtAssertion({ sub: 'service-account@example.com' });
+
+      const res = await tokenRequest(service.requestHandler)
+        .send({
+          grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+          assertion,
+        })
+        .expect(200);
+
+      expect(res.body).not.toHaveProperty('scope');
+      expect(res.body).not.toHaveProperty('id_token');
+      expect(res.body).not.toHaveProperty('refresh_token');
+
+      const resBody = res.body as { access_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+
+      expect(decoded.payload).toMatchObject({
+        sub: 'service-account@example.com',
+        client_id: 'service-account@example.com',
+      });
+      expect(decoded.payload).not.toHaveProperty('scope');
+    });
+
+    it('should reject a jwt-bearer grant without assertion', async () => {
+      const res = await tokenRequest(service.requestHandler)
+        .send({
+          grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+        });
+
+      assert400ProblemDetails(res, "Invalid 'assertion' type");
+    });
+
+    it('should reject a jwt-bearer grant with an invalid assertion format', async () => {
+      const res = await tokenRequest(service.requestHandler)
+        .send({
+          grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+          assertion: 'not-a-jwt',
+        });
+
+      assert400ProblemDetails(
+        res,
+        "Invalid 'assertion' format: expected at least header.payload",
+      );
+    });
+
+    it('should reject a jwt-bearer grant with a malformed assertion payload', async () => {
+      const assertion = ['eyJhbGciOiJub25lIn0', '!!!!', 'ignored-signature'].join('.');
+
+      const res = await tokenRequest(service.requestHandler)
+        .send({
+          grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+          assertion,
+        });
+
+      assert400ProblemDetails(res, "Invalid 'assertion' payload: malformed JSON");
+    });
+
+    it('should reject a jwt-bearer grant with no sub claim in assertion payload', async () => {
+      const assertion = createJwtAssertion({ aud: 'https://example.com/token' });
+
+      const res = await tokenRequest(service.requestHandler)
+        .send({
+          grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+          assertion,
+        });
+
+      assert400ProblemDetails(
+        res,
+        "Invalid 'assertion' payload: 'sub' claim is expected to be a string",
+      );
     });
 
     it('should expose a token endpoint that remembers nonce', async () => {
