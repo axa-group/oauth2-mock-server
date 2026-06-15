@@ -3,6 +3,8 @@ import request from 'supertest';
 
 import { OAuth2Server } from '../src';
 
+import { assert400ProblemDetails } from './lib/test_helpers';
+
 describe('OAuth 2 Server', () => {
   it('should be able to start and stop the server', async () => {
     const server = new OAuth2Server();
@@ -52,13 +54,7 @@ describe('OAuth 2 Server', () => {
     const host = `http://127.0.0.1:${server.address().port.toString()}`;
     const res = await configure(request(host));
 
-    expect(res.statusCode).toBe(400);
-    expect(res.body).toMatchInlineSnapshot(`
-      {
-        "error": "invalid_request",
-        "error_description": "Invalid token request body",
-      }
-    `);
+    assert400ProblemDetails(res, 'Invalid token request body');
 
     await expect(server.stop()).resolves.not.toThrow();
   }
@@ -110,17 +106,17 @@ describe('OAuth 2 Server', () => {
   });
 
   describe('Issuer url trailing slash handling', () => {
-      it.each([
-        [ true],
-        [ false],
-      ])('%s', async (
-        shouldIssuerUrlBeSuffixedWithATralingSlash,
-      ) => {
-        const server = new OAuth2Server(undefined, undefined, { shouldIssuerUrlBeSuffixedWithATralingSlash });
-        await expect(server.start()).resolves.not.toThrow();
-        expect(server.issuer.url).toBeDefined();
-        expect(server.issuer.url!.endsWith('/')).toBe(shouldIssuerUrlBeSuffixedWithATralingSlash);
-      });
+    it.each([
+      [true],
+      [false],
+    ])('%s', async (
+      shouldIssuerUrlBeSuffixedWithATralingSlash,
+    ) => {
+      const server = new OAuth2Server(undefined, undefined, { shouldIssuerUrlBeSuffixedWithATralingSlash });
+      await expect(server.start()).resolves.not.toThrow();
+      expect(server.issuer.url).toBeDefined();
+      expect(server.issuer.url!.endsWith('/')).toBe(shouldIssuerUrlBeSuffixedWithATralingSlash);
     });
+  });
 
 });

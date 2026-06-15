@@ -24,13 +24,6 @@ import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { AssertionError } from 'node:assert';
 
-import express, {
-  type ErrorRequestHandler,
-  json,
-  urlencoded,
-  type RequestHandler,
-} from 'express';
-import cors from 'cors';
 import basicAuth from 'basic-auth';
 
 import { defaultTokenTtl, type OAuth2Issuer } from './oauth2-issuer';
@@ -50,13 +43,22 @@ import type {
   PKCEAlgorithm,
   ScopesOrTransform,
   StatusCodeMutableResponse,
-  TokenRequest,
   TokenRequestIncomingMessage,
+  HttpMethod,
+  RouteHandler,
 } from './types';
-import { Events } from './types';
+import { supportedHttpMethods, Events } from './types';
 import { InternalEvents, supportedPkceAlgorithms } from './types-internals';
 import {
   assertEndpointsStartWithAForwardSlash,
+  dispatch,
+  errorHandler,
+  normalizePath,
+  parseBody,
+  parseQuery,
+  sendEmpty,
+  sendJson,
+  sendRedirect,
   urlCombine,
 } from './oauth2-service.http';
 import {
@@ -91,6 +93,7 @@ export class OAuth2Service extends EventEmitter {
   #nonce: Record<string, string>;
   #codeChallenges: Map<string, CodeChallenge>;
   #endpoints: OAuth2Endpoints;
+  #routes = new Map<string, RouteHandler>();
 
   constructor(oauth2Issuer: OAuth2Issuer, endpoints?: OAuth2EndpointsInput) {
     super();
@@ -100,6 +103,7 @@ export class OAuth2Service extends EventEmitter {
     this.#issuer = oauth2Issuer;
 
     this.#endpoints = { ...DEFAULT_ENDPOINTS, ...endpoints };
+    this.registerBuiltInRoutes();
     this.#requestHandler = this.buildRequestHandler();
     this.#nonce = {};
     this.#codeChallenges = new Map();
@@ -148,40 +152,90 @@ export class OAuth2Service extends EventEmitter {
     return this.#requestHandler;
   }
 
-  private buildRequestHandler = (): RequestListener => {
-    const app = express();
+  /**
+   * Adds a custom route to the service.
+   * @param method The HTTP method for the route.
+   * @param path The path for the route.
+   * @param handler The handler function for the route.
+   */
+  addRoute(method: HttpMethod, path: string, handler: RouteHandler): void {
+    // eslint-disable-next-line func-style
+    const wrappedHandler: RouteHandler = async (req, res) => {
+      req.body = await parseBody(req);
+      req.query = parseQuery(req);
 
-    // Default Express configuration.
-    // Explicitly set it here to put under the light the current behavior
-    // of the server
-    app.set('strict routing', false);
+      await handler(req, res);
+    };
 
-    app.disable('x-powered-by');
-    app.use(json({ strict: true }));
-    app.use(this.jsonParseErrorHandler);
-    app.use(cors());
-    app.get(this.#endpoints.wellKnownDocument, this.openidConfigurationHandler);
-    app.get(this.#endpoints.jwks, this.jwksHandler);
-    app.post(
-      this.#endpoints.token,
-      urlencoded({ extended: false }),
-      this.tokenHandler,
+    this.addRouteInternal(method, path, wrappedHandler);
+  }
+
+  private addRouteInternal(
+    method: HttpMethod,
+    path: string,
+    handler: RouteHandler,
+  ): void {
+    if (!supportedHttpMethods.includes(method)) {
+      throw new Error(`Invalid HTTP method: ${method}`);
+    }
+
+    if (!path.startsWith('/')) {
+      throw new Error(
+        `Invalid path: '${path}'. Path should start with a forward slash ('/').`,
+      );
+    }
+
+    const key = `${method}:${normalizePath(path)}`;
+
+    if (this.#routes.has(key)) {
+      throw new Error(
+        `Route already exists: '${method} ${normalizePath(path)}'`,
+      );
+    }
+
+    this.#routes.set(key, handler);
+  }
+
+  private registerBuiltInRoutes(): void {
+    this.addRouteInternal(
+      'GET',
+      this.#endpoints.wellKnownDocument,
+      this.openidConfigurationHandler,
     );
-    app.get(this.#endpoints.authorize, this.authorizeHandler);
-    app.get(this.#endpoints.userinfo, this.userInfoHandler);
-    app.post(this.#endpoints.revoke, this.revokeHandler);
-    app.get(this.#endpoints.endSession, this.endSessionHandler);
-    app.post(this.#endpoints.introspect, this.introspectHandler);
+    this.addRouteInternal('GET', this.#endpoints.jwks, this.jwksHandler);
+    this.addRouteInternal('POST', this.#endpoints.token, this.tokenHandler);
+    this.addRouteInternal(
+      'GET',
+      this.#endpoints.authorize,
+      this.authorizeHandler,
+    );
+    this.addRouteInternal(
+      'GET',
+      this.#endpoints.userinfo,
+      this.userInfoHandler,
+    );
+    this.addRouteInternal('POST', this.#endpoints.revoke, this.revokeHandler);
+    this.addRouteInternal(
+      'GET',
+      this.#endpoints.endSession,
+      this.endSessionHandler,
+    );
+    this.addRouteInternal(
+      'POST',
+      this.#endpoints.introspect,
+      this.introspectHandler,
+    );
+  }
 
-    app.use((_req, res) => {
-      res.status(404).send();
-    });
-    app.use(this.errorHandler);
-
-    return app as RequestListener;
+  private buildRequestHandler = (): RequestListener => {
+    return (req, res) => {
+      dispatch(this.#routes, req, res).catch((err: unknown) => {
+        errorHandler(err, res);
+      });
+    };
   };
 
-  private openidConfigurationHandler: RequestHandler = (_req, res) => {
+  private openidConfigurationHandler: RouteHandler = (_req, res) => {
     assertIsString(this.issuer.url, 'Unknown issuer url.');
 
     const issuer = this.issuer.url;
@@ -209,20 +263,23 @@ export class OAuth2Service extends EventEmitter {
       code_challenge_methods_supported: supportedPkceAlgorithms,
     };
 
-    res.json(openidConfig);
+    sendJson(res, openidConfig);
   };
 
-  private jwksHandler: RequestHandler = (_req, res) => {
-    res.json({ keys: this.issuer.keys.toJSON() });
+  private jwksHandler: RouteHandler = (_req, res) => {
+    sendJson(res, { keys: this.issuer.keys.toJSON() });
   };
 
-  private tokenHandler: RequestHandler = async (req, res) => {
-    assertIsValidTokenRequest(req.body);
-    const reqBody = req.body as Record<string, unknown> & TokenRequest;
+  private tokenHandler: RouteHandler = async (req, res) => {
+    const reqBody = await parseBody(req);
+    assertIsValidTokenRequest(reqBody);
+
+    req.body = reqBody;
 
     const tokenTtl = defaultTokenTtl;
 
-    res.set({ 'Cache-Control': 'no-store', Pragma: 'no-cache' });
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Pragma', 'no-cache');
 
     let xfn: ScopesOrTransform | undefined;
 
@@ -282,12 +339,14 @@ export class OAuth2Service extends EventEmitter {
         };
         break;
       default:
-        res.status(400);
-        res.json({ error: 'invalid_grant' });
-        return;
+        throw new AssertionError({ message: 'Invalid grant type' });
     }
 
-    const token = await this.buildToken(req, tokenTtl, xfn);
+    const token = await this.buildToken(
+      req as unknown as TokenRequestIncomingMessage,
+      tokenTtl,
+      xfn,
+    );
     const resBody: Record<string, unknown> = {
       access_token: token,
       token_type: 'Bearer',
@@ -308,7 +367,11 @@ export class OAuth2Service extends EventEmitter {
         }
       };
 
-      resBody['id_token'] = await this.buildToken(req, tokenTtl, xfn);
+      resBody['id_token'] = await this.buildToken(
+        req as unknown as TokenRequestIncomingMessage,
+        tokenTtl,
+        xfn,
+      );
       resBody['refresh_token'] = randomUUID();
     }
 
@@ -325,11 +388,12 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeResponse, tokenEndpointResponse, req);
 
-    res.status(tokenEndpointResponse.statusCode);
-    res.json(tokenEndpointResponse.body);
+    sendJson(res, tokenEndpointResponse.body, tokenEndpointResponse.statusCode);
   };
 
-  private authorizeHandler: RequestHandler = (req, res) => {
+  private authorizeHandler: RouteHandler = (req, res) => {
+    req.query = parseQuery(req);
+
     const code = randomUUID();
     const {
       nonce,
@@ -365,14 +429,11 @@ export class OAuth2Service extends EventEmitter {
             codeChallengeMethod as PKCEAlgorithm,
           )
         ) {
-          res.status(400);
-          res.json({
-            error: 'invalid_request',
-            error_description: `Unsupported code_challenge method ${codeChallengeMethod}. The following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
+          throw new AssertionError({
+            message: `Unsupported code_challenge method ${codeChallengeMethod}. The following code_challenge_method are supported: ${supportedPkceAlgorithms.join(
               ', ',
             )}`,
           });
-          return;
         }
         this.#codeChallenges.set(code, {
           challenge: code_challenge,
@@ -414,10 +475,10 @@ export class OAuth2Service extends EventEmitter {
     // for the sake of security.
     //
     // This is *not* a real oAuth2 server. This is *not* to be run in production.
-    res.redirect(url.href);
+    sendRedirect(res, url.href);
   };
 
-  private userInfoHandler: RequestHandler = (req, res) => {
+  private userInfoHandler: RouteHandler = (req, res) => {
     const userInfoResponse: MutableResponse = {
       body: { sub: 'johndoe' },
       statusCode: 200,
@@ -431,10 +492,10 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeUserinfo, userInfoResponse, req);
 
-    res.status(userInfoResponse.statusCode).json(userInfoResponse.body);
+    sendJson(res, userInfoResponse.body, userInfoResponse.statusCode);
   };
 
-  private revokeHandler: RequestHandler = (req, res) => {
+  private revokeHandler: RouteHandler = (req, res) => {
     const revokeResponse: StatusCodeMutableResponse = { statusCode: 200 };
 
     /**
@@ -445,10 +506,12 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeRevoke, revokeResponse, req);
 
-    res.status(revokeResponse.statusCode).send('');
+    sendEmpty(res, revokeResponse.statusCode);
   };
 
-  private endSessionHandler: RequestHandler = (req, res) => {
+  private endSessionHandler: RouteHandler = (req, res) => {
+    req.query = parseQuery(req);
+
     assertIsString(
       req.query['post_logout_redirect_uri'],
       'Invalid post_logout_redirect_uri type',
@@ -473,10 +536,10 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforePostLogoutRedirect, postLogoutRedirectUri, req);
 
-    res.redirect(postLogoutRedirectUri.url.href);
+    sendRedirect(res, postLogoutRedirectUri.url.href);
   };
 
-  private introspectHandler: RequestHandler = (req, res) => {
+  private introspectHandler: RouteHandler = (req, res) => {
     const introspectResponse: MutableResponse = {
       body: { active: true },
       statusCode: 200,
@@ -490,44 +553,6 @@ export class OAuth2Service extends EventEmitter {
      */
     this.emit(Events.BeforeIntrospect, introspectResponse, req);
 
-    res.status(introspectResponse.statusCode);
-    res.json(introspectResponse.body);
-  };
-
-  private jsonParseErrorHandler: ErrorRequestHandler = (
-    err,
-    _req,
-    _res,
-    next,
-  ) => {
-    if (
-      'type' in err &&
-      (err as { type: string }).type === 'entity.parse.failed'
-    ) {
-      next(new AssertionError({ message: 'Malformed JSON payload' }));
-    } else {
-      next(err);
-    }
-  };
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  private errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
-    let status = 400;
-    const errorBody: Record<string, unknown> = {};
-
-    if (err instanceof AssertionError) {
-      errorBody['error'] = 'invalid_request';
-      errorBody['error_description'] = err.message;
-    } else {
-      console.error('Unexpected error:', err);
-
-      status = 500;
-      errorBody['error'] = 'server_error';
-      errorBody['error_description'] =
-        'Most certainly a bug in the library code. ' +
-        'Check the logs for more details and report this to the maintainers.';
-    }
-
-    res.status(status).send(errorBody);
+    sendJson(res, introspectResponse.body, introspectResponse.statusCode);
   };
 }

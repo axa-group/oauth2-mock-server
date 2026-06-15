@@ -7,17 +7,21 @@
 
 When developing an application that exposes or consumes APIs that are secured with an [OAuth 2](https://oauth.net/2/) authorization scheme, a mechanism for issuing access tokens is needed. Frequently, a developer needs to create custom code that fakes the creation of tokens for testing purposes, and these tokens cannot be properly verified, since there is no actual entity issuing those tokens.
 
-The purpose of this package is to provide an easily configurable OAuth 2 server, that can be set up and teared down at will, and can be programmatically run while performing automated tests.
+The purpose of this package is to provide an easily configurable OAuth 2 server, that can be set up and torn down at will, and can be programmatically run while performing automated tests.
+
+- **Real cryptography.** Tokens are signed with actual JWK key pairs. Consuming applications can verify them using the `/jwks` endpoint, without mocking the verification layer.
+- **OIDC-conformant.** Exposes all the endpoints a real provider would: discovery, JWKS, authorization code flow with PKCE, userinfo, token introspection, revocation, and end session.
+- **Programmatic and CLI.** Embed it in a JavaScript or TypeScript test suite (`beforeAll`/`afterAll`) or run it as a standalone process for Java, .NET, Python, and other non-JS projects.
+- **Per-test customization via event hooks.** Use `server.service.once(Events.xxx, ...)` to alter token claims, simulate errors, or modify responses for a single test — without reconfiguring the server.
+- **TypeScript-first.** Full type definitions ship with the package. The entire codebase is written in strict TypeScript.
 
 > **Warning:** This tool is _not_ intended to be used as an actual production grade OAuth 2 server. It lacks many features that would be required in a proper implementation.
 
-## Development prerequisites
+## Requirements
 
-- [Node.js 20.19+](https://nodejs.org/)
+- [Node.js 22.12+](https://nodejs.org/)
 
-## How to use
-
-### Installation
+## Installation
 
 Add it to your Node.js project as a development dependency:
 
@@ -25,7 +29,17 @@ Add it to your Node.js project as a development dependency:
 npm install --save-dev oauth2-mock-server
 ```
 
-### Quickstart
+## CLI Usage
+
+The server can be run from the command line.
+
+```sh
+npx oauth2-mock-server --help
+```
+
+## Library Usage
+
+The server and its components can also be leveraged as a library, allowing finer control and configuration.
 
 Here is an example for creating and running a server instance with a single random RSA key:
 
@@ -62,7 +76,7 @@ await server.issuer.keys.add({
 });
 ```
 
-JSON Web Tokens (JWT) can be built programmatically:
+JSON Web Tokens (JWT) can also be built programmatically:
 
 ```js
 import axios from 'axios';
@@ -71,19 +85,190 @@ import axios from 'axios';
 let token = await server.issuer.buildToken();
 
 // Call a remote API with the token
-axios
-  .get('https://server.example.com/api/endpoint', {
-    headers: {
-      authorization: `Bearer ${token}`,
-    },
-  })
-  .then((response) => {
-    /* ... */
-  })
-  .catch((error) => {
-    /* ... */
-  });
+const response = await axios.get('https://server.example.com/api/endpoint', {
+  headers: {
+    authorization: `Bearer ${token}`,
+  },
+});
 ```
+
+## HTTPS
+
+To support HTTPS, an optional cert and key can be supplied to start the server with SSL/TLS using the in-built NodeJS [HTTPS](https://nodejs.org/api/https.html) module.
+
+We recommend using a package to create a locally trusted certificate, like [mkcert](https://github.com/FiloSottile/mkcert).
+
+```js
+let server = new OAuth2Server(
+  'test-assets/mock-auth/key.pem',  // Path to private key file
+  'test-assets/mock-auth/cert.pem', // Path to public SSL/TLS certificate
+);
+```
+
+> **Note:** Enabling HTTPS will also update the issuer URL to reflect the current protocol.
+
+## Event Hooks
+
+The library provides a convenient way, through event emitters, to programmatically customize the server processing. This is particularly useful when expecting the OIDC service to behave in a specific way for a single test.
+
+The list of supported events is exported by the library for a guided usage.
+
+```js
+import { Events } from 'oauth2-mock-server';
+// ...or in CommonJS style:
+// const { Events } = require('oauth2-mock-server');
+```
+
+- **Events.BeforeTokenSigning**
+
+  Typed signature: `(token: MutableToken, req: TokenRequestIncomingMessage) => void`
+
+  ```js
+  // Modify the expiration time on next produced token
+  server.service.once(Events.BeforeTokenSigning, (token, req) => {
+    const timestamp = Math.floor(Date.now() / 1000);
+    token.payload.exp = timestamp + 400;
+  });
+  ```
+
+  ```js
+  import basicAuth from 'basic-auth';
+
+  // Add the client ID to a token
+  server.service.once(Events.BeforeTokenSigning, (token, req) => {
+    const credentials = basicAuth(req);
+    const clientId = credentials ? credentials.name : req.body.client_id;
+    token.payload.client_id = clientId;
+  });
+  ```
+
+- **Events.BeforeResponse**
+
+  Typed signature: `(tokenEndpointResponse: MutableResponse, req: TokenRequestIncomingMessage) => void`
+
+  ```js
+  // Force the oidc service to provide an invalid_grant response
+  // on next call to the token endpoint
+  server.service.once(Events.BeforeResponse, (tokenEndpointResponse, req) => {
+    tokenEndpointResponse.body = {
+      error: 'invalid_grant',
+    };
+    tokenEndpointResponse.statusCode = 400;
+  });
+  ```
+
+- **Events.BeforeUserinfo**
+
+  Typed signature: `(userInfoResponse: MutableResponse, req: IncomingMessage) => void`
+
+  ```js
+  // Force the oidc service to provide an error
+  // on next call to userinfo endpoint
+  server.service.once(Events.BeforeUserinfo, (userInfoResponse, req) => {
+    userInfoResponse.body = {
+      error: 'invalid_token',
+      error_description: 'token is expired',
+    };
+    userInfoResponse.statusCode = 401;
+  });
+  ```
+
+- **Events.BeforeRevoke**
+
+  Typed signature: `(revokeResponse: StatusCodeMutableResponse, req: IncomingMessage) => void`
+
+  ```js
+  // Simulates a custom token revocation result code
+  server.service.once(Events.BeforeRevoke, (revokeResponse, req) => {
+    revokeResponse.statusCode = 418;
+  });
+  ```
+
+- **Events.BeforeAuthorizeRedirect**
+
+  Typed signature: `(authorizeRedirectUri: MutableRedirectUri, req: IncomingMessage) => void`
+
+  ```js
+  // Modify the uri and query parameters
+  // before the authorization redirect
+  server.service.once(Events.BeforeAuthorizeRedirect, (authorizeRedirectUri, req) => {
+    authorizeRedirectUri.url.searchParams.set('foo', 'bar');
+  });
+  ```
+
+- **Events.BeforePostLogoutRedirect**
+
+  Typed signature: `(postLogoutRedirectUri: MutableRedirectUri, req: IncomingMessage) => void`
+
+  ```js
+  // Modify the uri and query parameters
+  // before the post_logout_redirect_uri redirect
+  server.service.once(Events.BeforePostLogoutRedirect, (postLogoutRedirectUri, req) => {
+    postLogoutRedirectUri.url.searchParams.set('foo', 'bar');
+  });
+  ```
+
+- **Events.BeforeIntrospect**
+
+  Typed signature: `(introspectResponse: MutableResponse, req: IncomingMessage) => void`
+
+  ```js
+  // Simulate a custom token introspection response body
+  server.service.once(Events.BeforeIntrospect, (introspectResponse, req) => {
+    introspectResponse.body = {
+      active: true,
+      scope: 'read write email',
+      client_id: '<client_id>',
+      username: 'dummy',
+      exp: 1643712575,
+    };
+  });
+  ```
+
+## Endpoints
+
+### Standard endpoints
+
+| Endpoint                                 | Description                                                                                                                                        |
+| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET  /.well-known/openid-configuration` | Returns the [OpenID Provider Configuration Information](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig) for the server. |
+| `GET  /jwks`                             | Returns the JSON Web Key Set (JWKS) of all the keys configured in the server.                                                                      |
+| `POST /token`                            | Issues access tokens.                                                                                                                              |
+| `GET  /authorize`                        | Simulates user authentication. Automatically redirects to the callback endpoint. Supports only the `code` response type.                           |
+| `GET  /userinfo`                         | Provides extra userinfo claims.                                                                                                                    |
+| `POST /revoke`                           | Simulates token revocation. Always returns 200 per [RFC 7009](https://tools.ietf.org/html/rfc7009#section-2.2).                                    |
+| `GET  /endsession`                       | Simulates the end session endpoint. Redirects to `post_logout_redirect_uri`; returns `state` in the redirect URI if provided.                      |
+| `POST /introspect`                       | Simulates the [token introspection endpoint](https://www.oauth.com/oauth2-servers/token-introspection-endpoint/).                                  |
+
+### Path overrides
+
+All endpoint paths can be overridden via the `endpoints` option. Handy when willing to mimic some vendors default configuration.
+All fields are optional; any omitted path falls back to its default.
+
+```js
+const oAuth2Service = new OAuth2Service(oauth2Issuer, {
+  // As 'wellKnownDocument' is purposefully omitted, it will be set to its default,
+  token: '/oauth/token',
+  jwks: '/oauth/jwks',
+  authorize: '/oauth/authorize',
+  userinfo: '/oauth/userinfo',
+  revoke: '/oauth/revoke',
+  endSession: '/oauth/logout',
+  introspect: '/oauth/introspect',
+});
+```
+
+### Custom routes
+
+Additional routes can be registered via `addRoute()`. This may be useful when willing to stub vendor specific management routes, for instance
+
+```js
+oAuth2Service.addRoute('POST', '/api/v2/clients', (req, res) => {
+  // Your custom implementation goes here
+});
+```
+
+## Reference
 
 ### Supported grant types
 
@@ -102,173 +287,19 @@ axios
 | ECDSA             | EC    | ES256, ES384, ES512 |
 | EdDSA             | OKP   | EdDSA, Ed25519      |
 
-### Customization hooks
+## Security
 
-It also provides a convenient way, through event emitters, to programmatically customize the server processing. This is particularly useful when expecting the OIDC service to behave in a specific way on one single test.
+Tokens issued by this server are signed with real cryptographic keys and can be verified by any standard JWT library. However, the server performs **no validation of incoming requests** — any client ID, secret, username, or password is accepted. This is intentional for testing purposes.
 
-#### beforeTokenSigning
+**This library is not safe for production use.**
 
-Typed signature: `(token: MutableToken, req: TokenRequestIncomingMessage) => void`
+Review the Security Policy in [SECURITY.md](./SECURITY.md) for more details.
 
-```js
-// Modify the expiration time on next produced token
-service.once('beforeTokenSigning', (token, req) => {
-  const timestamp = Math.floor(Date.now() / 1000);
-  token.payload.exp = timestamp + 400;
-});
-```
+## Contributing
 
-```js
-const basicAuth = require('basic-auth');
+Contributions are welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for setup instructions, coding conventions, and the pull request process.
 
-// Add the client ID to a token
-service.once('beforeTokenSigning', (token, req) => {
-  const credentials = basicAuth(req);
-  const clientId = credentials ? credentials.name : req.body.client_id;
-  token.payload.client_id = clientId;
-});
-```
-
-#### beforeResponse
-
-Typed signature: `(tokenEndpointResponse: MutableResponse, req: TokenRequestIncomingMessage) => void`
-
-```js
-// Force the oidc service to provide an invalid_grant response
-// on next call to the token endpoint
-service.once('beforeResponse', (tokenEndpointResponse, req) => {
-  tokenEndpointResponse.body = {
-    error: 'invalid_grant',
-  };
-  tokenEndpointResponse.statusCode = 400;
-});
-```
-
-#### beforeUserinfo
-
-Typed signature: `(userInfoResponse: MutableResponse, req: IncomingMessage) => void`
-
-```js
-// Force the oidc service to provide an error
-// on next call to userinfo endpoint
-service.once('beforeUserinfo', (userInfoResponse, req) => {
-  userInfoResponse.body = {
-    error: 'invalid_token',
-    error_message: 'token is expired',
-  };
-  userInfoResponse.statusCode = 401;
-});
-```
-
-#### beforeRevoke
-
-Typed signature: `(revokeResponse: StatusCodeMutableResponse, req: IncomingMessage) => void`
-
-```js
-// Simulates a custom token revocation result code
-service.once('beforeRevoke', (revokeResponse, req) => {
-  revokeResponse.statusCode = 418;
-});
-```
-
-#### beforeAuthorizeRedirect
-
-Typed signature: `(authorizeRedirectUri: MutableRedirectUri, req: IncomingMessage) => void`
-
-```js
-// Modify the uri and query parameters
-// before the authorization redirect
-service.once('beforeAuthorizeRedirect', (authorizeRedirectUri, req) => {
-  authorizeRedirectUri.url.searchParams.set('foo', 'bar');
-});
-```
-
-#### beforePostLogoutRedirect
-
-Typed signature: `(postLogoutRedirectUri: MutableRedirectUri, req: IncomingMessage) => void`
-
-```js
-// Modify the uri and query parameters
-// before the post_logout_redirect_uri redirect
-service.once('beforePostLogoutRedirect', (postLogoutRedirectUri, req) => {
-  postLogoutRedirectUri.url.searchParams.set('foo', 'bar');
-});
-```
-
-#### beforeIntrospect
-
-Typed signature: `(introspectResponse: MutableResponse, req: IncomingMessage) => void`
-
-```js
-// Simulate a custom token introspection response body
-service.once('beforeIntrospect', (introspectResponse, req) => {
-  introspectResponse.body = {
-    active: true,
-    scope: 'read write email',
-    client_id: '<client_id>',
-    username: 'dummy',
-    exp: 1643712575,
-  };
-});
-```
-
-### HTTPS support
-
-It also provides basic HTTPS support, an optional cert and key can be supplied to start the server with SSL/TLS using the in-built NodeJS [HTTPS](https://nodejs.org/api/https.html) module.
-
-We recommend using a package to create a locally trusted certificate, like [mkcert](https://github.com/FiloSottile/mkcert).
-
-```js
-let server = new OAuth2Server(
-  'test-assets/mock-auth/key.pem',
-  'test-assets/mock-auth/cert.pem'
-);
-```
-
-NOTE: Enabling HTTPS will also update the issuer URL to reflect the current protocol.
-
-## Supported endpoints
-
-### GET `/.well-known/openid-configuration`
-
-Returns the [OpenID Provider Configuration Information](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig) for the server.
-
-### GET `/jwks`
-
-Returns the JSON Web Key Set (JWKS) of all the keys configured in the server.
-
-### POST `/token`
-
-Issues access tokens.
-
-### GET `/authorize`
-
-Simulates the user authentication. It will automatically redirect to the callback endpoint sent as parameter.
-It currently supports only 'code' response_type.
-
-### GET `/userinfo`
-
-Provides extra userinfo claims.
-
-### POST `/revoke`
-
-Simulates a token revocation. This endpoint should always return 200 as stated by [RFC 7009](https://tools.ietf.org/html/rfc7009#section-2.2).
-
-### GET `/endsession`
-
-Simulates the end session endpoint. It will automatically redirect to the `post_logout_redirect_uri` sent as parameter, and if `state` is provided, it is returned in the redirect URI.
-
-### POST `/introspect`
-
-Simulates the [token introspection endpoint](https://www.oauth.com/oauth2-servers/token-introspection-endpoint/).
-
-## Command-Line Interface
-
-The server can be run from the command line.
-
-```sh
-npx oauth2-mock-server --help
-```
+AI coding agents working in this repository should read [AGENTS.md](./AGENTS.md) before making any changes.
 
 ## Attributions
 

@@ -1,18 +1,20 @@
 import { IncomingMessage, type RequestListener } from 'node:http';
 import qs from 'node:querystring';
+import { AssertionError } from 'node:assert';
 
-import { describe, it, expect, beforeAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
 import request from 'supertest';
+import isPlainObject from 'is-plain-obj';
 
 import { OAuth2Issuer, OAuth2Service } from '../src';
-import type { MutableRedirectUri } from '../src';
+import type { HttpMethod, MutableRedirectUri } from '../src';
 import {
   createPKCECodeChallenge,
   createPKCEVerifier,
 } from '../src/lib/oauth2-service.pkce';
 
 import * as testKeys from './keys';
-import { verifyTokenWithKey } from './lib/test_helpers';
+import { assert400ProblemDetails, verifyTokenWithKey } from './lib/test_helpers';
 
 describe('OAuth2Service endpoint validation', () => {
   it('should accept undefined endpoints', () => {
@@ -38,1148 +40,1310 @@ describe.each([
 ])
   ('OAuth 2 service with issuer %s', (issuerUrl: string) => {
 
-  let issuer: OAuth2Issuer;
-  let service: OAuth2Service;
+    let service: OAuth2Service;
 
-  beforeAll(async () => {
-    issuer = new OAuth2Issuer();
-    issuer.url = issuerUrl;
-    await issuer.keys.add(testKeys.getParsedKey('test-rs256-key.json'));
-
-    service = new OAuth2Service(issuer);
-  });
-
-  it('should use custom endpoint paths', async () => {
-    const customService = new OAuth2Service(issuer, {
-      wellKnownDocument: '/custom-well-known',
-      jwks: '/custom-jwks',
-      token: '/custom-token',
-      authorize: '/custom-authorize',
-      userinfo: '/custom-userinfo',
-      // 'revoke', 'endSession' purposefully omitted to test defaults,
-      introspect: '/custom-introspect',
+    beforeAll(async () => {
+      service = await BuildSut(issuerUrl);
     });
 
-    // OpenID well known document
-    const res = await request(customService.requestHandler)
-      .get('/custom-well-known')
-      .expect(200);
-
-    const endpointsPrefix = wellKnownEndpointsPrefixFrom(customService.issuer);
-
-    expect(res.body).toMatchObject({
-      jwks_uri: `${endpointsPrefix}/custom-jwks`,
-      token_endpoint: `${endpointsPrefix}/custom-token`,
-      authorization_endpoint: `${endpointsPrefix}/custom-authorize`,
-      userinfo_endpoint: `${endpointsPrefix}/custom-userinfo`,
-      revocation_endpoint: `${endpointsPrefix}/revoke`,
-      end_session_endpoint: `${endpointsPrefix}/endsession`,
-      introspection_endpoint: `${endpointsPrefix}/custom-introspect`,
-    });
-
-    const getTestCases: [string, number, string?][] = [
-      ['/custom-jwks', 200],
-      ['/jwks', 404],
-      ['/custom-userinfo', 200],
-      ['/userinfo', 404],
-      ['/authorize', 404],
-      ['/custom-authorize', 302, 'redirect_uri=http://example.com&scope=dummy_scope&state=1'],
-      ['/endsession', 302, 'post_logout_redirect_uri=http://example.com']
-    ];
-
-    // GET
-    for (const [path, expectedStatus, query] of getTestCases) {
-      await request(customService.requestHandler)
-        .get(path)
-        .query(query ?? '')
-        .expect(expectedStatus);
-    }
-
-    const postTestCases: [string, number][] = [
-      ['/custom-token', 400], // 400 implies it was routed successfully (invalid body)
-      ['/token', 404],
-      ['/revoke', 200],
-      ['/custom-introspect', 200],
-    ];
-
-    // POST
-    for (const [path, expectedStatus] of postTestCases) {
-      await request(customService.requestHandler)
-        .post(path)
-        .expect(expectedStatus);
-    }
-  });
-
-  function wellKnownEndpointsPrefixFrom(issuer: OAuth2Issuer): string {
-    const { url } = issuer;
-    expect(url).not.toBeUndefined();
-
-    return url!.endsWith('/') ? url!.slice(0, -1) : url!;
-  }
-
-  it('should expose an OpenID configuration endpoint', async () => {
-    const res = await request(service.requestHandler)
-      .get('/.well-known/openid-configuration')
-      .expect(200);
-
-    const endpointsPrefix = wellKnownEndpointsPrefixFrom(service.issuer);
-
-    expect(res.body).toEqual({
-      issuer: service.issuer.url,
-      token_endpoint: `${endpointsPrefix}/token`,
-      authorization_endpoint: `${endpointsPrefix}/authorize`,
-      userinfo_endpoint: `${endpointsPrefix}/userinfo`,
-      token_endpoint_auth_methods_supported: ['none'],
-      jwks_uri: `${endpointsPrefix}/jwks`,
-      response_types_supported: ['code'],
-      grant_types_supported: ['client_credentials', 'authorization_code', 'password'],
-      token_endpoint_auth_signing_alg_values_supported: ['RS256'],
-      response_modes_supported: ['query'],
-      id_token_signing_alg_values_supported: ['RS256'],
-      revocation_endpoint: `${endpointsPrefix}/revoke`,
-      subject_types_supported: ['public'],
-      introspection_endpoint: `${endpointsPrefix}/introspect`,
-      code_challenge_methods_supported: ['plain', 'S256'],
-      end_session_endpoint: `${endpointsPrefix}/endsession`,
-    });
-
-    expect(JSON.stringify(res.body)).not.toMatch(/(?<!https:|http:)\/\//);
-  });
-
-  it('trailing slashes are silently ignored', async () => {
-    const res = await request(service.requestHandler)
-      .get('/.well-known/openid-configuration/');
-
-    expect(res.statusCode).toBe(200);
-  });
-
-  it('should expose an JWKS endpoint', async () => {
-    const res = await request(service.requestHandler)
-      .get('/jwks')
-      .expect(200);
-
-    expect(res.body).toMatchObject({
-      keys: [
-        {
-          kty: 'RSA',
-          kid: 'test-rs256-key',
-          n: expect.any(String),
-          e: expect.any(String),
-        },
-      ],
-    });
-
-    expect(res.body.keys[0]).not.toHaveProperty('d');
-  });
-
-  it('should expose a token endpoint that handles Client Credentials grants', async () => {
-    const res = await tokenRequest(service.requestHandler)
-      .send({
-        grant_type: 'client_credentials',
-        scope: 'urn:first-scope urn:second-scope',
-      })
-      .expect(200);
-
-    expect(res.body).toMatchObject({
-      access_token: expect.any(String),
-      token_type: 'Bearer',
-      expires_in: 3600,
-      scope: 'urn:first-scope urn:second-scope',
-    });
-
-    const key = service.issuer.keys.get('test-rs256-key');
-    expect(key).not.toBeNull();
-
-    const resBody = res.body as { access_token: string; scope: string };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
-
-    expect(decoded.payload).toMatchObject({
-      iss: service.issuer.url,
-      scope: resBody.scope,
-    });
-  });
-
-  it.each([
-    'aud',
-    ['aud1', 'aud2']
-  ])('should expose a token endpoint that includes an aud claim on Client Credentials grants', async (aud) => {
-    const res = await tokenRequest(service.requestHandler)
-      .send(qs.stringify({
-        grant_type: 'client_credentials',
-        aud,
-      }))
-      .expect(200);
-
-    const resBody = res.body as { access_token: string; };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
-
-    expect(decoded.payload).toMatchObject({ aud });
-  });
-
-
-  it('should expose a token endpoint that handles Resource Owner Password Credentials grants', async () => {
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .send({
-        grant_type: 'password',
-        username: 'the-resource-owner@example.com',
-        scope: 'urn:first-scope urn:second-scope',
-      })
-      .expect(200);
-
-    expect(res.body).toMatchObject({
-      access_token: expect.any(String),
-      token_type: 'Bearer',
-      expires_in: 3600,
-      scope: 'urn:first-scope urn:second-scope',
-      refresh_token: expect.any(String),
-    });
-
-    const resBody = res.body as { access_token: string; scope: string };
-
-    const key = service.issuer.keys.get('test-rs256-key');
-    expect(key).not.toBeNull();
-
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
-
-    expect(decoded.payload).toMatchObject({
-      iss: service.issuer.url,
-      scope: resBody.scope,
-      sub: 'the-resource-owner@example.com',
-      amr: ['pwd'],
-    });
-  });
-
-  it('should expose a token endpoint that handles authorization_code grants', async () => {
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
-      .send({
-        grant_type: 'authorization_code',
-        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
-        redirect_uri: 'https://example.com/callback',
-      })
-      .expect(200);
-
-    expect(res.body).toMatchObject({
-      access_token: expect.any(String),
-      token_type: 'Bearer',
-      expires_in: 3600,
-      scope: 'dummy',
-      id_token: expect.any(String),
-      refresh_token: expect.any(String),
-    });
-
-    const key = service.issuer.keys.get('test-rs256-key');
-    expect(key).not.toBeNull();
-
-    const resBody = res.body as { access_token: string };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
-
-    expect(decoded.payload).toMatchObject({
-      iss: service.issuer.url,
-      scope: 'dummy',
-      sub: 'johndoe',
-      amr: ['pwd'],
-    });
-  });
-
-  it('should expose a token endpoint that copies scope for authorization_code grants', async () => {
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
-      .send({
-        grant_type: 'authorization_code',
-        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
-        redirect_uri: 'https://example.com/callback',
-        scope: 'test'
-      })
-      .expect(200);
-
-    expect(res.body).toMatchObject({
-      access_token: expect.any(String),
-      token_type: 'Bearer',
-      expires_in: 3600,
-      scope: 'test',
-      id_token: expect.any(String),
-      refresh_token: expect.any(String),
-    });
-
-    const key = service.issuer.keys.get('test-rs256-key');
-    expect(key).not.toBeNull();
-
-    const resBody = res.body as { access_token: string };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
-
-    expect(decoded.payload).toMatchObject({
-      iss: service.issuer.url,
-      scope: 'test',
-      sub: 'johndoe',
-      amr: ['pwd'],
-    });
-  });
-
-  it('should expose a token endpoint that handles authorization_code grants without the basic authorization', async () => {
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .send({
-        grant_type: 'authorization_code',
-        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
-        redirect_uri: 'https://example.com/callback',
-        client_id: 'client_id_sample',
-      })
-      .expect(200);
-
-    expect(res.body).toMatchObject({
-      access_token: expect.any(String),
-      token_type: 'Bearer',
-      expires_in: 3600,
-      scope: 'dummy',
-      id_token: expect.any(String),
-      refresh_token: expect.any(String),
-    });
-
-    const key = service.issuer.keys.get('test-rs256-key');
-    expect(key).not.toBeNull();
-
-    const resBody = res.body as {
-      access_token: string;
-      scope: string;
-      id_token: string;
-    };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
-
-    expect(decoded.payload).toMatchObject({
-      iss: service.issuer.url,
-      scope: 'dummy',
-      sub: 'johndoe',
-      amr: ['pwd'],
-    });
-
-    const decodedIdToken = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
-
-    expect(decodedIdToken.payload).toMatchObject({
-      aud: 'client_id_sample',
-    });
-  });
-
-  it('should expose a token endpoint that handles refresh_token grants', async () => {
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
-      .send({
-        grant_type: 'refresh_token',
-        refresh_token: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
-      })
-      .expect(200);
-
-    expect(res.body).toMatchObject({
-      access_token: expect.any(String),
-      token_type: 'Bearer',
-      expires_in: 3600,
-      scope: 'dummy',
-      id_token: expect.any(String),
-      refresh_token: expect.any(String),
-    });
-
-    const key = service.issuer.keys.get('test-rs256-key');
-    expect(key).not.toBeNull();
-
-    const resBody = res.body as { access_token: string };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
-
-    expect(decoded.payload).toMatchObject({
-      iss: service.issuer.url,
-      scope: 'dummy',
-      sub: 'johndoe',
-      amr: ['pwd'],
-    });
-  });
-
-  it('should expose a token endpoint that copies scope for refresh_token grants', async () => {
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
-      .send({
-        grant_type: 'refresh_token',
-        refresh_token: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
-        scope: 'test'
-      })
-      .expect(200);
-
-    expect(res.body).toMatchObject({
-      access_token: expect.any(String),
-      token_type: 'Bearer',
-      expires_in: 3600,
-      scope: 'test',
-      id_token: expect.any(String),
-      refresh_token: expect.any(String),
-    });
-
-    const key = service.issuer.keys.get('test-rs256-key');
-    expect(key).not.toBeNull();
-
-    const resBody = res.body as { access_token: string };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
-
-    expect(decoded.payload).toMatchObject({
-      iss: service.issuer.url,
-      scope: 'test',
-      sub: 'johndoe',
-      amr: ['pwd'],
-    });
-  });
-
-  it('should expose a token endpoint that remembers nonce', async () => {
-    const resAuth = await request(service.requestHandler)
-      .get('/authorize')
-      .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754');
-
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .send({
-        grant_type: 'authorization_code',
-        code: getCode(resAuth),
-        redirect_uri: 'https://example.com/callback',
-        client_id: 'abcecedf',
-      })
-      .expect(200);
-
-    const key = service.issuer.keys.get('test-rs256-key');
-    expect(key).not.toBeNull();
-
-    expect(res.body).toMatchObject({
-      id_token: expect.any(String),
-    });
-    const resBody = res.body as { id_token: string };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
-
-    expect(decoded.payload).toMatchObject({
-      sub: 'johndoe',
-      aud: 'abcecedf',
-      nonce: '21ba8e4a-26af-4538-b98a-bccf031f6754',
-    });
-  });
-
-  it('should expose a token endpoint that remembers nonces of multiple clients', async () => {
-    const resAuth = await request(service.requestHandler)
-      .get('/authorize')
-      .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754');
-
-    await request(service.requestHandler)
-      .get('/authorize')
-      .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state456&client_id=abcecedf&nonce=7184422e-f260-11ea-adc1-0242ac120002');
-
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .send({
-        grant_type: 'authorization_code',
-        code: getCode(resAuth),
-        redirect_uri: 'https://example.com/callback',
-        client_id: 'abcecedf',
-      })
-      .expect(200);
-
-    const key = service.issuer.keys.get('test-rs256-key');
-    expect(key).not.toBeNull();
-
-    expect(res.body).toMatchObject({
-      id_token: expect.any(String),
-    });
-    const resBody = res.body as { id_token: string };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
-
-    expect(decoded.payload).toMatchObject({
-      sub: 'johndoe',
-      aud: 'abcecedf',
-      nonce: '21ba8e4a-26af-4538-b98a-bccf031f6754',
-    });
-  });
-
-  it('should expose a token endpoint that forgets nonce used', async () => {
-    await request(service.requestHandler)
-      .get('/authorize')
-      .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754');
-
-    await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .send({
-        grant_type: 'authorization_code',
-        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
-        redirect_uri: 'https://example.com/callback',
-        client_id: 'abcecedf',
+    it('should use custom endpoint paths', async () => {
+      const customService = new OAuth2Service(service.issuer, {
+        wellKnownDocument: '/custom-well-known',
+        jwks: '/custom-jwks',
+        token: '/custom-token',
+        authorize: '/custom-authorize',
+        userinfo: '/custom-userinfo',
+        // 'revoke', 'endSession' purposefully omitted to test defaults,
+        introspect: '/custom-introspect',
       });
 
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .send({
-        grant_type: 'authorization_code',
-        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
-        redirect_uri: 'https://example.com/callback',
-        client_id: 'abcecedf',
-      })
-      .expect(200);
+      // OpenID well known document
+      const res = await request(customService.requestHandler)
+        .get('/custom-well-known')
+        .expect(200);
 
-    const key = service.issuer.keys.get('test-rs256-key');
-    expect(key).not.toBeNull();
+      const endpointsPrefix = wellKnownEndpointsPrefixFrom(customService.issuer);
 
-    expect(res.body).toMatchObject({
-      id_token: expect.any(String),
+      expect(res.body).toMatchObject({
+        jwks_uri: `${endpointsPrefix}/custom-jwks`,
+        token_endpoint: `${endpointsPrefix}/custom-token`,
+        authorization_endpoint: `${endpointsPrefix}/custom-authorize`,
+        userinfo_endpoint: `${endpointsPrefix}/custom-userinfo`,
+        revocation_endpoint: `${endpointsPrefix}/revoke`,
+        end_session_endpoint: `${endpointsPrefix}/endsession`,
+        introspection_endpoint: `${endpointsPrefix}/custom-introspect`,
+      });
+
+      const getTestCases: [string, number, string?][] = [
+        ['/custom-jwks', 200],
+        ['/jwks', 404],
+        ['/custom-userinfo', 200],
+        ['/userinfo', 404],
+        ['/authorize', 404],
+        ['/custom-authorize', 302, 'redirect_uri=http://example.com&scope=dummy_scope&state=1'],
+        ['/endsession', 302, 'post_logout_redirect_uri=http://example.com']
+      ];
+
+      // GET
+      for (const [path, expectedStatus, query] of getTestCases) {
+        await request(customService.requestHandler)
+          .get(path)
+          .query(query ?? '')
+          .expect(expectedStatus);
+      }
+
+      const postTestCases: [string, number][] = [
+        ['/custom-token', 400], // 400 implies it was routed successfully (invalid body)
+        ['/token', 404],
+        ['/revoke', 200],
+        ['/custom-introspect', 200],
+      ];
+
+      // POST
+      for (const [path, expectedStatus] of postTestCases) {
+        await request(customService.requestHandler)
+          .post(path)
+          .expect(expectedStatus);
+      }
     });
-    const resBody = res.body as { id_token: string };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
 
-    expect(decoded.payload).toMatchObject({
-      sub: 'johndoe',
-      aud: 'abcecedf',
+    function wellKnownEndpointsPrefixFrom(issuer: OAuth2Issuer): string {
+      const { url } = issuer;
+      expect(url).not.toBeUndefined();
+
+      return url!.endsWith('/') ? url!.slice(0, -1) : url!;
+    }
+
+    it('should expose an OpenID configuration endpoint', async () => {
+      const res = await request(service.requestHandler)
+        .get('/.well-known/openid-configuration')
+        .expect(200);
+
+      const endpointsPrefix = wellKnownEndpointsPrefixFrom(service.issuer);
+
+      expect(res.body).toEqual({
+        issuer: service.issuer.url,
+        token_endpoint: `${endpointsPrefix}/token`,
+        authorization_endpoint: `${endpointsPrefix}/authorize`,
+        userinfo_endpoint: `${endpointsPrefix}/userinfo`,
+        token_endpoint_auth_methods_supported: ['none'],
+        jwks_uri: `${endpointsPrefix}/jwks`,
+        response_types_supported: ['code'],
+        grant_types_supported: ['client_credentials', 'authorization_code', 'password'],
+        token_endpoint_auth_signing_alg_values_supported: ['RS256'],
+        response_modes_supported: ['query'],
+        id_token_signing_alg_values_supported: ['RS256'],
+        revocation_endpoint: `${endpointsPrefix}/revoke`,
+        subject_types_supported: ['public'],
+        introspection_endpoint: `${endpointsPrefix}/introspect`,
+        code_challenge_methods_supported: ['plain', 'S256'],
+        end_session_endpoint: `${endpointsPrefix}/endsession`,
+      });
+
+      expect(JSON.stringify(res.body)).not.toMatch(/(?<!https:|http:)\/\//);
     });
-  });
 
-  it('should expose a token endpoint that accepts a JSON request body', async () => {
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('json')
-      .send({
-        grant_type: 'password',
-        username: 'the-resource-owner@example.com',
+    it('trailing slashes are silently ignored', async () => {
+      const res = await request(service.requestHandler)
+        .get('/.well-known/openid-configuration/');
+
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('should expose an JWKS endpoint', async () => {
+      const res = await request(service.requestHandler)
+        .get('/jwks')
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        keys: [
+          {
+            kty: 'RSA',
+            kid: 'test-rs256-key',
+            n: expect.any(String),
+            e: expect.any(String),
+          },
+        ],
+      });
+
+      expect(res.body.keys[0]).not.toHaveProperty('d');
+    });
+
+    it('should expose a token endpoint that handles Client Credentials grants', async () => {
+      const res = await tokenRequest(service.requestHandler)
+        .send({
+          grant_type: 'client_credentials',
+          scope: 'urn:first-scope urn:second-scope',
+        })
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        access_token: expect.any(String),
+        token_type: 'Bearer',
+        expires_in: 3600,
         scope: 'urn:first-scope urn:second-scope',
-      })
-      .expect(200);
+      });
 
-    expect(res.body).toMatchObject({
-      access_token: expect.any(String),
-      token_type: 'Bearer',
-      expires_in: 3600,
-      scope: 'urn:first-scope urn:second-scope',
-      refresh_token: expect.any(String),
-    });
-  });
+      const key = service.issuer.keys.get('test-rs256-key');
+      expect(key).not.toBeNull();
 
-  it('should redirect to callback url when calling authorize endpoint with code response type and no state', async () => {
-    const res = await request(service.requestHandler)
-      .get('/authorize')
-      .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&client_id=abcecedf')
-      .redirects(0)
-      .expect(302);
+      const resBody = res.body as { access_token: string; scope: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
-    expect(res).toMatchObject({
-      headers: {
-        location: expect.stringMatching(/http:\/\/example\.com\/callback\?code=[^&]*/)
-      }
-    });
-  });
-
-  it('should redirect to callback url keeping state when calling authorize endpoint with code response type', async () => {
-    const res = await request(service.requestHandler)
-      .get('/authorize')
-      .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf')
-      .redirects(0)
-      .expect(302);
-
-    expect(res).toMatchObject({
-      headers: {
-        location: expect.stringMatching(/http:\/\/example\.com\/callback\?code=[^&]*&state=state123/)
-      }
-    });
-  });
-
-  it('should be able to manipulate url and query params when redirecting within authorize endpoint', async () => {
-    service.once('beforeAuthorizeRedirect', (authorizeRedirectUri: MutableRedirectUri, req) => {
-      expect(req).toBeInstanceOf(IncomingMessage);
-
-      expect(authorizeRedirectUri.url.toString()).toMatch(/http:\/\/example.com\/callback\?code=[^&]+&state=state123/);
-
-      authorizeRedirectUri.url.hostname = 'foo.com';
-      authorizeRedirectUri.url.pathname = '/cb';
-      authorizeRedirectUri.url.protocol = 'https';
-      authorizeRedirectUri.url.searchParams.set('code', 'testcode');
-      authorizeRedirectUri.url.searchParams.set('extra_param', 'value');
-      authorizeRedirectUri.url.searchParams.delete('state');
+      expect(decoded.payload).toMatchObject({
+        iss: service.issuer.url,
+        scope: resBody.scope,
+      });
     });
 
-    const res = await request(service.requestHandler)
-      .get('/authorize')
-      .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf')
-      .redirects(0)
-      .expect(302);
+    it.each([
+      'aud',
+      ['aud1', 'aud2']
+    ])('should expose a token endpoint that includes an aud claim on Client Credentials grants', async (aud) => {
+      const res = await tokenRequest(service.requestHandler)
+        .send(qs.stringify({
+          grant_type: 'client_credentials',
+          aud,
+        }))
+        .expect(200);
 
-    expect(res).toMatchObject({
-      headers: {
-        location: expect.stringMatching(/https:\/\/foo\.com\/cb\?code=testcode&extra_param=value/)
-      }
-    });
-  });
+      const resBody = res.body as { access_token: string; };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
-  it('should redirect to callback url with an error and keeping state when calling authorize endpoint with an invalid response type', async () => {
-    const res = await request(service.requestHandler)
-      .get('/authorize')
-      .query('response_type=invalid_response_type&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf')
-      .redirects(0)
-      .expect(302);
-
-    expect(res).toMatchObject({
-      headers: {
-        location: 'http://example.com/callback?error=unsupported_response_type&error_description=The+authorization+server+does+not+support+obtaining+an+access+token+using+this+response_type.&state=state123'
-      }
-    });
-  });
-
-  it('should not handle token requests unsupported grant types', async () => {
-    const res = await tokenRequest(service.requestHandler)
-      .send({
-        grant_type: 'INVALID_GRANT_TYPE',
-      })
-      .expect(400);
-
-    expect(res.body).toMatchObject({
-      error: 'invalid_grant',
-    });
-  });
-
-  it('should be able to transform the token endpoint response', async () => {
-    service.once('beforeResponse', (tokenEndpointResponse, req) => {
-      expect(req).toBeInstanceOf(IncomingMessage);
-      tokenEndpointResponse.body.expires_in = 9000;
-      tokenEndpointResponse.body.some_stuff = 'whatever';
-      tokenEndpointResponse.statusCode = 302;
+      expect(decoded.payload).toMatchObject({ aud });
     });
 
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
-      .send({
-        grant_type: 'authorization_code',
-        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
-        redirect_uri: 'https://example.com/callback',
-      })
-      .expect(302);
 
-    expect(res.body).toMatchObject({
-      access_token: expect.any(String),
-      token_type: 'Bearer',
-      expires_in: 9000,
-      scope: 'dummy',
-      id_token: expect.any(String),
-      refresh_token: expect.any(String),
-      some_stuff: 'whatever',
-    });
-  });
+    it('should expose a token endpoint that handles Resource Owner Password Credentials grants', async () => {
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .send({
+          grant_type: 'password',
+          username: 'the-resource-owner@example.com',
+          scope: 'urn:first-scope urn:second-scope',
+        })
+        .expect(200);
 
-  it('should allow customizing the token response through a beforeTokenSigning event', async () => {
-    service.once('beforeTokenSigning', (token, req) => {
-      expect(req).toBeInstanceOf(IncomingMessage);
-      token.payload.custom_header = req.headers['custom-header'];
-      token.payload.iss = "https://tada.com";
-    });
+      expect(res.body).toMatchObject({
+        access_token: expect.any(String),
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope: 'urn:first-scope urn:second-scope',
+        refresh_token: expect.any(String),
+      });
 
-    const res = await tokenRequest(service.requestHandler)
-      .set('Custom-Header', 'custom-token-value')
-      .send({
-        grant_type: 'client_credentials',
-        scope: 'a-test-scope',
-      })
-      .expect(200);
+      const resBody = res.body as { access_token: string; scope: string };
 
-    const key = service.issuer.keys.get('test-rs256-key');
-    expect(key).not.toBeNull();
+      const key = service.issuer.keys.get('test-rs256-key');
+      expect(key).not.toBeNull();
 
-    expect(res.body).toMatchObject({
-      access_token: expect.any(String),
-    });
-    const resBody = res.body as { access_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
-
-    expect(decoded.payload).toMatchObject({
-      iss: "https://tada.com",
-      scope: 'a-test-scope',
-      custom_header: 'custom-token-value',
-    });
-  });
-
-  it('should expose req.body to the beforeTokenSigning handler', async () => {
-    service.once('beforeTokenSigning', (token, req) => {
-      token.payload.client_id_from_request_body = req.body?.client_id;
+      expect(decoded.payload).toMatchObject({
+        iss: service.issuer.url,
+        scope: resBody.scope,
+        sub: 'the-resource-owner@example.com',
+        amr: ['pwd'],
+      });
     });
 
-    const res = await tokenRequest(service.requestHandler)
-      .send({ grant_type: 'client_credentials', client_id: 'a-body-client-id' })
-      .expect(200);
+    it('should expose a token endpoint that handles authorization_code grants', async () => {
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
+        .send({
+          grant_type: 'authorization_code',
+          code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+          redirect_uri: 'https://example.com/callback',
+        })
+        .expect(200);
 
-    const resBody = res.body as { access_token: string };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+      expect(res.body).toMatchObject({
+        access_token: expect.any(String),
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope: 'dummy',
+        id_token: expect.any(String),
+        refresh_token: expect.any(String),
+      });
 
-    expect(decoded.payload).toMatchObject({
-      client_id_from_request_body: 'a-body-client-id',
+      const key = service.issuer.keys.get('test-rs256-key');
+      expect(key).not.toBeNull();
+
+      const resBody = res.body as { access_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+
+      expect(decoded.payload).toMatchObject({
+        iss: service.issuer.url,
+        scope: 'dummy',
+        sub: 'johndoe',
+        amr: ['pwd'],
+      });
     });
-  });
 
-  it('should expose the userinfo endpoint', async () => {
-    const res = await request(service.requestHandler)
-      .get('/userinfo')
-      .expect(200);
+    it('should expose a token endpoint that copies scope for authorization_code grants', async () => {
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
+        .send({
+          grant_type: 'authorization_code',
+          code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+          redirect_uri: 'https://example.com/callback',
+          scope: 'test'
+        })
+        .expect(200);
 
-    expect(res.body).toMatchObject({
-      sub: 'johndoe',
+      expect(res.body).toMatchObject({
+        access_token: expect.any(String),
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope: 'test',
+        id_token: expect.any(String),
+        refresh_token: expect.any(String),
+      });
+
+      const key = service.issuer.keys.get('test-rs256-key');
+      expect(key).not.toBeNull();
+
+      const resBody = res.body as { access_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+
+      expect(decoded.payload).toMatchObject({
+        iss: service.issuer.url,
+        scope: 'test',
+        sub: 'johndoe',
+        amr: ['pwd'],
+      });
     });
-  });
 
-  it('should allow customizing the userinfo response through a beforeUserinfo event', async () => {
-    service.once('beforeUserinfo', (userInfoResponse, req) => {
-      expect(req).toBeInstanceOf(IncomingMessage);
-      userInfoResponse.body = {
-        error: 'invalid_token',
-        error_message: 'token is expired',
+    it('should expose a token endpoint that handles authorization_code grants without the basic authorization', async () => {
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .send({
+          grant_type: 'authorization_code',
+          code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+          redirect_uri: 'https://example.com/callback',
+          client_id: 'client_id_sample',
+        })
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        access_token: expect.any(String),
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope: 'dummy',
+        id_token: expect.any(String),
+        refresh_token: expect.any(String),
+      });
+
+      const key = service.issuer.keys.get('test-rs256-key');
+      expect(key).not.toBeNull();
+
+      const resBody = res.body as {
+        access_token: string;
+        scope: string;
+        id_token: string;
       };
-      userInfoResponse.statusCode = 401;
-    });
-    const res = await request(service.requestHandler)
-      .get('/userinfo')
-      .expect(401);
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
-    expect(res.body).toMatchObject({
-      error: 'invalid_token',
-      error_message: 'token is expired',
-    });
-  });
+      expect(decoded.payload).toMatchObject({
+        iss: service.issuer.url,
+        scope: 'dummy',
+        sub: 'johndoe',
+        amr: ['pwd'],
+      });
 
-  it('should expose the revoke endpoint', async () => {
-    const res = await request(service.requestHandler)
-      .post('/revoke')
-      .type('form')
-      .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
-      .send({
-        token: 'authorization_code',
-        token_type_hint: 'refresh_token',
-      })
-      .expect(200);
+      const decodedIdToken = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
 
-    expect(res.text).toBe('');
-  });
-
-  it('should allow customizing the revoke response through a beforeRevoke event', async () => {
-    service.once('beforeRevoke', (revokeResponse, req) => {
-      expect(req).toBeInstanceOf(IncomingMessage);
-      revokeResponse.body = '';
-      revokeResponse.statusCode = 204;
-    });
-    const res = await request(service.requestHandler)
-      .post('/revoke')
-      .type('form')
-      .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
-      .send({
-        token: 'authorization_code',
-        token_type_hint: 'refresh_token',
-      })
-      .expect(204);
-
-    expect(res.text).toBeFalsy();
-  });
-
-  it('should expose CORS headers in a GET request', async () => {
-    const res = await request(service.requestHandler)
-      .get('/.well-known/openid-configuration')
-      .expect(200);
-
-    expect(res).toMatchObject({
-      headers: { 'access-control-allow-origin': '*' },
-    });
-  });
-
-  it('should expose CORS headers in an OPTIONS request', async () => {
-    const res = await request(service.requestHandler)
-      .options('/token')
-      .expect(204);
-
-    expect(res).toMatchObject({
-      headers: { 'access-control-allow-origin': '*' },
-    });
-  });
-
-  it('should redirect to post_logout_redirect_uri when calling end_session_endpoint', async () => {
-    const postLogoutRedirectUri = 'http://example.com/signin?param=test';
-
-    const res = await request(service.requestHandler)
-      .get('/endsession')
-      .query(`post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`)
-      .redirects(0)
-      .expect(302);
-
-    expect(res.headers['location']).toBe(postLogoutRedirectUri);
-  });
-
-  it('should keep state when redirecting from end_session_endpoint', async () => {
-    const postLogoutRedirectUri = 'http://example.com/signin?param=test';
-
-    const res = await request(service.requestHandler)
-      .get('/endsession')
-      .query({
-        post_logout_redirect_uri: postLogoutRedirectUri,
-        state: 'state-123',
-      })
-      .redirects(0)
-      .expect(302);
-
-    expect(res.headers['location']).toBe(
-      'http://example.com/signin?param=test&state=state-123',
-    );
-  });
-
-  it('should be able to manipulate url and query params when redirecting within post_logout_redirect_uri', async () => {
-    const postLogoutRedirectUri = 'http://example.com/signin?param=test';
-
-    service.once('beforePostLogoutRedirect', (postLogoutRedirectURL: MutableRedirectUri, req) => {
-      expect(req).toBeInstanceOf(IncomingMessage);
-
-      expect(postLogoutRedirectURL.url.toString()).toBe(postLogoutRedirectUri);
-
-      postLogoutRedirectURL.url.hostname = 'post-logout.com';
+      expect(decodedIdToken.payload).toMatchObject({
+        aud: 'client_id_sample',
+      });
     });
 
-    const res = await request(service.requestHandler)
-      .get('/endsession')
-      .query(`post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`)
-      .redirects(0)
-      .expect(302);
+    it('should expose a token endpoint that handles refresh_token grants', async () => {
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
+        .send({
+          grant_type: 'refresh_token',
+          refresh_token: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+        })
+        .expect(200);
 
-    expect(res.headers['location']).toBe('http://post-logout.com/signin?param=test');
-  });
+      expect(res.body).toMatchObject({
+        access_token: expect.any(String),
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope: 'dummy',
+        id_token: expect.any(String),
+        refresh_token: expect.any(String),
+      });
 
-  it('should expose a token introspection endpoint that returns information about a token', async () => {
-    const res = await request(service.requestHandler)
-      .post('/introspect')
-      .type('form')
-      .expect(200);
+      const key = service.issuer.keys.get('test-rs256-key');
+      expect(key).not.toBeNull();
 
-    expect(res.body).toMatchObject({
-      active: true,
+      const resBody = res.body as { access_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+
+      expect(decoded.payload).toMatchObject({
+        iss: service.issuer.url,
+        scope: 'dummy',
+        sub: 'johndoe',
+        amr: ['pwd'],
+      });
     });
-  });
 
-  it('should allow customizing the introspect response through a beforeIntrospect event', async () => {
-    service.once('beforeIntrospect', (introspectResponse, req) => {
-      expect(req).toBeInstanceOf(IncomingMessage);
-      introspectResponse.body = {
+    it('should expose a token endpoint that copies scope for refresh_token grants', async () => {
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
+        .send({
+          grant_type: 'refresh_token',
+          refresh_token: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+          scope: 'test'
+        })
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        access_token: expect.any(String),
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope: 'test',
+        id_token: expect.any(String),
+        refresh_token: expect.any(String),
+      });
+
+      const key = service.issuer.keys.get('test-rs256-key');
+      expect(key).not.toBeNull();
+
+      const resBody = res.body as { access_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+
+      expect(decoded.payload).toMatchObject({
+        iss: service.issuer.url,
+        scope: 'test',
+        sub: 'johndoe',
+        amr: ['pwd'],
+      });
+    });
+
+    it('should expose a token endpoint that remembers nonce', async () => {
+      const resAuth = await request(service.requestHandler)
+        .get('/authorize')
+        .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754');
+
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .send({
+          grant_type: 'authorization_code',
+          code: getCode(resAuth),
+          redirect_uri: 'https://example.com/callback',
+          client_id: 'abcecedf',
+        })
+        .expect(200);
+
+      const key = service.issuer.keys.get('test-rs256-key');
+      expect(key).not.toBeNull();
+
+      expect(res.body).toMatchObject({
+        id_token: expect.any(String),
+      });
+      const resBody = res.body as { id_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
+
+      expect(decoded.payload).toMatchObject({
+        sub: 'johndoe',
+        aud: 'abcecedf',
+        nonce: '21ba8e4a-26af-4538-b98a-bccf031f6754',
+      });
+    });
+
+    it('should expose a token endpoint that remembers nonces of multiple clients', async () => {
+      const resAuth = await request(service.requestHandler)
+        .get('/authorize')
+        .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754');
+
+      await request(service.requestHandler)
+        .get('/authorize')
+        .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state456&client_id=abcecedf&nonce=7184422e-f260-11ea-adc1-0242ac120002');
+
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .send({
+          grant_type: 'authorization_code',
+          code: getCode(resAuth),
+          redirect_uri: 'https://example.com/callback',
+          client_id: 'abcecedf',
+        })
+        .expect(200);
+
+      const key = service.issuer.keys.get('test-rs256-key');
+      expect(key).not.toBeNull();
+
+      expect(res.body).toMatchObject({
+        id_token: expect.any(String),
+      });
+      const resBody = res.body as { id_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
+
+      expect(decoded.payload).toMatchObject({
+        sub: 'johndoe',
+        aud: 'abcecedf',
+        nonce: '21ba8e4a-26af-4538-b98a-bccf031f6754',
+      });
+    });
+
+    it('should expose a token endpoint that forgets nonce used', async () => {
+      await request(service.requestHandler)
+        .get('/authorize')
+        .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754');
+
+      await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .send({
+          grant_type: 'authorization_code',
+          code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+          redirect_uri: 'https://example.com/callback',
+          client_id: 'abcecedf',
+        });
+
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .send({
+          grant_type: 'authorization_code',
+          code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+          redirect_uri: 'https://example.com/callback',
+          client_id: 'abcecedf',
+        })
+        .expect(200);
+
+      const key = service.issuer.keys.get('test-rs256-key');
+      expect(key).not.toBeNull();
+
+      expect(res.body).toMatchObject({
+        id_token: expect.any(String),
+      });
+      const resBody = res.body as { id_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
+
+      expect(decoded.payload).toMatchObject({
+        sub: 'johndoe',
+        aud: 'abcecedf',
+      });
+    });
+
+    it('should expose a token endpoint that accepts a JSON request body', async () => {
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('json')
+        .send({
+          grant_type: 'password',
+          username: 'the-resource-owner@example.com',
+          scope: 'urn:first-scope urn:second-scope',
+        })
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        access_token: expect.any(String),
+        token_type: 'Bearer',
+        expires_in: 3600,
+        scope: 'urn:first-scope urn:second-scope',
+        refresh_token: expect.any(String),
+      });
+    });
+
+    it('should redirect to callback url when calling authorize endpoint with code response type and no state', async () => {
+      const res = await request(service.requestHandler)
+        .get('/authorize')
+        .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&client_id=abcecedf')
+        .redirects(0)
+        .expect(302);
+
+      expect(res).toMatchObject({
+        headers: {
+          location: expect.stringMatching(/http:\/\/example\.com\/callback\?code=[^&]*/)
+        }
+      });
+    });
+
+    it('should redirect to callback url keeping state when calling authorize endpoint with code response type', async () => {
+      const res = await request(service.requestHandler)
+        .get('/authorize')
+        .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf')
+        .redirects(0)
+        .expect(302);
+
+      expect(res).toMatchObject({
+        headers: {
+          location: expect.stringMatching(/http:\/\/example\.com\/callback\?code=[^&]*&state=state123/)
+        }
+      });
+    });
+
+    it('should be able to manipulate url and query params when redirecting within authorize endpoint', async () => {
+      service.once('beforeAuthorizeRedirect', (authorizeRedirectUri: MutableRedirectUri, req) => {
+        expect(req).toBeInstanceOf(IncomingMessage);
+
+        expect(authorizeRedirectUri.url.toString()).toMatch(/http:\/\/example.com\/callback\?code=[^&]+&state=state123/);
+
+        authorizeRedirectUri.url.hostname = 'foo.com';
+        authorizeRedirectUri.url.pathname = '/cb';
+        authorizeRedirectUri.url.protocol = 'https';
+        authorizeRedirectUri.url.searchParams.set('code', 'testcode');
+        authorizeRedirectUri.url.searchParams.set('extra_param', 'value');
+        authorizeRedirectUri.url.searchParams.delete('state');
+      });
+
+      const res = await request(service.requestHandler)
+        .get('/authorize')
+        .query('response_type=code&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf')
+        .redirects(0)
+        .expect(302);
+
+      expect(res).toMatchObject({
+        headers: {
+          location: expect.stringMatching(/https:\/\/foo\.com\/cb\?code=testcode&extra_param=value/)
+        }
+      });
+    });
+
+    it('should redirect to callback url with an error and keeping state when calling authorize endpoint with an invalid response type', async () => {
+      const res = await request(service.requestHandler)
+        .get('/authorize')
+        .query('response_type=invalid_response_type&redirect_uri=http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf')
+        .redirects(0)
+        .expect(302);
+
+      expect(res).toMatchObject({
+        headers: {
+          location: 'http://example.com/callback?error=unsupported_response_type&error_description=The+authorization+server+does+not+support+obtaining+an+access+token+using+this+response_type.&state=state123'
+        }
+      });
+    });
+
+    it('should not handle token requests unsupported grant types', async () => {
+      const res = await tokenRequest(service.requestHandler)
+        .send({
+          grant_type: 'INVALID_GRANT_TYPE',
+        });
+
+      assert400ProblemDetails(res, 'Invalid grant type');
+    });
+
+    it('should be able to transform the token endpoint response', async () => {
+      service.once('beforeResponse', (tokenEndpointResponse, req) => {
+        expect(req).toBeInstanceOf(IncomingMessage);
+        tokenEndpointResponse.body.expires_in = 9000;
+        tokenEndpointResponse.body.some_stuff = 'whatever';
+        tokenEndpointResponse.statusCode = 302;
+      });
+
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
+        .send({
+          grant_type: 'authorization_code',
+          code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+          redirect_uri: 'https://example.com/callback',
+        })
+        .expect(302);
+
+      expect(res.body).toMatchObject({
+        access_token: expect.any(String),
+        token_type: 'Bearer',
+        expires_in: 9000,
+        scope: 'dummy',
+        id_token: expect.any(String),
+        refresh_token: expect.any(String),
+        some_stuff: 'whatever',
+      });
+    });
+
+    it('should allow customizing the token response through a beforeTokenSigning event', async () => {
+      service.once('beforeTokenSigning', (token, req) => {
+        expect(req).toBeInstanceOf(IncomingMessage);
+        token.payload.custom_header = req.headers['custom-header'];
+        token.payload.iss = "https://tada.com";
+      });
+
+      const res = await tokenRequest(service.requestHandler)
+        .set('Custom-Header', 'custom-token-value')
+        .send({
+          grant_type: 'client_credentials',
+          scope: 'a-test-scope',
+        })
+        .expect(200);
+
+      const key = service.issuer.keys.get('test-rs256-key');
+      expect(key).not.toBeNull();
+
+      expect(res.body).toMatchObject({
+        access_token: expect.any(String),
+      });
+      const resBody = res.body as { access_token: string };
+
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+
+      expect(decoded.payload).toMatchObject({
+        iss: "https://tada.com",
+        scope: 'a-test-scope',
+        custom_header: 'custom-token-value',
+      });
+    });
+
+    it('should expose req.body to the beforeTokenSigning handler', async () => {
+      service.once('beforeTokenSigning', (token, req) => {
+        token.payload.client_id_from_request_body = req.body?.client_id;
+      });
+
+      const res = await tokenRequest(service.requestHandler)
+        .send({ grant_type: 'client_credentials', client_id: 'a-body-client-id' })
+        .expect(200);
+
+      const resBody = res.body as { access_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
+
+      expect(decoded.payload).toMatchObject({
+        client_id_from_request_body: 'a-body-client-id',
+      });
+    });
+
+    it('should expose the userinfo endpoint', async () => {
+      const res = await request(service.requestHandler)
+        .get('/userinfo')
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        sub: 'johndoe',
+      });
+    });
+
+    it('should allow customizing the userinfo response through a beforeUserinfo event', async () => {
+      service.once('beforeUserinfo', (userInfoResponse, req) => {
+        expect(req).toBeInstanceOf(IncomingMessage);
+        userInfoResponse.body = {
+          error: 'invalid_token',
+          error_description: 'token is expired',
+        };
+        userInfoResponse.statusCode = 401;
+      });
+      const res = await request(service.requestHandler)
+        .get('/userinfo')
+        .expect(401);
+
+      expect(res.body).toMatchObject({
+        error: 'invalid_token',
+        error_description: 'token is expired',
+      });
+    });
+
+    it('should expose the revoke endpoint', async () => {
+      const res = await request(service.requestHandler)
+        .post('/revoke')
+        .type('form')
+        .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
+        .send({
+          token: 'authorization_code',
+          token_type_hint: 'refresh_token',
+        })
+        .expect(200);
+
+      expect(res.text).toBe('');
+    });
+
+    it('should allow customizing the revoke response through a beforeRevoke event', async () => {
+      service.once('beforeRevoke', (revokeResponse, req) => {
+        expect(req).toBeInstanceOf(IncomingMessage);
+        revokeResponse.body = '';
+        revokeResponse.statusCode = 204;
+      });
+      const res = await request(service.requestHandler)
+        .post('/revoke')
+        .type('form')
+        .set('authorization', `Basic ${Buffer.from('dummy_client_id:dummy_client_secret').toString('base64')}`)
+        .send({
+          token: 'authorization_code',
+          token_type_hint: 'refresh_token',
+        })
+        .expect(204);
+
+      expect(res.text).toBeFalsy();
+    });
+
+    it('should expose CORS headers in a GET request', async () => {
+      const res = await request(service.requestHandler)
+        .get('/.well-known/openid-configuration')
+        .expect(200);
+
+      expect(res).toMatchObject({
+        headers: { 'access-control-allow-origin': '*' },
+      });
+    });
+
+    it('should expose CORS headers in an OPTIONS request', async () => {
+      const res = await request(service.requestHandler)
+        .options('/token')
+        .expect(204);
+
+      expect(res).toMatchObject({
+        headers: { 'access-control-allow-origin': '*' },
+      });
+    });
+
+    it('should redirect to post_logout_redirect_uri when calling end_session_endpoint', async () => {
+      const postLogoutRedirectUri = 'http://example.com/signin?param=test';
+
+      const res = await request(service.requestHandler)
+        .get('/endsession')
+        .query(`post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`)
+        .redirects(0)
+        .expect(302);
+
+      expect(res.headers['location']).toBe(postLogoutRedirectUri);
+    });
+
+    it('should keep state when redirecting from end_session_endpoint', async () => {
+      const postLogoutRedirectUri = 'http://example.com/signin?param=test';
+
+      const res = await request(service.requestHandler)
+        .get('/endsession')
+        .query({
+          post_logout_redirect_uri: postLogoutRedirectUri,
+          state: 'state-123',
+        })
+        .redirects(0)
+        .expect(302);
+
+      expect(res.headers['location']).toBe(
+        'http://example.com/signin?param=test&state=state-123',
+      );
+    });
+
+    it('should be able to manipulate url and query params when redirecting within post_logout_redirect_uri', async () => {
+      const postLogoutRedirectUri = 'http://example.com/signin?param=test';
+
+      service.once('beforePostLogoutRedirect', (postLogoutRedirectURL: MutableRedirectUri, req) => {
+        expect(req).toBeInstanceOf(IncomingMessage);
+
+        expect(postLogoutRedirectURL.url.toString()).toBe(postLogoutRedirectUri);
+
+        postLogoutRedirectURL.url.hostname = 'post-logout.com';
+      });
+
+      const res = await request(service.requestHandler)
+        .get('/endsession')
+        .query(`post_logout_redirect_uri=${encodeURIComponent(postLogoutRedirectUri)}`)
+        .redirects(0)
+        .expect(302);
+
+      expect(res.headers['location']).toBe('http://post-logout.com/signin?param=test');
+    });
+
+    it('should expose a token introspection endpoint that returns information about a token', async () => {
+      const res = await request(service.requestHandler)
+        .post('/introspect')
+        .type('form')
+        .expect(200);
+
+      expect(res.body).toMatchObject({
+        active: true,
+      });
+    });
+
+    it('should allow customizing the introspect response through a beforeIntrospect event', async () => {
+      service.once('beforeIntrospect', (introspectResponse, req) => {
+        expect(req).toBeInstanceOf(IncomingMessage);
+        introspectResponse.body = {
+          active: true,
+          scope: 'dummy',
+          username: 'johndoe',
+        };
+        introspectResponse.statusCode = 200;
+      });
+      const res = await request(service.requestHandler)
+        .post('/introspect')
+        .expect(200);
+
+      expect(res.body).toMatchObject({
         active: true,
         scope: 'dummy',
         username: 'johndoe',
-      };
-      introspectResponse.statusCode = 200;
+      });
     });
-    const res = await request(service.requestHandler)
-      .post('/introspect')
-      .expect(200);
 
-    expect(res.body).toMatchObject({
-      active: true,
-      scope: 'dummy',
-      username: 'johndoe',
-    });
-  });
+    describe('PKCE', () => {
+      it('should grant access in normal PKCE flow with SHA-256 code_verifier', async () => {
+        const verifier = createPKCEVerifier();
 
-  describe('PKCE', () => {
-    it('should grant access in normal PKCE flow with SHA-256 code_verifier', async () => {
-      const verifier = createPKCEVerifier();
+        const searchParams = new URLSearchParams({
+          response_type: 'code',
+          redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+          code_challenge: await createPKCECodeChallenge(verifier, 'S256'),
+          code_challenge_method: 'S256',
+        });
 
-      const searchParams = new URLSearchParams({
-        response_type: 'code',
-        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
-        code_challenge: await createPKCECodeChallenge(verifier, 'S256'),
-        code_challenge_method: 'S256',
+        const resAuth = await request(service.requestHandler)
+          .get('/authorize')
+          .query(searchParams.toString());
+
+        const res = await tokenRequest(service.requestHandler).send({
+          grant_type: 'authorization_code',
+          code: getCode(resAuth),
+          redirect_uri: 'https://example.com/callback',
+          client_id: 'abcecedf',
+          code_verifier: verifier,
+        });
+        expect(res.statusCode).toBe(200);
       });
 
-      const resAuth = await request(service.requestHandler)
+      it('should grant access in normal PKCE flow with plain code_verifier', async () => {
+        const verifier = createPKCEVerifier();
+
+        const searchParams = new URLSearchParams({
+          response_type: 'code',
+          redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+          code_challenge: await createPKCECodeChallenge(verifier),
+          code_challenge_method: 'plain',
+        });
+
+        const resAuth = await request(service.requestHandler)
+          .get('/authorize')
+          .query(searchParams.toString());
+
+        const res = await tokenRequest(service.requestHandler).send({
+          grant_type: 'authorization_code',
+          code: getCode(resAuth),
+          redirect_uri: 'https://example.com/callback',
+          client_id: 'abcecedf',
+          code_verifier: verifier,
+        });
+        expect(res.statusCode).toBe(200);
+      });
+
+      it('should revoke on mismatching code_challenge_method', async () => {
+        const verifier = createPKCEVerifier();
+
+        const searchParams = new URLSearchParams({
+          response_type: 'code',
+          redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+          code_challenge: await createPKCECodeChallenge(verifier, 'plain'),
+          code_challenge_method: 'S256',
+        });
+
+        const resAuth = await request(service.requestHandler)
+          .get('/authorize')
+          .query(searchParams.toString());
+
+        const res = await tokenRequest(service.requestHandler).send({
+          grant_type: 'authorization_code',
+          code: getCode(resAuth),
+          redirect_uri: 'https://example.com/callback',
+          client_id: 'abcecedf',
+          code_verifier: verifier,
+        });
+
+        assert400ProblemDetails(res, 'code_verifier provided does not match code_challenge');
+      });
+
+      it('should revoke on invalid code_verifier', async () => {
+        const verifier = createPKCEVerifier();
+
+        const searchParams = new URLSearchParams({
+          response_type: 'code',
+          redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+          code_challenge: await createPKCECodeChallenge(verifier),
+          code_challenge_method: 'S256',
+        });
+
+        const resAuth = await request(service.requestHandler)
+          .get('/authorize')
+          .query(searchParams.toString());
+
+        const res = await tokenRequest(service.requestHandler).send({
+          grant_type: 'authorization_code',
+          code: getCode(resAuth),
+          redirect_uri: 'https://example.com/callback',
+          client_id: 'abcecedf',
+          code_verifier: 'invalid',
+        });
+
+        assert400ProblemDetails(
+          res,
+          "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1");
+      });
+
+      it('should revoke on non-matching challenge', async () => {
+        const searchParams = new URLSearchParams({
+          response_type: 'code',
+          redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+        });
+
+        const resAuth = await request(service.requestHandler)
+          .get('/authorize')
+          .query(searchParams.toString());
+
+        const res = await tokenRequest(service.requestHandler).send({
+          grant_type: 'authorization_code',
+          code: getCode(resAuth),
+          redirect_uri: 'https://example.com/callback',
+          client_id: 'abcecedf',
+          code_verifier: createPKCEVerifier(),
+        });
+
+        assert400ProblemDetails(res, 'code_challenge required');
+      });
+
+      it('should revoke on unsupported code_challende_method', async () => {
+        const searchParams = new URLSearchParams({
+          response_type: 'code',
+          redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+          code_challenge: await createPKCECodeChallenge(),
+          code_challenge_method: 'invalid'
+        });
+
+        const resAuth = await request(service.requestHandler)
+          .get('/authorize')
+          .query(searchParams.toString());
+
+        assert400ProblemDetails(
+          resAuth,
+          "Unsupported code_challenge method invalid. The following code_challenge_method are supported: plain, S256");
+      });
+
+      it('should default to plain code_challenge_method if not provided', async () => {
+        const verifier = createPKCEVerifier();
+
+        const searchParams = new URLSearchParams({
+          response_type: 'code',
+          redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
+          code_challenge: await createPKCECodeChallenge(verifier, 'plain'),
+        });
+
+        const resAuth = await request(service.requestHandler)
+          .get('/authorize')
+          .query(searchParams.toString());
+
+        const res = await tokenRequest(service.requestHandler).send({
+          grant_type: 'authorization_code',
+          code: getCode(resAuth),
+          redirect_uri: 'https://example.com/callback',
+          client_id: 'abcecedf',
+          code_verifier: verifier,
+        });
+        expect(res.statusCode).toBe(200);
+      });
+    });
+
+    it('should return 400 for a token request with an unsupported content-type', async () => {
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('text/plain')
+        .send('grant_type=client_credentials');
+
+      assert400ProblemDetails(res, 'Invalid token request body');
+    });
+
+    it('should return 400 for a token request with malformed JSON body', async () => {
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .set('Content-Type', 'application/json')
+        .send('{bad json}');
+
+      assert400ProblemDetails(res, 'Malformed JSON payload');
+    });
+
+    it('should return 400 when the authorize endpoint is called without redirect_uri', async () => {
+      const res = await request(service.requestHandler)
         .get('/authorize')
-        .query(searchParams.toString());
+        .query('response_type=code&scope=dummy_scope');
 
-      const res = await tokenRequest(service.requestHandler).send({
-        grant_type: 'authorization_code',
-        code: getCode(resAuth),
-        redirect_uri: 'https://example.com/callback',
-        client_id: 'abcecedf',
-        code_verifier: verifier,
-      });
-      expect(res.statusCode).toBe(200);
+      assert400ProblemDetails(res, 'Invalid redirectUri type');
     });
 
-    it('should grant access in normal PKCE flow with plain code_verifier', async () => {
-      const verifier = createPKCEVerifier();
+    it('should return 400 when the end_session_endpoint is called without post_logout_redirect_uri', async () => {
+      const res = await request(service.requestHandler)
+        .get('/endsession');
 
-      const searchParams = new URLSearchParams({
-        response_type: 'code',
-        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
-        code_challenge: await createPKCECodeChallenge(verifier),
-        code_challenge_method: 'plain',
-      });
-
-      const resAuth = await request(service.requestHandler)
-        .get('/authorize')
-        .query(searchParams.toString());
-
-      const res = await tokenRequest(service.requestHandler).send({
-        grant_type: 'authorization_code',
-        code: getCode(resAuth),
-        redirect_uri: 'https://example.com/callback',
-        client_id: 'abcecedf',
-        code_verifier: verifier,
-      });
-      expect(res.statusCode).toBe(200);
+      assert400ProblemDetails(res, 'Invalid post_logout_redirect_uri type');
     });
 
-    it('should revoke on mismatching code_challenge_method', async () => {
-      const verifier = createPKCEVerifier();
+    it('should return 400 from the OpenID configuration endpoint when issuer url is not set', async () => {
+      const issuerWithoutUrl = new OAuth2Issuer();
+      const serviceWithoutUrl = new OAuth2Service(issuerWithoutUrl);
 
-      const searchParams = new URLSearchParams({
-        response_type: 'code',
-        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
-        code_challenge: await createPKCECodeChallenge(verifier, 'plain'),
-        code_challenge_method: 'S256',
-      });
+      const res = await request(serviceWithoutUrl.requestHandler)
+        .get('/.well-known/openid-configuration');
 
-      const resAuth = await request(service.requestHandler)
-        .get('/authorize')
-        .query(searchParams.toString());
-
-      const res = await tokenRequest(service.requestHandler).send({
-        grant_type: 'authorization_code',
-        code: getCode(resAuth),
-        redirect_uri: 'https://example.com/callback',
-        client_id: 'abcecedf',
-        code_verifier: verifier,
-      });
-      expect(res.statusCode).toBe(400);
-      expect(res.body).toMatchInlineSnapshot(`
-        {
-          "error": "invalid_request",
-          "error_description": "code_verifier provided does not match code_challenge",
-        }
-      `);
+      assert400ProblemDetails(res, 'Unknown issuer url.');
     });
 
-    it('should revoke on invalid code_verifier', async () => {
-      const verifier = createPKCEVerifier();
+    it('should produce an id_token without aud when authorization_code grant provides no client identity', async () => {
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .send({
+          grant_type: 'authorization_code',
+          code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+          redirect_uri: 'https://example.com/callback',
+        })
+        .expect(200);
 
-      const searchParams = new URLSearchParams({
-        response_type: 'code',
-        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
-        code_challenge: await createPKCECodeChallenge(verifier),
-        code_challenge_method: 'S256',
-      });
+      const resBody = res.body as { id_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
 
-      const resAuth = await request(service.requestHandler)
-        .get('/authorize')
-        .query(searchParams.toString());
-
-      const res = await tokenRequest(service.requestHandler).send({
-        grant_type: 'authorization_code',
-        code: getCode(resAuth),
-        redirect_uri: 'https://example.com/callback',
-        client_id: 'abcecedf',
-        code_verifier: 'invalid',
-      });
-      expect(res.statusCode).toBe(400);
-      expect(res.body).toMatchInlineSnapshot(`
-        {
-          "error": "invalid_request",
-          "error_description": "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
-        }
-      `);
+      expect(decoded.payload).not.toHaveProperty('aud');
     });
 
-    it('should revoke on non-matching challenge', async () => {
-      const searchParams = new URLSearchParams({
-        response_type: 'code',
-        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
-      });
+    it('should produce an id_token with aud from Basic auth on refresh_token grants', async () => {
+      const res = await request(service.requestHandler)
+        .post('/token')
+        .type('form')
+        .set('authorization', `Basic ${Buffer.from('the-client:secret').toString('base64')}`)
+        .send({
+          grant_type: 'refresh_token',
+          refresh_token: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
+        })
+        .expect(200);
 
-      const resAuth = await request(service.requestHandler)
-        .get('/authorize')
-        .query(searchParams.toString());
+      const resBody = res.body as { id_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
 
-      const res = await tokenRequest(service.requestHandler).send({
-        grant_type: 'authorization_code',
-        code: getCode(resAuth),
-        redirect_uri: 'https://example.com/callback',
-        client_id: 'abcecedf',
-        code_verifier: createPKCEVerifier(),
-      });
-      expect(res.statusCode).toBe(400);
-      expect(res.body).toMatchInlineSnapshot(`
-        {
-          "error": "invalid_request",
-          "error_description": "code_challenge required",
-        }
-      `);
+      expect(decoded.payload).toMatchObject({ aud: 'the-client' });
     });
 
-    it('should revoke on unsupported code_challende_method', async () => {
-      const searchParams = new URLSearchParams({
-        response_type: 'code',
-        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
-        code_challenge: await createPKCECodeChallenge(),
-        code_challenge_method: 'invalid'
-      });
+    it('should handle client_credentials grant with no scope', async () => {
+      const res = await tokenRequest(service.requestHandler)
+        .send({ grant_type: 'client_credentials' })
+        .expect(200);
 
-      const resAuth = await request(service.requestHandler)
-        .get('/authorize')
-        .query(searchParams.toString());
+      expect(res.body).not.toHaveProperty('scope');
 
-      expect(resAuth.statusCode).toBe(400);
-      expect(resAuth.body).toMatchInlineSnapshot(`
-        {
-          "error": "invalid_request",
-          "error_description": "Unsupported code_challenge method invalid. The following code_challenge_method are supported: plain, S256",
-        }
-      `);
+      const resBody = res.body as { access_token: string };
+      const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
 
-
+      expect(decoded.payload).not.toHaveProperty('scope');
     });
 
-    it('should default to plain code_challenge_method if not provided', async () => {
-      const verifier = createPKCEVerifier();
+    describe('addRoute', () => {
+      let serv: OAuth2Service;
+      const bodyMethods = ['POST', 'PUT', 'PATCH'];
+      const queryMethods = ['GET', 'DELETE'];
+      const nonSupportedMethods = ['OPTIONS', 'HEAD', 'TRACE', 'CONNECT'];
+      const allSupportedMethods = [...bodyMethods, ...queryMethods];
 
-      const searchParams = new URLSearchParams({
-        response_type: 'code',
-        redirect_uri: 'http://example.com/callback&scope=dummy_scope&state=state123&client_id=abcecedf&nonce=21ba8e4a-26af-4538-b98a-bccf031f6754',
-        code_challenge: await createPKCECodeChallenge(verifier, 'plain'),
+      beforeEach(async () => {
+        serv = await BuildSut('https://example.com');
       });
 
-      const resAuth = await request(service.requestHandler)
-        .get('/authorize')
-        .query(searchParams.toString());
+      describe.each(queryMethods)('with %s method', (method: string) => {
 
-      const res = await tokenRequest(service.requestHandler).send({
-        grant_type: 'authorization_code',
-        code: getCode(resAuth),
-        redirect_uri: 'https://example.com/callback',
-        client_id: 'abcecedf',
-        code_verifier: verifier,
+        it('should allow adding a custom route', async () => {
+          serv.addRoute(method as HttpMethod, '/custom', (req, res) => {
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ message: 'Hello' }));
+          });
+
+          const req = endpoint(
+            request(serv.requestHandler),
+            method,
+            '/custom');
+
+          const res = await req.expect(200);
+
+          expect(res.body).toMatchObject({ message: 'Hello' });
+        });
       });
-      expect(res.statusCode).toBe(200);
+
+      describe.each(bodyMethods)('with %s method', (method: string) => {
+        it.each([
+          ['application/json', '{ "name": "World!" }', 'Hello World!'],
+          ['application/x-www-form-urlencoded', 'name=World!', 'Hello World!'],
+          ['text/plain', '{ "name": "World!" }', 'Hello Nope!'],
+          ['text/plain', 'name=World!', 'Hello Nope!'],
+        ])(
+          'should allow adding a custom route and parse the body (%s / %s)',
+          async (contentType: string, body: string, expectedMessage: string) => {
+            serv.addRoute(method as HttpMethod, '/custom', (req, res) => {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              let name = 'Nope!';
+              if (isPlainObject(req.body) && typeof req.body.name === 'string') {
+                name = req.body.name;
+              }
+              res.end(JSON.stringify({ message: `Hello ${name}` }));
+            });
+
+            const req = endpoint(request(serv.requestHandler), method, '/custom');
+
+            const res = await req
+              .set('content-Type', contentType)
+              .send(body)
+              .expect(200);
+
+            expect(res.body).toMatchObject({ message: expectedMessage });
+          },
+        );
+      });
+
+      describe.each(allSupportedMethods)('with %s method', (method: string) => {
+        it.each([
+          [{}, 'Hello {}'],
+          [{ a: 'one' }, 'Hello {"a":"one"}'],
+          [{ a: ['one', 'two'] }, 'Hello {"a":["one","two"]}'],
+        ])(
+          'should allow adding a custom route and parse the query string (%o)',
+          async (query: Record<string, unknown>, expectedMessage: string) => {
+            serv.addRoute(method as HttpMethod, '/custom', (req, res) => {
+              res.writeHead(200, { 'Content-Type': 'application/json' });
+              res.end(
+                JSON.stringify({
+                  message: `Hello ${JSON.stringify(req.query)}`,
+                }),
+              );
+            });
+
+            const req = endpoint(
+              request(serv.requestHandler),
+              method,
+              '/custom');
+
+            const res = await req.query(query).send().expect(200);
+
+            expect(res.body).toMatchObject({ message: expectedMessage });
+          },
+        );
+      });
+
+      it('should return 400 on AssertionError thrown in custom handler', async () => {
+        serv.addRoute('GET', '/custom', () => {
+          throw new AssertionError({ message: 'This is a bad request' });
+        });
+
+        const res = await request(serv.requestHandler)
+          .get('/custom');
+
+        assert400ProblemDetails(res, "This is a bad request");
+      });
+
+      it('should return 500 on Error thrown in custom handler', async () => {
+        serv.addRoute('GET', '/custom', () => {
+          throw new Error(
+            'Error thrown on purpose for testing. Nothing to worry about :)',
+          );
+        });
+
+        const res = await request(serv.requestHandler)
+          .get('/custom')
+          .expect(500);
+
+        expect(res.body).toMatchObject({
+          type: 'https://tools.ietf.org/html/rfc9110#section-15.6.1',
+          title: 'Internal Server Error',
+          detail: 'Most certainly a bug in the library code. Check the logs for more details and report this to the maintainers.',
+        });
+
+        expect(res.headers['content-type']).toMatch(/application\/problem\+json/);
+      });
+
+      it.each([nonSupportedMethods])(
+        'should throw an error when trying to add a route with an invalid method (%s)',
+        (method: string) => {
+          expect(() => {
+            serv.addRoute(method as HttpMethod, '/custom', (req, res) => {
+              res.end('');
+            });
+          }).toThrow(
+            expect.objectContaining({
+              message: `Invalid HTTP method: ${method}`,
+            }),
+          );
+        },
+      );
+
+      it('should throw an error when trying to add a route with a path not starting with /', () => {
+        expect(() => {
+          serv.addRoute('GET', 'custom', (req, res) => {
+            res.end('');
+          });
+        }).toThrow(
+          expect.objectContaining({
+            message:
+              "Invalid path: 'custom'. Path should start with a forward slash ('/').",
+          }),
+        );
+      });
+
+      it('should throw when colliding with a built-in route', () => {
+        expect(() => {
+          serv.addRoute('POST', '/token', (_req, res) => { res.end(''); });
+        }).toThrow(
+          expect.objectContaining({
+            message: "Route already exists: 'POST /token'",
+          }),
+        );
+      });
+
+      it('should throw when colliding with a previously-added custom route', () => {
+        serv.addRoute('GET', '/custom', (_req, res) => { res.end(''); });
+
+        expect(() => {
+          serv.addRoute('GET', '/custom', (_req, res) => { res.end(''); });
+        }).toThrow(
+          expect.objectContaining({
+            message: "Route already exists: 'GET /custom'",
+          }),
+        );
+      });
+
+      it('should throw when a trailing-slash variant collides with an existing route', () => {
+        serv.addRoute('GET', '/custom', (_req, res) => { res.end(''); });
+
+        expect(() => {
+          serv.addRoute('GET', '/custom/', (_req, res) => { res.end(''); });
+        }).toThrow(
+          expect.objectContaining({
+            message: "Route already exists: 'GET /custom'",
+          }),
+        );
+      });
     });
   });
 
-  it('should return 400 for a token request with an unsupported content-type', async () => {
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('text/plain')
-      .send('grant_type=client_credentials')
-      .expect(400);
+function endpoint(testAgent: request.Agent, method: string, path: string): request.Test {
+  switch (method.toUpperCase()) {
+    case 'GET':
+      return testAgent.get(path);
+    case 'POST':
+      return testAgent.post(path);
+    case 'PUT':
+      return testAgent.put(path);
+    case 'PATCH':
+      return testAgent.patch(path);
+    case 'DELETE':
+      return testAgent.delete(path);
+    default:
+      throw new Error(`Unsupported method: ${method}`);
+  }
+}
 
-    expect(res.body).toMatchObject({
-      error: 'invalid_request',
-      error_description: 'Invalid token request body',
-    });
-  });
+async function BuildSut(issuerUrl: string) {
+  const issuer = new OAuth2Issuer();
+  issuer.url = issuerUrl;
+  await issuer.keys.add(testKeys.getParsedKey('test-rs256-key.json'));
 
-  it('should return 400 for a token request with malformed JSON body', async () => {
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .set('Content-Type', 'application/json')
-      .send('{bad json}')
-      .expect(400);
-
-    expect(res.body).toMatchObject({
-      error: 'invalid_request',
-      error_description: 'Malformed JSON payload',
-    });
-  });
-
-  it('should return 400 when the authorize endpoint is called without redirect_uri', async () => {
-    const res = await request(service.requestHandler)
-      .get('/authorize')
-      .query('response_type=code&scope=dummy_scope')
-      .expect(400);
-
-    expect(res.body).toMatchObject({
-      error: 'invalid_request',
-      error_description: 'Invalid redirectUri type',
-    });
-  });
-
-  it('should return 400 when the end_session_endpoint is called without post_logout_redirect_uri', async () => {
-    const res = await request(service.requestHandler)
-      .get('/endsession')
-      .expect(400);
-
-    expect(res.body).toMatchObject({
-      error: 'invalid_request',
-      error_description: 'Invalid post_logout_redirect_uri type',
-    });
-  });
-
-  it('should return 400 from the OpenID configuration endpoint when issuer url is not set', async () => {
-    const issuerWithoutUrl = new OAuth2Issuer();
-    const serviceWithoutUrl = new OAuth2Service(issuerWithoutUrl);
-
-    const res = await request(serviceWithoutUrl.requestHandler)
-      .get('/.well-known/openid-configuration')
-      .expect(400);
-
-    expect(res.body).toMatchObject({
-      error: 'invalid_request',
-      error_description: 'Unknown issuer url.',
-    });
-  });
-
-  it('should produce an id_token without aud when authorization_code grant provides no client identity', async () => {
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .send({
-        grant_type: 'authorization_code',
-        code: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
-        redirect_uri: 'https://example.com/callback',
-      })
-      .expect(200);
-
-    const resBody = res.body as { id_token: string };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
-
-    expect(decoded.payload).not.toHaveProperty('aud');
-  });
-
-  it('should produce an id_token with aud from Basic auth on refresh_token grants', async () => {
-    const res = await request(service.requestHandler)
-      .post('/token')
-      .type('form')
-      .set('authorization', `Basic ${Buffer.from('the-client:secret').toString('base64')}`)
-      .send({
-        grant_type: 'refresh_token',
-        refresh_token: '6b575dd1-2c3b-4284-81b1-e281138cdbbd',
-      })
-      .expect(200);
-
-    const resBody = res.body as { id_token: string };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.id_token, 'test-rs256-key');
-
-    expect(decoded.payload).toMatchObject({ aud: 'the-client' });
-  });
-
-  it('should handle client_credentials grant with no scope', async () => {
-    const res = await tokenRequest(service.requestHandler)
-      .send({ grant_type: 'client_credentials' })
-      .expect(200);
-
-    expect(res.body).not.toHaveProperty('scope');
-
-    const resBody = res.body as { access_token: string };
-    const decoded = await verifyTokenWithKey(service.issuer, resBody.access_token, 'test-rs256-key');
-
-    expect(decoded.payload).not.toHaveProperty('scope');
-  });
-});
+  const service = new OAuth2Service(issuer);
+  return service;
+}
 
 function getCode(response: request.Response): string | null {
   expect(response).toMatchObject({
@@ -1188,7 +1352,7 @@ function getCode(response: request.Response): string | null {
   const parsed = response as unknown as { header: { location: string } };
   const url = new URL(parsed.header.location);
   return url.searchParams.get('code');
-};
+}
 
 function tokenRequest(app: RequestListener) {
   return request(app)
@@ -1196,4 +1360,4 @@ function tokenRequest(app: RequestListener) {
     .type('form')
     .expect('Cache-Control', 'no-store')
     .expect('Pragma', 'no-cache');
-};
+}
