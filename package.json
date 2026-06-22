@@ -1,6 +1,6 @@
 {
   "name": "oauth2-mock-server",
-  "version": "9.0.0",
+  "version": "9.1.0",
   "description": "Configurable OAuth2/OpenID Connect server for automated testing and development purposes",
   "type": "module",
   "keywords": [
