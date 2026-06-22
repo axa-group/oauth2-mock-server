@@ -277,6 +277,7 @@ oAuth2Service.addRoute('POST', '/api/v2/clients', (req, res) => {
 - Resource Owner Password Credentials grant
 - Authorization Code grant, with Proof Key for Code Exchange (PKCE) support
 - Refresh token grant
+- JWT Bearer token grant (`urn:ietf:params:oauth:grant-type:jwt-bearer`)
 
 ### Supported JWK formats
 

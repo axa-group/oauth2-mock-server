@@ -54,3 +54,11 @@ export function assert400ProblemDetails(res: request.Response, detail: string) {
 
   expect(res.headers['content-type']).toMatch(/application\/problem\+json/);
 }
+
+export function createJwtAssertion(payload: Record<string, unknown>): string {
+  const header = Buffer.from(JSON.stringify({ alg: 'none' })).toString('base64url');
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
+
+  // Signature ommitted on purpose since this mock server explicitly ignores it
+  return `${header}.${body}`;
+}

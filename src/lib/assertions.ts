@@ -90,6 +90,10 @@ export function assertIsValidTokenRequest(
   if ('aud' in body) {
     validateAudField(body['aud']);
   }
+
+  if ('assertion' in body) {
+    assertIsString(body['assertion'], "Invalid 'assertion' type");
+  }
 }
 
 function generateRandomKid(): string {

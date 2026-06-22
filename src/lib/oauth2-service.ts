@@ -65,6 +65,16 @@ import {
   isValidPkceCodeVerifier,
   pkceVerifierMatchesChallenge,
 } from './oauth2-service.pkce';
+import {
+  jwtBearerGrantType,
+  parseJwtBearerAssertionPayload,
+} from './oauth2-service.jwt-assertion';
+
+const grantsIssuingIdToken = new Set([
+  'authorization_code',
+  'password',
+  'refresh_token',
+]);
 
 const DEFAULT_ENDPOINTS: OAuth2Endpoints = Object.freeze({
   wellKnownDocument: '/.well-known/openid-configuration',
@@ -252,6 +262,7 @@ export class OAuth2Service extends EventEmitter {
         'client_credentials',
         'authorization_code',
         'password',
+        jwtBearerGrantType,
       ],
       token_endpoint_auth_signing_alg_values_supported: ['RS256'],
       response_modes_supported: ['query'],
@@ -338,6 +349,22 @@ export class OAuth2Service extends EventEmitter {
           Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
         };
         break;
+      case jwtBearerGrantType: {
+        assertIsString(reqBody.assertion, "Invalid 'assertion' type");
+
+        const assertionPayload = parseJwtBearerAssertionPayload(
+          reqBody.assertion,
+        );
+
+        xfn = (_header, payload) => {
+          Object.assign(payload, {
+            sub: assertionPayload.sub,
+            client_id: assertionPayload.sub,
+            scope,
+          });
+        };
+        break;
+      }
       default:
         throw new AssertionError({ message: 'Invalid grant type' });
     }
@@ -354,7 +381,7 @@ export class OAuth2Service extends EventEmitter {
       scope,
     };
 
-    if (reqBody.grant_type !== 'client_credentials') {
+    if (grantsIssuingIdToken.has(reqBody.grant_type)) {
       const credentials = basicAuth(req);
       const clientId = credentials ? credentials.name : reqBody.client_id;
 

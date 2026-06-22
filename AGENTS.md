@@ -10,22 +10,23 @@ This file contains instructions for AI coding agents working in this repository.
 
 ### Module map
 
-| File                             | Role                                                                                                                                            |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/index.ts`                   | Public barrel — all library exports originate here                                                                                              |
-| `src/oauth2-mock-server.ts`      | Binary shim — calls `cli()` from `src/cli.ts` with `process.argv.slice(2)`; contains no logic                                                   |
-| `src/cli.ts`                     | CLI logic — `cli(args)` parses argv and starts the server; also exports `readJsonFromFile()` and `shift()`; not part of the public API          |
-| `src/lib/http-server.ts`         | `HttpServer` — restartable wrapper around `node:http`/`node:https`                                                                              |
-| `src/lib/jwk-store.ts`           | `JWKStore` — manages JWK key pairs; uses `jose` for key generation/export                                                                       |
-| `src/lib/jwk-store.keys.ts`      | JWK algorithm registry: `supportedAlgs` list and `privateToPublicKeyTransformer`; used by `JWKStore` and test helpers — not exported publicly   |
-| `src/lib/oauth2-issuer.ts`       | `OAuth2Issuer` — holds the issuer URL + key store; signs JWTs with `jose` (`SignJWT`)                                                           |
-| `src/lib/oauth2-service.ts`      | `OAuth2Service` — HTTP request handler; owns all OAuth2/OIDC endpoint logic; composes `OAuth2Issuer`                                            |
-| `src/lib/oauth2-service.http.ts` | HTTP plumbing for `OAuth2Service`: body/query-param parsing, route matching — not exported publicly                                             |
-| `src/lib/oauth2-service.pkce.ts` | PKCE utilities: `isValidPkceCodeVerifier`, `createPKCEVerifier`, `createPKCECodeChallenge` — not exported publicly                              |
-| `src/lib/oauth2-server.ts`       | `OAuth2Server` — convenience façade; combines `HttpServer` + `OAuth2Service` + `OAuth2Issuer`                                                   |
-| `src/lib/assertions.ts`          | Internal assertion helpers: `assertIsString`, `assertIsStringOrUndefined`, `assertIsAddressInfo`, `assertIsPlainObject` — not exported publicly |
-| `src/lib/types.ts`               | Public types and interfaces (exported via barrel)                                                                                               |
-| `src/lib/types-internals.ts`     | Internal types (`JWKWithKid`, `AugmentedRequest`, `RouteHandler`, `InternalEvents`, `supportedPkceAlgorithms`) — **not** re-exported            |
+| File                                      | Role                                                                                                                                                |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/index.ts`                            | Public barrel — all library exports originate here                                                                                                  |
+| `src/oauth2-mock-server.ts`               | Binary shim — calls `cli()` from `src/cli.ts` with `process.argv.slice(2)`; contains no logic                                                       |
+| `src/cli.ts`                              | CLI logic — `cli(args)` parses argv and starts the server; also exports `readJsonFromFile()` and `shift()`; not part of the public API              |
+| `src/lib/http-server.ts`                  | `HttpServer` — restartable wrapper around `node:http`/`node:https`                                                                                  |
+| `src/lib/jwk-store.ts`                    | `JWKStore` — manages JWK key pairs; uses `jose` for key generation/export                                                                           |
+| `src/lib/jwk-store.keys.ts`               | JWK algorithm registry: `supportedAlgs` list and `privateToPublicKeyTransformer`; used by `JWKStore` and test helpers — not exported publicly       |
+| `src/lib/oauth2-issuer.ts`                | `OAuth2Issuer` — holds the issuer URL + key store; signs JWTs with `jose` (`SignJWT`)                                                               |
+| `src/lib/oauth2-service.ts`               | `OAuth2Service` — HTTP request handler; owns all OAuth2/OIDC endpoint logic; composes `OAuth2Issuer`                                                |
+| `src/lib/oauth2-service.http.ts`          | HTTP plumbing for `OAuth2Service`: body/query-param parsing, route matching — not exported publicly                                                 |
+| `src/lib/oauth2-service.pkce.ts`          | PKCE utilities: `isValidPkceCodeVerifier`, `createPKCEVerifier`, `createPKCECodeChallenge` — not exported publicly                                  |
+| `src/lib/oauth2-service.jwt-assertion.ts` | JWT Bearer assertion parsing: `parseJwtBearerAssertionPayload` — decodes the payload segment without verifying the signature; not exported publicly |
+| `src/lib/oauth2-server.ts`                | `OAuth2Server` — convenience façade; combines `HttpServer` + `OAuth2Service` + `OAuth2Issuer`                                                       |
+| `src/lib/assertions.ts`                   | Internal assertion helpers: `assertIsString`, `assertIsStringOrUndefined`, `assertIsAddressInfo`, `assertIsPlainObject` — not exported publicly     |
+| `src/lib/types.ts`                        | Public types and interfaces (exported via barrel)                                                                                                   |
+| `src/lib/types-internals.ts`              | Internal types (`JWKWithKid`, `AugmentedRequest`, `RouteHandler`, `InternalEvents`, `supportedPkceAlgorithms`) — **not** re-exported                |
 
 **Key dependency**: `jose` (async, Promise-based API) is used for all JWK generation, JWT signing, and key import/export.
 
@@ -110,7 +111,8 @@ Tests are the **behavioural contract** of this library and are more critical tha
 ### Test integrity — read carefully
 
 - **Every code change must be accompanied by unit tests** that cover the new or modified behaviour. A PR without tests for its changes will not be accepted.
-- **All code branches must be covered.** When a branch genuinely cannot be reached in tests (e.g. a defensive assertion against an impossible runtime state), you **must** explicitly tell the user which branch is uncovered, why it cannot be tested, and what the underlying reason is. Do not silently leave branches uncovered.
+- **New source modules require a dedicated test file.** Every new `src/lib/foo.ts` must have a corresponding `test/foo.test.ts` that tests the module directly, not only indirectly through another module's tests. Tests in an unrelated test file are not a substitute.
+- **All code branches must be covered.** When a branch genuinely cannot be reached in tests (e.g. a defensive assertion against an impossible runtime state), you **must** explicitly tell the user which branch is uncovered, why it cannot be tested, and what the underlying reason is. Do not silently leave branches uncovered. Prefer refactoring to remove unreachable branches over leaving them as dead code.
 - **Modifying existing passing tests is strictly forbidden** without the explicit agreement of the user. If you believe a test must be changed, stop, explain clearly which test you want to modify and exactly why, and wait for approval before touching it.
 
 ### Conventions

@@ -92,6 +92,7 @@ describe('assertIsValidTokenRequest', () => {
     { grant_type: "g", scope: 1, code: "c" },
     { grant_type: "g", scope: "1", code: "c", aud: 1 },
     { grant_type: "g", scope: "1", code: "c", aud: [1] },
+    { grant_type: "g", assertion: 1 },
   ])('throws on wrong values (%s)', (input) => {
     expect(() => { assertIsValidTokenRequest(input); }).toThrow();
   });
@@ -103,6 +104,7 @@ describe('assertIsValidTokenRequest', () => {
     { grant_type: "g", scope: "s", code: "c" },
     { grant_type: "g", scope: "s", code: "c", aud: "a" },
     { grant_type: "g", scope: "s", code: "c", aud: ["a", "b"] },
+    { grant_type: "g", assertion: "header.payload.signature" },
   ])('does not throw on valid input (%s)', (input) => {
     expect(() => { assertIsValidTokenRequest(input); }).not.toThrow();
   });
