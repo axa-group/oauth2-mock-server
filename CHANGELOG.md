@@ -4,11 +4,15 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## [9.1.0](https://github.com/axa-group/oauth2-mock-server/compare/v9.0.0...v9.1.0) — 2026-06-23
 
 ### Added
 
 - Teach `/token` endpoint to support `urn:ietf:params:oauth:grant-type:jwt-bearer` grant type and JWT bearer assertions (cf. https://datatracker.ietf.org/doc/html/rfc7523)
+
+### Changed
+
+- Update dependencies
 
 ## [9.0.0](https://github.com/axa-group/oauth2-mock-server/compare/v8.2.3...v9.0.0) — 2026-06-05
 
