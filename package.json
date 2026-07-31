@@ -59,29 +59,29 @@
   "dependencies": {
     "basic-auth": "^2.0.1",
     "is-plain-obj": "^4.1.0",
-    "jose": "^6.2.3"
+    "jose": "^6.2.5"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/basic-auth": "^1.1.8",
-    "@types/node": "^22.20.0",
-    "@types/supertest": "^7.2.0",
+    "@types/node": "^22.20.1",
+    "@types/supertest": "^7.2.1",
     "@typescript-eslint/eslint-plugin": "^8.56.1",
     "@typescript-eslint/parser": "^8.56.1",
-    "@vitest/coverage-v8": "^4.1.9",
-    "@vitest/eslint-plugin": "^1.6.20",
-    "eslint": "^10.5.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "@vitest/eslint-plugin": "^1.6.24",
+    "eslint": "^10.8.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-import-resolver-typescript": "^4.4.5",
-    "eslint-plugin-import-x": "^4.16.2",
-    "eslint-plugin-jsdoc": "^63.0.7",
+    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-jsdoc": "^63.3.2",
     "eslint-plugin-prettier": "^5.5.6",
-    "prettier": "^3.8.4",
+    "prettier": "^3.9.6",
     "supertest": "^7.2.2",
-    "tsdown": "^0.22.3",
+    "tsdown": "^0.22.14",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.61.1",
-    "vitest": "^4.1.9"
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^4.1.10"
   },
   "overrides": {
     "@types/node": "$@types/node"
