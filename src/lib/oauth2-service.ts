@@ -539,11 +539,18 @@ export class OAuth2Service extends EventEmitter {
   private endSessionHandler: RouteHandler = (req, res) => {
     req.query = parseQuery(req);
 
-    assertIsString(
+    assertIsStringOrUndefined(
       req.query['post_logout_redirect_uri'],
       'Invalid post_logout_redirect_uri type',
     );
     assertIsStringOrUndefined(req.query['state'], 'Invalid state type');
+
+    if (req.query['post_logout_redirect_uri'] === undefined) {
+      res.statusCode = 200;
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.end('Logout successful');
+      return;
+    }
 
     const redirectUrl = new URL(req.query['post_logout_redirect_uri']);
 
