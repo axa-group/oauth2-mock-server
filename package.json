@@ -1,7 +1,7 @@
 {
   "name": "oauth2-mock-server",
   "version": "9.1.0",
-  "description": "OAuth2 and OpenID Connect mock server for automated testing and development. OIDC-conformant, with real signed JWTs, JWKS, PKCE, and per-test response customization. Use as a CLI or JavaScript/TypeScript library.",
+  "description": "OAuth2 and OpenID Connect mock server for automated testing and development. Issues cryptographically signed JWTs via JWK key pairs. OIDC-conformant, exposes discovery, JWKS, authorization, token, userinfo, introspection, revocation, and end-session endpoints. PKCE support and per-test response customization. CLI and JavaScript/TypeScript library.",
   "type": "module",
   "keywords": [
     "oauth",
