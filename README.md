@@ -132,11 +132,11 @@ import { Events } from 'oauth2-mock-server';
   ```
 
   ```js
-  import basicAuth from 'basic-auth';
+  import { parse } from 'basic-auth';
 
   // Add the client ID to a token
   server.service.once(Events.BeforeTokenSigning, (token, req) => {
-    const credentials = basicAuth(req);
+    const credentials = parse(req.headers.authorization ?? '');
     const clientId = credentials ? credentials.name : req.body.client_id;
     token.payload.client_id = clientId;
   });

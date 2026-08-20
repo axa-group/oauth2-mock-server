@@ -47,7 +47,7 @@ describe('JWK Store', () => {
     ])('throws on unsupported algs (alg = %s)', async (alg: string) => {
       const store = new JWKStore();
 
-      await expect(() => store.generate(alg)).rejects.toThrow("Invalid or unsupported JWK \"alg\" (Algorithm) Parameter value");
+      await expect(() => store.generate(alg)).rejects.toThrow("Invalid or unsupported \"alg\" (Algorithm) value");
     });
 
     it.each([

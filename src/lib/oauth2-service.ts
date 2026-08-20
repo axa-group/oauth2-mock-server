@@ -24,7 +24,7 @@ import { randomUUID } from 'node:crypto';
 import { EventEmitter } from 'node:events';
 import { AssertionError } from 'node:assert';
 
-import basicAuth from 'basic-auth';
+import { parse } from 'basic-auth';
 
 import { defaultTokenTtl, type OAuth2Issuer } from './oauth2-issuer';
 import {
@@ -382,7 +382,7 @@ export class OAuth2Service extends EventEmitter {
     };
 
     if (grantsIssuingIdToken.has(reqBody.grant_type)) {
-      const credentials = basicAuth(req);
+      const credentials = parse(req.headers.authorization ?? '');
       const clientId = credentials ? credentials.name : reqBody.client_id;
 
       const xfn: JwtTransform = (_header, payload) => {
