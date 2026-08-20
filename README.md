@@ -229,16 +229,16 @@ import { Events } from 'oauth2-mock-server';
 
 ### Standard endpoints
 
-| Endpoint                                 | Description                                                                                                                                        |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `GET  /.well-known/openid-configuration` | Returns the [OpenID Provider Configuration Information](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig) for the server. |
-| `GET  /jwks`                             | Returns the JSON Web Key Set (JWKS) of all the keys configured in the server.                                                                      |
-| `POST /token`                            | Issues access tokens.                                                                                                                              |
-| `GET  /authorize`                        | Simulates user authentication. Automatically redirects to the callback endpoint. Supports only the `code` response type.                           |
-| `GET  /userinfo`                         | Provides extra userinfo claims.                                                                                                                    |
-| `POST /revoke`                           | Simulates token revocation. Always returns 200 per [RFC 7009](https://tools.ietf.org/html/rfc7009#section-2.2).                                    |
-| `GET  /endsession`                       | Simulates the end session endpoint. Redirects to `post_logout_redirect_uri`; returns `state` in the redirect URI if provided.                      |
-| `POST /introspect`                       | Simulates the [token introspection endpoint](https://www.oauth.com/oauth2-servers/token-introspection-endpoint/).                                  |
+| Endpoint                                 | Description                                                                                                                                                                                                   |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `GET  /.well-known/openid-configuration` | Returns the [OpenID Provider Configuration Information](https://openid.net/specs/openid-connect-discovery-1_0.html#ProviderConfig) for the server.                                                            |
+| `GET  /jwks`                             | Returns the JSON Web Key Set (JWKS) of all the keys configured in the server.                                                                                                                                 |
+| `POST /token`                            | Issues access tokens.                                                                                                                                                                                         |
+| `GET  /authorize`                        | Simulates user authentication. Automatically redirects to the callback endpoint. Supports only the `code` response type.                                                                                      |
+| `GET  /userinfo`                         | Provides extra userinfo claims.                                                                                                                                                                               |
+| `POST /revoke`                           | Simulates token revocation. Always returns 200 per [RFC 7009](https://tools.ietf.org/html/rfc7009#section-2.2).                                                                                               |
+| `GET  /endsession`                       | Simulates the end session endpoint. When `post_logout_redirect_uri` is provided, redirects to it (appending `state` if supplied). When absent or empty, returns a `200` success response without redirecting. |
+| `POST /introspect`                       | Simulates the [token introspection endpoint](https://www.oauth.com/oauth2-servers/token-introspection-endpoint/).                                                                                             |
 
 ### Path overrides
 
