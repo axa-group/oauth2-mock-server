@@ -18,8 +18,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { URL } from 'node:url';
 import { AssertionError } from 'node:assert';
 
-import isPlainObject from 'is-plain-obj';
-
+import { isPlainObject } from './is-plain-object';
 import { assertIsString } from './assertions';
 import type { AugmentedRequest, OAuth2Endpoints, RouteHandler } from './types';
 import type { ProblemDetails } from './types-internals';

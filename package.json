@@ -71,7 +71,6 @@
   },
   "dependencies": {
     "basic-auth": "^3.0.0",
-    "is-plain-obj": "^4.1.0",
     "jose": "^6.2.10"
   },
   "devDependencies": {
