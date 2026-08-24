@@ -33,6 +33,7 @@ import {
   assertIsValidTokenRequest,
 } from './assertions';
 import type {
+  AugmentedRequest,
   CodeChallenge,
   JwtTransform,
   MutableRedirectUri,
@@ -43,6 +44,7 @@ import type {
   PKCEAlgorithm,
   ScopesOrTransform,
   StatusCodeMutableResponse,
+  TokenRequest,
   TokenRequestIncomingMessage,
   HttpMethod,
   RouteHandler,
@@ -281,6 +283,56 @@ export class OAuth2Service extends EventEmitter {
     sendJson(res, { keys: this.issuer.keys.toJSON() });
   };
 
+  private async assertValidPkce(code: string, verifier: string): Promise<void> {
+    const savedCodeChallenge = this.#codeChallenges.get(code);
+    if (savedCodeChallenge === undefined) {
+      throw new AssertionError({ message: 'code_challenge required' });
+    }
+    this.#codeChallenges.delete(code);
+    if (!isValidPkceCodeVerifier(verifier)) {
+      throw new AssertionError({
+        message:
+          "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
+      });
+    }
+    const doesVerifierMatchCodeChallenge = await pkceVerifierMatchesChallenge(
+      verifier,
+      savedCodeChallenge,
+    );
+    if (!doesVerifierMatchCodeChallenge) {
+      throw new AssertionError({
+        message: 'code_verifier provided does not match code_challenge',
+      });
+    }
+  }
+
+  private async buildIdTokens(
+    req: AugmentedRequest,
+    reqBody: TokenRequest,
+    tokenTtl: number,
+  ): Promise<{ id_token: string; refresh_token: string }> {
+    const credentials = parse(req.headers.authorization ?? '');
+    const clientId = credentials ? credentials.name : reqBody.client_id;
+
+    const xfn: JwtTransform = (_header, payload) => {
+      Object.assign(payload, { sub: 'johndoe', aud: clientId });
+      if (reqBody.code !== undefined && reqBody.code in this.#nonce) {
+        Object.assign(payload, { nonce: this.#nonce[reqBody.code] });
+        // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
+        delete this.#nonce[reqBody.code];
+      }
+    };
+
+    return {
+      id_token: await this.buildToken(
+        req as unknown as TokenRequestIncomingMessage,
+        tokenTtl,
+        xfn,
+      ),
+      refresh_token: randomUUID(),
+    };
+  }
+
   private tokenHandler: RouteHandler = async (req, res) => {
     const reqBody = await parseBody(req);
     assertIsValidTokenRequest(reqBody);
@@ -295,28 +347,7 @@ export class OAuth2Service extends EventEmitter {
     let xfn: ScopesOrTransform | undefined;
 
     if ('code_verifier' in reqBody && 'code' in reqBody) {
-      const code = reqBody.code;
-      const verifier = reqBody.code_verifier;
-      const savedCodeChallenge = this.#codeChallenges.get(code);
-      if (savedCodeChallenge === undefined) {
-        throw new AssertionError({ message: 'code_challenge required' });
-      }
-      this.#codeChallenges.delete(code);
-      if (!isValidPkceCodeVerifier(verifier)) {
-        throw new AssertionError({
-          message:
-            "Invalid 'code_verifier'. The verifier does not conform with the RFC7636 spec. Ref: https://datatracker.ietf.org/doc/html/rfc7636#section-4.1",
-        });
-      }
-      const doesVerifierMatchCodeChallenge = await pkceVerifierMatchesChallenge(
-        verifier,
-        savedCodeChallenge,
-      );
-      if (!doesVerifierMatchCodeChallenge) {
-        throw new AssertionError({
-          message: 'code_verifier provided does not match code_challenge',
-        });
-      }
+      await this.assertValidPkce(reqBody.code, reqBody.code_verifier);
     }
 
     let { scope } = reqBody;
@@ -338,11 +369,6 @@ export class OAuth2Service extends EventEmitter {
         };
         break;
       case 'authorization_code':
-        scope = scope ?? 'dummy';
-        xfn = (_header, payload) => {
-          Object.assign(payload, { sub: 'johndoe', amr: ['pwd'], scope });
-        };
-        break;
       case 'refresh_token':
         scope = scope ?? 'dummy';
         xfn = (_header, payload) => {
@@ -374,6 +400,7 @@ export class OAuth2Service extends EventEmitter {
       tokenTtl,
       xfn,
     );
+
     const resBody: Record<string, unknown> = {
       access_token: token,
       token_type: 'Bearer',
@@ -382,24 +409,14 @@ export class OAuth2Service extends EventEmitter {
     };
 
     if (grantsIssuingIdToken.has(reqBody.grant_type)) {
-      const credentials = parse(req.headers.authorization ?? '');
-      const clientId = credentials ? credentials.name : reqBody.client_id;
-
-      const xfn: JwtTransform = (_header, payload) => {
-        Object.assign(payload, { sub: 'johndoe', aud: clientId });
-        if (reqBody.code !== undefined && reqBody.code in this.#nonce) {
-          Object.assign(payload, { nonce: this.#nonce[reqBody.code] });
-          // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-          delete this.#nonce[reqBody.code];
-        }
-      };
-
-      resBody['id_token'] = await this.buildToken(
-        req as unknown as TokenRequestIncomingMessage,
+      const { id_token, refresh_token } = await this.buildIdTokens(
+        req,
+        reqBody,
         tokenTtl,
-        xfn,
       );
-      resBody['refresh_token'] = randomUUID();
+
+      resBody['refresh_token'] = refresh_token;
+      resBody['id_token'] = id_token;
     }
 
     const tokenEndpointResponse: MutableResponse = {
