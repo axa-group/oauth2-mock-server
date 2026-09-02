@@ -2,7 +2,7 @@ import { IncomingMessage, type RequestListener } from 'node:http';
 import qs from 'node:querystring';
 import { AssertionError } from 'node:assert';
 
-import { describe, it, expect, beforeAll, beforeEach } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import request from 'supertest';
 import isPlainObject from 'is-plain-obj';
 
@@ -945,6 +945,45 @@ describe.each([
       );
     });
 
+    it('should return 400 when end_session_endpoint is called with a repeated post_logout_redirect_uri parameter', async () => {
+      const res = await request(service.requestHandler)
+        .get('/endsession')
+        .query('post_logout_redirect_uri=a&post_logout_redirect_uri=b');
+
+      assert400ProblemDetails(res, 'Invalid post_logout_redirect_uri type');
+    });
+
+    it('should return 200 with no Location header when end_session_endpoint is called without post_logout_redirect_uri', async () => {
+      const res = await request(service.requestHandler)
+        .get('/endsession')
+        .redirects(0)
+        .expect(200);
+
+      expect(res.headers['location']).toBeUndefined();
+    });
+
+    it('should return 200 with no Location header when end_session_endpoint is called with an empty post_logout_redirect_uri', async () => {
+      const res = await request(service.requestHandler)
+        .get('/endsession')
+        .query('post_logout_redirect_uri=')
+        .redirects(0)
+        .expect(200);
+
+      expect(res.headers['location']).toBeUndefined();
+    });
+
+    it('should not emit beforePostLogoutRedirect when post_logout_redirect_uri is absent', async () => {
+      const spy = vi.fn();
+      service.once('beforePostLogoutRedirect', spy);
+
+      await request(service.requestHandler)
+        .get('/endsession')
+        .redirects(0)
+        .expect(200);
+
+      expect(spy).not.toHaveBeenCalled();
+    });
+
     it('should be able to manipulate url and query params when redirecting within post_logout_redirect_uri', async () => {
       const postLogoutRedirectUri = 'http://example.com/signin?param=test';
 
@@ -1186,12 +1225,7 @@ describe.each([
       assert400ProblemDetails(res, 'Invalid redirectUri type');
     });
 
-    it('should return 400 when the end_session_endpoint is called without post_logout_redirect_uri', async () => {
-      const res = await request(service.requestHandler)
-        .get('/endsession');
 
-      assert400ProblemDetails(res, 'Invalid post_logout_redirect_uri type');
-    });
 
     it('should return 400 from the OpenID configuration endpoint when issuer url is not set', async () => {
       const issuerWithoutUrl = new OAuth2Issuer();

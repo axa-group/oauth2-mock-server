@@ -4,6 +4,12 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Changed
+
+- Teach `GET /endsession` to cope with optional `post_logout_redirect_uri` (by [markbrockhoff](https://github.com/markbrockhoff) in [#312](https://github.com/axa-group/oauth2-mock-server/pull/312))
+
 ## [9.1.0](https://github.com/axa-group/oauth2-mock-server/compare/v9.0.0...v9.1.0) — 2026-06-23
 
 ### Added
