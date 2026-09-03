@@ -109,7 +109,10 @@ let server = new OAuth2Server(
 
 ## Event Hooks
 
-The library provides a convenient way, through event emitters, to programmatically customize the server processing. This is particularly useful when expecting the OIDC service to behave in a specific way for a single test.
+The library provides a convenient way, through event emitters, to programmatically customize the server processing and make the OIDC service behave in a specific way:
+
+- Use `server.service.once(Events.Xxx, handler)` to intercept a single request (ideal for per-test overrides).
+- Use `server.service.on(Events.Xxx, handler)` for persistent hooks that apply to every request (such as always-present custom claims, for instance).
 
 The list of supported events is exported by the library for a guided usage.
 
@@ -132,11 +135,11 @@ import { Events } from 'oauth2-mock-server';
   ```
 
   ```js
-  import basicAuth from 'basic-auth';
+  import { parse } from 'basic-auth';
 
   // Add the client ID to a token
   server.service.once(Events.BeforeTokenSigning, (token, req) => {
-    const credentials = basicAuth(req);
+    const credentials = parse(req.headers.authorization ?? '');
     const clientId = credentials ? credentials.name : req.body.client_id;
     token.payload.client_id = clientId;
   });

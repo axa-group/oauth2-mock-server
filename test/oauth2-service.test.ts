@@ -4,8 +4,8 @@ import { AssertionError } from 'node:assert';
 
 import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import request from 'supertest';
-import isPlainObject from 'is-plain-obj';
 
+import { isPlainObject } from '../src/lib/is-plain-object';
 import { OAuth2Issuer, OAuth2Service } from '../src';
 import type { HttpMethod, MutableRedirectUri } from '../src';
 import {

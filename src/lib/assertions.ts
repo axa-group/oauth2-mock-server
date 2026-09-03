@@ -21,8 +21,7 @@ import { AssertionError } from 'node:assert';
 import type { AddressInfo } from 'node:net';
 import { randomBytes } from 'node:crypto';
 
-import isPlainObject from 'is-plain-obj';
-
+import { isPlainObject } from './is-plain-object';
 import type { TokenRequest } from './types';
 import type { JWKWithKid } from './types-internals';
 
