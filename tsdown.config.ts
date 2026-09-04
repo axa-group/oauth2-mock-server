@@ -11,7 +11,7 @@ const _default: (options: UserConfig) => UserConfig = () => {
     platform: 'node',
     clean: true,
     deps: {
-      skipNodeModulesBundle: true,
+      neverBundle: true,
     },
   };
 };
