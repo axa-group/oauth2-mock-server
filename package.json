@@ -96,5 +96,8 @@
   },
   "overrides": {
     "@types/node": "$@types/node"
+  },
+  "allowScripts": {
+    "unrs-resolver@1.12.2": true
   }
 }
