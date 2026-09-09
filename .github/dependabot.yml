@@ -18,11 +18,6 @@ updates:
         patterns:
           - "eslint"
           - "@eslint/js"
-      typescript-eslint:
-        patterns:
-          - "@typescript-eslint/eslint-plugin"
-          - "@typescript-eslint/parser"
-          - "typescript-eslint"
       vitest:
         patterns:
           - "vitest"
