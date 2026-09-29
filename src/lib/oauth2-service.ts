@@ -247,7 +247,7 @@ export class OAuth2Service extends EventEmitter {
     };
   };
 
-  private openidConfigurationHandler: RouteHandler = (_req, res) => {
+  private openidConfigurationHandler: RouteHandler = (req, res) => {
     assertIsString(this.issuer.url, 'Unknown issuer url.');
 
     const issuer = this.issuer.url;
@@ -273,10 +273,31 @@ export class OAuth2Service extends EventEmitter {
       subject_types_supported: ['public'],
       end_session_endpoint: urlCombine(issuer, this.#endpoints.endSession),
       introspection_endpoint: urlCombine(issuer, this.#endpoints.introspect),
-      code_challenge_methods_supported: supportedPkceAlgorithms,
+      code_challenge_methods_supported: [...supportedPkceAlgorithms],
     };
 
-    sendJson(res, openidConfig);
+    const openIdConfigurationResponse: MutableResponse = {
+      body: openidConfig,
+      statusCode: 200,
+    };
+
+    /**
+     * Before OpenID configuration response event.
+     * @event OAuth2Service#beforeWellKnownOpenIdConfiguration
+     * @param {MutableResponse} response The response body and status code.
+     * @param {IncomingMessage} req The incoming HTTP request.
+     */
+    this.emit(
+      Events.BeforeWellKnownOpenIdConfiguration,
+      openIdConfigurationResponse,
+      req,
+    );
+
+    sendJson(
+      res,
+      openIdConfigurationResponse.body,
+      openIdConfigurationResponse.statusCode,
+    );
   };
 
   private jwksHandler: RouteHandler = (_req, res) => {

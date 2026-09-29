@@ -122,6 +122,29 @@ import { Events } from 'oauth2-mock-server';
 // const { Events } = require('oauth2-mock-server');
 ```
 
+- **Events.BeforeWellKnownOpenIdConfiguration**
+
+  Typed signature: `(openIdConfigurationResponse: MutableResponse, req: IncomingMessage) => void`
+
+  Customize the discovery response body or status code. For example, advertise an
+  authorization endpoint reachable by a host browser while keeping the issuer,
+  token endpoint and JWKS URL reachable from other containers:
+
+  ```js
+  server.service.on(
+    Events.BeforeWellKnownOpenIdConfiguration,
+    (openIdConfigurationResponse, req) => {
+      Object.assign(openIdConfigurationResponse.body, {
+        authorization_endpoint: 'http://localhost:8080/authorize',
+      });
+    },
+  );
+  ```
+
+  This changes the advertised metadata only; the browser-facing address must
+  already route to the server. The hook also runs when the discovery endpoint
+  path is customized through `wellKnownDocument`.
+
 - **Events.BeforeTokenSigning**
 
   Typed signature: `(token: MutableToken, req: TokenRequestIncomingMessage) => void`
