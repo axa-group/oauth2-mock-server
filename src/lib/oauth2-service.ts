@@ -273,6 +273,8 @@ export class OAuth2Service extends EventEmitter {
       subject_types_supported: ['public'],
       end_session_endpoint: urlCombine(issuer, this.#endpoints.endSession),
       introspection_endpoint: urlCombine(issuer, this.#endpoints.introspect),
+      // Keep hook mutations local to this response, without changing PKCE
+      // validation or the metadata returned by later requests.
       code_challenge_methods_supported: [...supportedPkceAlgorithms],
     };
 
