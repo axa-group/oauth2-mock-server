@@ -74,6 +74,15 @@ export type JwtTransform = (header: Header, payload: Payload) => void;
  */
 export enum Events {
   /**
+   * Raised by the OpenID configuration endpoint before the response is sent.
+   * Allows mutating the discovery metadata and status code, for example to
+   * advertise a browser-facing authorization endpoint separately from the issuer.
+   *
+   * Handler signature: `(openIdConfigurationResponse: MutableResponse, req: IncomingMessage) => void`
+   */
+  BeforeWellKnownOpenIdConfiguration = 'beforeWellKnownOpenIdConfiguration',
+
+  /**
    * Raised by the `POST /token` endpoint before the JWT is signed.
    * Allows mutating the token's header and payload — e.g. adding custom claims,
    * overriding the expiry, or attaching a client ID.
