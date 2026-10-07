@@ -71,7 +71,7 @@
   },
   "dependencies": {
     "basic-auth": "^3.0.0",
-    "jose": "^6.2.11"
+    "jose": "^6.2.12"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
