@@ -4,10 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/).
 
-## Unreleased
+## [9.3.0](https://github.com/axa-group/oauth2-mock-server/compare/v9.2.0...v9.3.0) — 2026-10-07
 
 ### Changed
 
+- Add `BeforeWellKnownOpenIdConfiguration` event to `OAuth2Service` to allow customization of the discovery response body (by [eliasruntime](https://github.com/eliasruntime) in [#462](https://github.com/axa-group/oauth2-mock-server/pull/462))
 - Update dependencies
 
 ## [9.2.0](https://github.com/axa-group/oauth2-mock-server/compare/v9.1.0...v9.2.0) — 2026-09-04
