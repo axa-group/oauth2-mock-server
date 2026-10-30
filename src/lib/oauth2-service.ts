@@ -547,6 +547,7 @@ export class OAuth2Service extends EventEmitter {
 
   private userInfoHandler: RouteHandler = (req, res) => {
     const userInfoResponse: MutableResponse = {
+      // eslint-disable-next-line @typescript-eslint/no-deprecated -- OIDC subject claim, not String.prototype.sub().
       body: { sub: 'johndoe' },
       statusCode: 200,
     };
